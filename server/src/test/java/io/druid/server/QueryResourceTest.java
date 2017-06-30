@@ -45,7 +45,7 @@ import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationInfo;
+import io.druid.server.security.AuthorizationManager;
 import io.druid.server.security.Resource;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -113,6 +113,7 @@ public class QueryResourceTest
     }
   };
 
+
   private static final ServiceEmitter noopServiceEmitter = new NoopServiceEmitter();
 
   private QueryResource queryResource;
@@ -141,6 +142,7 @@ public class QueryResourceTest
         new NoopRequestLogger(),
         queryManager,
         new AuthConfig(),
+        null,
         new DefaultGenericQueryMetricsFactory(jsonMapper)
     );
   }
@@ -188,23 +190,28 @@ public class QueryResourceTest
   @Test
   public void testSecuredQuery() throws Exception
   {
-    EasyMock.expect(testServletRequest.getAttribute(EasyMock.anyString())).andReturn(
-        new AuthorizationInfo()
-        {
-          @Override
-          public Access isAuthorized(
-              Resource resource, Action action
-          )
-          {
-            if (resource.getName().equals("allow")) {
-              return new Access(true);
-            } else {
-              return new Access(false);
-            }
-          }
-        }
-    ).times(2);
+    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn("druid").times(2);
+
+    testServletRequest.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, false);
+    EasyMock.expectLastCall().times(1);
+
+    testServletRequest.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, true);
+    EasyMock.expectLastCall().times(1);
+
     EasyMock.replay(testServletRequest);
+
+    AuthorizationManager authorizationManager = new AuthorizationManager()
+    {
+      @Override
+      public Access authorize(String identity, Resource resource, Action action)
+      {
+        if (resource.getName().equals("allow")) {
+          return new Access(true);
+        } else {
+          return new Access(false);
+        }
+      }
+    };
 
     queryResource = new QueryResource(
         warehouse,
@@ -215,7 +222,8 @@ public class QueryResourceTest
         new NoopServiceEmitter(),
         new NoopRequestLogger(),
         queryManager,
-        new AuthConfig(true),
+        new AuthConfig(true, null, null),
+        authorizationManager,
         new DefaultGenericQueryMetricsFactory(jsonMapper)
     );
 
@@ -244,38 +252,42 @@ public class QueryResourceTest
     final CountDownLatch startAwaitLatch = new CountDownLatch(1);
     final CountDownLatch cancelledCountDownLatch = new CountDownLatch(1);
 
-    EasyMock.expect(testServletRequest.getAttribute(EasyMock.anyString())).andReturn(
-        new AuthorizationInfo()
-        {
-          @Override
-          public Access isAuthorized(
-              Resource resource, Action action
-          )
-          {
-            // READ action corresponds to the query
-            // WRITE corresponds to cancellation of query
-            if (action.equals(Action.READ)) {
-              try {
-                // Countdown startAwaitLatch as we want query cancellation to happen
-                // after we enter isAuthorized method so that we can handle the
-                // InterruptedException here because of query cancellation
-                startAwaitLatch.countDown();
-                waitForCancellationLatch.await();
-              }
-              catch (InterruptedException e) {
-                // When the query is cancelled the control will reach here,
-                // countdown the latch and rethrow the exception so that error response is returned for the query
-                cancelledCountDownLatch.countDown();
-                Throwables.propagate(e);
-              }
-              return new Access(true);
-            } else {
-              return new Access(true);
-            }
-          }
-        }
-    ).times(2);
+    //EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED)).andReturn(null).times(2);
+
+    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn("druid").times(2);
+
+    testServletRequest.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, true);
+    EasyMock.expectLastCall().times(1);
+
     EasyMock.replay(testServletRequest);
+
+    AuthorizationManager authorizationManager = new AuthorizationManager()
+    {
+      @Override
+      public Access authorize(String identity, Resource resource, Action action)
+      {
+        // READ action corresponds to the query
+        // WRITE corresponds to cancellation of query
+        if (action.equals(Action.READ)) {
+          try {
+            // Countdown startAwaitLatch as we want query cancellation to happen
+            // after we enter isAuthorized method so that we can handle the
+            // InterruptedException here because of query cancellation
+            startAwaitLatch.countDown();
+            waitForCancellationLatch.await();
+          }
+          catch (InterruptedException e) {
+            // When the query is cancelled the control will reach here,
+            // countdown the latch and rethrow the exception so that error response is returned for the query
+            cancelledCountDownLatch.countDown();
+            Throwables.propagate(e);
+          }
+          return new Access(true);
+        } else {
+          return new Access(true);
+        }
+      }
+    };
 
     queryResource = new QueryResource(
         warehouse,
@@ -286,7 +298,8 @@ public class QueryResourceTest
         new NoopServiceEmitter(),
         new NoopRequestLogger(),
         queryManager,
-        new AuthConfig(true),
+        new AuthConfig(true, null, null),
+        authorizationManager,
         new DefaultGenericQueryMetricsFactory(jsonMapper)
     );
 
@@ -347,32 +360,39 @@ public class QueryResourceTest
     final CountDownLatch waitFinishLatch = new CountDownLatch(2);
     final CountDownLatch startAwaitLatch = new CountDownLatch(1);
 
-    EasyMock.expect(testServletRequest.getAttribute(EasyMock.anyString())).andReturn(
-        new AuthorizationInfo()
-        {
-          @Override
-          public Access isAuthorized(
-              Resource resource, Action action
-          )
-          {
-            // READ action corresponds to the query
-            // WRITE corresponds to cancellation of query
-            if (action.equals(Action.READ)) {
-              try {
-                waitForCancellationLatch.await();
-              }
-              catch (InterruptedException e) {
-                Throwables.propagate(e);
-              }
-              return new Access(true);
-            } else {
-              // Deny access to cancel the query
-              return new Access(false);
-            }
-          }
-        }
-    ).times(2);
+    //EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED)).andReturn(null).times(2);
+
+    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn("druid").times(2);
+
+    testServletRequest.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, true);
+    EasyMock.expectLastCall().times(1);
+
+    testServletRequest.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, false);
+    EasyMock.expectLastCall().times(1);
+
     EasyMock.replay(testServletRequest);
+
+    AuthorizationManager authorizationManager = new AuthorizationManager()
+    {
+      @Override
+      public Access authorize(String identity, Resource resource, Action action)
+      {
+        // READ action corresponds to the query
+        // WRITE corresponds to cancellation of query
+        if (action.equals(Action.READ)) {
+          try {
+            waitForCancellationLatch.await();
+          }
+          catch (InterruptedException e) {
+            Throwables.propagate(e);
+          }
+          return new Access(true);
+        } else {
+          // Deny access to cancel the query
+          return new Access(false);
+        }
+      }
+    };
 
     queryResource = new QueryResource(
         warehouse,
@@ -383,7 +403,8 @@ public class QueryResourceTest
         new NoopServiceEmitter(),
         new NoopRequestLogger(),
         queryManager,
-        new AuthConfig(true),
+        new AuthConfig(true, null, null),
+        authorizationManager,
         new DefaultGenericQueryMetricsFactory(jsonMapper)
     );
 

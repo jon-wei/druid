@@ -35,6 +35,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ServerConfig;
+import io.druid.server.security.AuthConfig;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -125,12 +126,14 @@ public class DruidAvaticaHandlerTest
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     druidMeta = new DruidMeta(
-        new PlannerFactory(rootSchema, walker, operatorTable, macroTable, plannerConfig, new ServerConfig()),
-        AVATICA_CONFIG
+        new PlannerFactory(rootSchema, walker, operatorTable, macroTable, plannerConfig, new ServerConfig(), new AuthConfig(), null),
+        AVATICA_CONFIG,
+        new AuthConfig(),
+        null
     );
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
         druidMeta,
-        new DruidNode("dummy", "dummy", 1, null, new ServerConfig()),
+    new DruidNode("dummy", "dummy", 1, null, new ServerConfig()),
         new AvaticaMonitor()
     );
     final int port = new Random().nextInt(9999) + 10000;
@@ -142,7 +145,7 @@ public class DruidAvaticaHandlerTest
         port,
         DruidAvaticaHandler.AVATICA_PATH
     );
-    client = DriverManager.getConnection(url);
+    client = DriverManager.getConnection(url, "admin", "druid");
 
     final Properties propertiesLosAngeles = new Properties();
     propertiesLosAngeles.setProperty("sqlTimeZone", "America/Los_Angeles");
@@ -555,8 +558,19 @@ public class DruidAvaticaHandlerTest
 
     final List<Meta.Frame> frames = new ArrayList<>();
     DruidMeta smallFrameDruidMeta = new DruidMeta(
-        new PlannerFactory(rootSchema, walker, operatorTable, macroTable, plannerConfig, new ServerConfig()),
-        smallFrameConfig
+        new PlannerFactory(
+            rootSchema,
+            walker,
+            operatorTable,
+            macroTable,
+            plannerConfig,
+            new ServerConfig(),
+            new AuthConfig(),
+            null
+        ),
+        smallFrameConfig,
+        new AuthConfig(),
+        null
     )
     {
       @Override
