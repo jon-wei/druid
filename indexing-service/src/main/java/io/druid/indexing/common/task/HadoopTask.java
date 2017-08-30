@@ -213,4 +213,16 @@ public abstract class HadoopTask extends AbstractTask
       Thread.currentThread().setContextClassLoader(oldLoader);
     }
   }
+
+  public static void correctCP(final List<URL> localClassLoaderURLs) {
+    for(int i=0;i<localClassLoaderURLs.size();i++){
+      URL url =localClassLoaderURLs.get(i);
+      log.info("checking the url:"+url);
+      if(url!=null && url.toString().contains("maprfs")){
+        localClassLoaderURLs.remove(i);
+        log.info("removeing the url:"+url);
+        break;
+      }
+    }
+  }
 }
