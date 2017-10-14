@@ -62,6 +62,8 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -78,6 +80,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private static final String HOST_ATTRIBUTE = "io.druid.proxy.to.host";
   private static final String SCHEME_ATTRIBUTE = "io.druid.proxy.to.host.scheme";
   private static final String QUERY_ATTRIBUTE = "io.druid.proxy.query";
+  private static final String AVATICA_QUERY_ATTRIBUTE = "io.druid.proxy.avaticaQuery";
   private static final String OBJECTMAPPER_ATTRIBUTE = "io.druid.proxy.objectMapper";
 
   private static final int CANCELLATION_TIMEOUT_MILLIS = 500;
@@ -85,6 +88,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private final AtomicLong successfulQueryCount = new AtomicLong();
   private final AtomicLong failedQueryCount = new AtomicLong();
   private final AtomicLong interruptedQueryCount = new AtomicLong();
+
+  private final ConsistentHasher serverHasher = new ConsistentHasher(null);
 
   private static void handleException(HttpServletResponse response, ObjectMapper objectMapper, Exception exception)
       throws IOException
@@ -186,7 +191,17 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     final boolean isQueryEndpoint = request.getRequestURI().startsWith("/druid/v2")
                                     && !request.getRequestURI().startsWith("/druid/v2/sql");
 
-    if (isQueryEndpoint && HttpMethod.DELETE.is(request.getMethod())) {
+    final boolean isAvatica = request.getRequestURI().startsWith("/druid/v2/sql/avatica");
+
+    if (isAvatica) {
+      byte[] requestContent = getRequestContent(request);
+      String connectionId = getAvaticaConnectionId(requestContent, objectMapper);
+      Server targetServer = getTargetServerForConnectionId(connectionId);
+      request.setAttribute(HOST_ATTRIBUTE, targetServer.getHost());
+      request.setAttribute(SCHEME_ATTRIBUTE, targetServer.getScheme());
+      request.setAttribute(AVATICA_QUERY_ATTRIBUTE, requestContent);
+      log.info("Sending request with connectionId[%s] to server: %s", connectionId, targetServer.getHost());
+    } else if (isQueryEndpoint && HttpMethod.DELETE.is(request.getMethod())) {
       // query cancellation request
       for (final Server server: hostFinder.getAllServers()) {
         // send query cancellation to all brokers this query may have gone to
@@ -262,6 +277,11 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   {
     proxyRequest.timeout(httpClientConfig.getReadTimeout().getMillis(), TimeUnit.MILLISECONDS);
     proxyRequest.idleTimeout(httpClientConfig.getReadTimeout().getMillis(), TimeUnit.MILLISECONDS);
+
+    byte[] avaticaQuery = (byte[]) clientRequest.getAttribute(AVATICA_QUERY_ATTRIBUTE);
+    if (avaticaQuery != null) {
+      proxyRequest.content(new BytesContentProvider(avaticaQuery));
+    }
 
     final Query query = (Query) clientRequest.getAttribute(QUERY_ATTRIBUTE);
     if (query != null) {
@@ -371,6 +391,34 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     return interruptedQueryCount.get();
   }
 
+  private static byte[] getRequestContent(HttpServletRequest request) throws IOException
+  {
+    int contentSize = request.getContentLength();
+    byte[] content = new byte[contentSize];
+    int bytesRead = request.getInputStream().read(content);
+    return content;
+  }
+
+  private static String getAvaticaConnectionId(byte[] requestContent, ObjectMapper objectMapper) throws IOException
+  {
+    Map<String, Object> contentMap = objectMapper.readValue(requestContent, Map.class);
+    return (String) contentMap.get("connectionId");
+  }
+
+  private Server getTargetServerForConnectionId(String connectionId)
+  {
+    synchronized (serverHasher) {
+      Map<String, Server> currentServers = new HashMap<>();
+
+      for (Server server : hostFinder.getAllServers()) {
+        currentServers.put(server.getHost(), server);
+      }
+
+      serverHasher.updateKeys(currentServers.keySet());
+      String chosenServerKey = serverHasher.hash(connectionId, ConsistentHasher.STRING_FUNNEL);
+      return currentServers.get(chosenServerKey);
+    }
+  }
 
   private class MetricsEmittingProxyResponseListener extends ProxyResponseListener
   {
