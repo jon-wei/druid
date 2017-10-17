@@ -39,5 +39,4 @@ public class RendezvousHasher
 
     return weights.get(weights.lastLongKey());
   }
-
 }
