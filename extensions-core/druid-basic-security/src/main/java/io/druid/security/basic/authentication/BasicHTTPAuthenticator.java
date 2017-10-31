@@ -24,12 +24,20 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
+import com.google.inject.Binder;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.Module;
 import com.metamx.http.client.CredentialedHttpClient;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.auth.BasicCredentials;
+import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.annotations.Self;
 import io.druid.java.util.common.StringUtils;
 import io.druid.security.basic.BasicAuthUtils;
-import io.druid.security.basic.db.BasicSecurityStorageConnector;
+import io.druid.security.basic.db.BasicAuthDBConfig;
+import io.druid.security.basic.db.BasicAuthenticatorStorageConnector;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Authenticator;
@@ -37,7 +45,6 @@ import org.eclipse.jetty.client.api.Authentication;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.util.Attributes;
-
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import javax.annotation.Nullable;
@@ -58,23 +65,64 @@ import java.util.Map;
 @JsonTypeName("basic")
 public class BasicHTTPAuthenticator implements Authenticator
 {
-  private final BasicSecurityStorageConnector dbConnector;
+  private final BasicAuthenticatorStorageConnector dbConnector;
   private final String internalClientUsername;
   private final String internalClientPassword;
   private final String authorizerName;
+  private final BasicAuthDBConfig dbConfig;
 
   @JsonCreator
   public BasicHTTPAuthenticator(
-      @JacksonInject BasicSecurityStorageConnector dbConnector,
+      @JacksonInject Injector injector,
+      @JsonProperty("dbPrefix") String dbPrefix,
+      @JsonProperty("initialAdminPassword") String initialAdminPassword,
+      @JsonProperty("initialInternalClientPassword") String initialInternalClientPassword,
       @JsonProperty("internalClientUsername") String internalClientUsername,
       @JsonProperty("internalClientPassword") String internalClientPassword,
       @JsonProperty("authorizerName") String authorizerName
+  )
+  {
+    this.internalClientUsername = internalClientUsername;
+    this.internalClientPassword = internalClientPassword;
+    this.authorizerName = authorizerName;
+    this.dbConfig = new BasicAuthDBConfig(dbPrefix, initialAdminPassword, initialInternalClientPassword);
+
+    Injector childInjector = injector.createChildInjector(
+        ImmutableList.<Module>of(
+            new Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                JsonConfigProvider.bindInstance(
+                    binder,
+                    Key.get(BasicAuthDBConfig.class, Self.class),
+                    dbConfig
+                );
+              }
+            }
+        )
+    );
+
+    this.dbConnector = childInjector.getInstance(BasicAuthenticatorStorageConnector.class);
+  }
+
+  /**
+   * constructor for unit tests
+   */
+  public BasicHTTPAuthenticator(
+      BasicAuthenticatorStorageConnector dbConnector,
+      String dbPrefix,
+      String internalClientUsername,
+      String internalClientPassword,
+      String authorizerName
   )
   {
     this.dbConnector = dbConnector;
     this.internalClientUsername = internalClientUsername;
     this.internalClientPassword = internalClientPassword;
     this.authorizerName = authorizerName;
+    this.dbConfig = new BasicAuthDBConfig(dbPrefix, null, null);
   }
 
   @Override
@@ -100,7 +148,7 @@ public class BasicHTTPAuthenticator implements Authenticator
       return null;
     }
 
-    if (dbConnector.checkCredentials(user, password.toCharArray())) {
+    if (dbConnector.checkCredentials(dbConfig.getDbPrefix(), user, password.toCharArray())) {
       return new AuthenticationResult(user, authorizerName, null);
     } else {
       return null;
@@ -188,6 +236,21 @@ public class BasicHTTPAuthenticator implements Authenticator
     return null;
   }
 
+  public BasicAuthenticatorStorageConnector getDbConnector()
+  {
+    return dbConnector;
+  }
+
+  public BasicAuthDBConfig getDbConfig()
+  {
+    return dbConfig;
+  }
+
+  public String getDBPrefix()
+  {
+    return dbConfig.getDbPrefix();
+  }
+
   public class BasicHTTPAuthenticationFilter implements Filter
   {
     @Override
@@ -218,7 +281,7 @@ public class BasicHTTPAuthenticator implements Authenticator
       String user = splits[0];
       char[] password = splits[1].toCharArray();
 
-      if (dbConnector.checkCredentials(user, password)) {
+      if (dbConnector.checkCredentials(dbConfig.getDbPrefix(), user, password)) {
         AuthenticationResult authenticationResult = new AuthenticationResult(user, authorizerName, null);
         servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
         filterChain.doFilter(servletRequest, servletResponse);
