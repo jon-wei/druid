@@ -32,8 +32,6 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.metadata.BaseSQLMetadataConnector;
 import io.druid.metadata.MetadataStorageConnectorConfig;
-import io.druid.security.basic.BasicAuthConfig;
-import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.server.security.Action;
 import io.druid.server.security.Resource;
@@ -50,32 +48,19 @@ import org.skife.jdbi.v2.util.IntegerMapper;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-/**
- * Base class for BasicSecurityStorageConnector implementations that interface with a database using SQL.
- */
-public abstract class SQLBasicSecurityStorageConnector
+public abstract class SQLBasicAuthorizerStorageConnector
     extends BaseSQLMetadataConnector
-    implements BasicSecurityStorageConnector
+    implements BasicAuthorizerStorageConnector
 {
   public static final String USERS = "users";
-  public static final String USER_CREDENTIALS = "user_credentials";
   public static final String PERMISSIONS = "permissions";
   public static final String ROLES = "roles";
   public static final String USER_ROLES = "user_roles";
-
-  public static final List<String> TABLE_NAMES = Lists.newArrayList(
-      USER_CREDENTIALS,
-      USER_ROLES,
-      PERMISSIONS,
-      ROLES,
-      USERS
-  );
 
   private static final String DEFAULT_ADMIN_NAME = "admin";
   private static final String DEFAULT_ADMIN_ROLE = "admin";
@@ -84,23 +69,27 @@ public abstract class SQLBasicSecurityStorageConnector
   private static final String DEFAULT_SYSTEM_USER_ROLE = "druid_system";
 
   private final Supplier<MetadataStorageConnectorConfig> config;
-  private final BasicAuthConfig basicAuthConfig;
+  private final Supplier<BasicAuthDBConfig> dbConfigSupplier;
   private final ObjectMapper jsonMapper;
   private final PermissionsMapper permMapper;
-  private final UserCredentialsMapper credsMapper;
+
+  protected final String userTableName;
+  protected final String roleTableName;
+  protected final String permissionTableName;
+  protected final String userRoleTableName;
+  protected final List<String> tableNames;
 
   @Inject
-  public SQLBasicSecurityStorageConnector(
+  public SQLBasicAuthorizerStorageConnector(
       Supplier<MetadataStorageConnectorConfig> config,
-      Supplier<BasicAuthConfig> basicAuthConfigSupplier,
+      Supplier<BasicAuthDBConfig> dbConfigSupplier,
       ObjectMapper jsonMapper
   )
   {
     this.config = config;
-    this.basicAuthConfig = basicAuthConfigSupplier.get();
+    this.dbConfigSupplier = dbConfigSupplier;
     this.jsonMapper = jsonMapper;
     this.permMapper = new PermissionsMapper();
-    this.credsMapper = new UserCredentialsMapper();
     this.shouldRetry = new Predicate<Throwable>()
     {
       @Override
@@ -109,6 +98,17 @@ public abstract class SQLBasicSecurityStorageConnector
         return isTransientException(e);
       }
     };
+
+    this.userTableName = getPrefixedTableName(USERS);
+    this.roleTableName = getPrefixedTableName(ROLES);
+    this.permissionTableName = getPrefixedTableName(PERMISSIONS);
+    this.userRoleTableName = getPrefixedTableName(USER_ROLES);
+    this.tableNames = ImmutableList.of(
+        userRoleTableName,
+        permissionTableName,
+        roleTableName,
+        userTableName
+    );
   }
 
   @LifecycleStart
@@ -118,17 +118,16 @@ public abstract class SQLBasicSecurityStorageConnector
     createRoleTable();
     createPermissionTable();
     createUserRoleTable();
-    createUserCredentialsTable();
 
-    makeDefaultSuperuser(DEFAULT_ADMIN_NAME, basicAuthConfig.getInitialAdminPassword(), DEFAULT_ADMIN_ROLE);
-    makeDefaultSuperuser(DEFAULT_SYSTEM_USER_NAME, basicAuthConfig.getInitialInternalClientPassword(), DEFAULT_SYSTEM_USER_ROLE);
+    makeDefaultSuperuser(DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_ROLE);
+    makeDefaultSuperuser(DEFAULT_SYSTEM_USER_NAME, DEFAULT_SYSTEM_USER_ROLE);
   }
 
   @Override
   public void createRoleTable()
   {
     createTable(
-        ROLES,
+        roleTableName,
         ImmutableList.of(
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
@@ -136,7 +135,7 @@ public abstract class SQLBasicSecurityStorageConnector
                 + "  PRIMARY KEY (name),\n"
                 + "  UNIQUE (name)\n"
                 + ")",
-                ROLES
+                roleTableName
             )
         )
     );
@@ -146,7 +145,7 @@ public abstract class SQLBasicSecurityStorageConnector
   public void createUserTable()
   {
     createTable(
-        USERS,
+        userTableName,
         ImmutableList.of(
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
@@ -154,27 +153,7 @@ public abstract class SQLBasicSecurityStorageConnector
                 + "  PRIMARY KEY (name),\n"
                 + "  UNIQUE (name)\n"
                 + ")",
-                USERS
-            )
-        )
-    );
-  }
-
-  @Override
-  public void createUserCredentialsTable()
-  {
-    createTable(
-        USER_CREDENTIALS,
-        ImmutableList.of(
-            StringUtils.format(
-                "CREATE TABLE %1$s (\n"
-                + "  user_name VARCHAR(255) NOT NULL, \n"
-                + "  salt VARBINARY(32) NOT NULL, \n"
-                + "  hash VARBINARY(64) NOT NULL, \n"
-                + "  iterations INTEGER NOT NULL, \n"
-                + "  PRIMARY KEY (user_name) REFERENCES users(name) ON DELETE CASCADE\n"
-                + ")",
-                USER_CREDENTIALS
+                userTableName
             )
         )
     );
@@ -184,7 +163,7 @@ public abstract class SQLBasicSecurityStorageConnector
   public void createPermissionTable()
   {
     createTable(
-        PERMISSIONS,
+        permissionTableName,
         ImmutableList.of(
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
@@ -192,9 +171,10 @@ public abstract class SQLBasicSecurityStorageConnector
                 + "  resource_json VARCHAR(255) NOT NULL,\n"
                 + "  role_name INTEGER NOT NULL, \n"
                 + "  PRIMARY KEY (id),\n"
-                + "  FOREIGN KEY (role_name) REFERENCES roles(name) ON DELETE CASCADE\n"
+                + "  FOREIGN KEY (role_name) REFERENCES %2$s(name) ON DELETE CASCADE\n"
                 + ")",
-                PERMISSIONS
+                permissionTableName,
+                roleTableName
             )
         )
     );
@@ -204,45 +184,21 @@ public abstract class SQLBasicSecurityStorageConnector
   public void createUserRoleTable()
   {
     createTable(
-        USER_ROLES,
+        userRoleTableName,
         ImmutableList.of(
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
                 + "  user_name VARCHAR(255) NOT NULL,\n"
                 + "  role_name VARCHAR(255) NOT NULL, \n"
-                + "  FOREIGN KEY (user_name) REFERENCES users(name) ON DELETE CASCADE,\n"
-                + "  FOREIGN KEY (role_name) REFERENCES roles(name) ON DELETE CASCADE\n"
+                + "  FOREIGN KEY (user_name) REFERENCES %2$s(name) ON DELETE CASCADE,\n"
+                + "  FOREIGN KEY (role_name) REFERENCES %3$s(name) ON DELETE CASCADE\n"
                 + ")",
-                USER_ROLES
+                userRoleTableName,
+                userTableName,
+                roleTableName
             )
         )
     );
-  }
-
-  public MetadataStorageConnectorConfig getConfig()
-  {
-    return config.get();
-  }
-
-  protected BasicDataSource getDatasource()
-  {
-    MetadataStorageConnectorConfig connectorConfig = getConfig();
-
-    BasicDataSource dataSource = new BasicDataSource();
-    dataSource.setUsername(connectorConfig.getUser());
-    dataSource.setPassword(connectorConfig.getPassword());
-    String uri = connectorConfig.getConnectURI();
-    dataSource.setUrl(uri);
-
-    dataSource.setValidationQuery(getValidationQuery());
-    dataSource.setTestOnBorrow(true);
-
-    return dataSource;
-  }
-
-  public String getValidationQuery()
-  {
-    return "SELECT 1";
   }
 
   @Override
@@ -261,7 +217,7 @@ public abstract class SQLBasicSecurityStorageConnector
 
             handle.createStatement(
                 StringUtils.format(
-                    "INSERT INTO %1$s (name) VALUES (:user_name)", USERS
+                    "INSERT INTO %1$s (name) VALUES (:user_name)", userTableName
                 )
             )
                   .bind("user_name", userName)
@@ -287,7 +243,7 @@ public abstract class SQLBasicSecurityStorageConnector
             }
             handle.createStatement(
                 StringUtils.format(
-                    "DELETE FROM %1$s WHERE name = :userName", USERS
+                    "DELETE FROM %1$s WHERE name = :userName", userTableName
                 )
             )
                   .bind("userName", userName)
@@ -313,7 +269,7 @@ public abstract class SQLBasicSecurityStorageConnector
             }
             handle.createStatement(
                 StringUtils.format(
-                    "INSERT INTO %1$s (name) VALUES (:roleName)", ROLES
+                    "INSERT INTO %1$s (name) VALUES (:roleName)", roleTableName
                 )
             )
                   .bind("roleName", roleName)
@@ -339,7 +295,7 @@ public abstract class SQLBasicSecurityStorageConnector
             }
             handle.createStatement(
                 StringUtils.format(
-                    "DELETE FROM %1$s WHERE name = :roleName", ROLES
+                    "DELETE FROM %1$s WHERE name = :roleName", roleTableName
                 )
             )
                   .bind("roleName", roleName)
@@ -380,7 +336,7 @@ public abstract class SQLBasicSecurityStorageConnector
               handle.createStatement(
                   StringUtils.format(
                       "INSERT INTO %1$s (resource_json, role_name) VALUES (:resourceJson, :roleName)",
-                      PERMISSIONS
+                      permissionTableName
                   )
               )
                     .bind("resourceJson", serializedResourceAction)
@@ -412,7 +368,7 @@ public abstract class SQLBasicSecurityStorageConnector
             }
             handle.createStatement(
                 StringUtils.format(
-                    "DELETE FROM %1$s WHERE id = :permissionId", PERMISSIONS
+                    "DELETE FROM %1$s WHERE id = :permissionId", permissionTableName
                 )
             )
                   .bind("permissionId", permissionId)
@@ -450,7 +406,7 @@ public abstract class SQLBasicSecurityStorageConnector
 
             handle.createStatement(
                 StringUtils.format(
-                    "INSERT INTO %1$s (user_name, role_name) VALUES (:userName, :roleName)", USER_ROLES
+                    "INSERT INTO %1$s (user_name, role_name) VALUES (:userName, :roleName)", userRoleTableName
                 )
             )
                   .bind("userName", userName)
@@ -489,7 +445,7 @@ public abstract class SQLBasicSecurityStorageConnector
 
             handle.createStatement(
                 StringUtils.format(
-                    "DELETE FROM %1$s WHERE user_name = :userName AND role_name = :roleName", USER_ROLES
+                    "DELETE FROM %1$s WHERE user_name = :userName AND role_name = :roleName", userRoleTableName
                 )
             )
                   .bind("userName", userName)
@@ -514,7 +470,7 @@ public abstract class SQLBasicSecurityStorageConnector
           {
             return handle
                 .createQuery(
-                    StringUtils.format("SELECT * FROM users")
+                    StringUtils.format("SELECT * FROM %1$s", userTableName)
                 )
                 .list();
           }
@@ -534,7 +490,7 @@ public abstract class SQLBasicSecurityStorageConnector
           {
             return handle
                 .createQuery(
-                    StringUtils.format("SELECT * FROM roles")
+                    StringUtils.format("SELECT * FROM %1$s", roleTableName)
                 )
                 .list();
           }
@@ -553,7 +509,7 @@ public abstract class SQLBasicSecurityStorageConnector
           {
             return handle
                 .createQuery(
-                    StringUtils.format("SELECT * FROM users where name = :userName")
+                    StringUtils.format("SELECT * FROM %1$s where name = :userName", userTableName)
                 )
                 .bind("userName", userName)
                 .first();
@@ -573,7 +529,7 @@ public abstract class SQLBasicSecurityStorageConnector
           {
             return handle
                 .createQuery(
-                    StringUtils.format("SELECT * FROM roles where name = :roleName")
+                    StringUtils.format("SELECT * FROM %1$s where name = :roleName", roleTableName)
                 )
                 .bind("roleName", roleName)
                 .first();
@@ -600,11 +556,13 @@ public abstract class SQLBasicSecurityStorageConnector
             return handle
                 .createQuery(
                     StringUtils.format(
-                        "SELECT roles.name\n"
-                        + "FROM roles\n"
-                        + "JOIN user_roles\n"
-                        + "    ON user_roles.role_name = roles.name\n"
-                        + "WHERE user_roles.user_name = :userName"
+                        "SELECT %1$s.name\n"
+                        + "FROM %1$s\n"
+                        + "JOIN %2$s\n"
+                        + "    ON %2$s.role_name = %1$s.name\n"
+                        + "WHERE %2$s.user_name = :userName",
+                        roleTableName,
+                        userRoleTableName
                     )
                 )
                 .bind("userName", userName)
@@ -632,11 +590,13 @@ public abstract class SQLBasicSecurityStorageConnector
             return handle
                 .createQuery(
                     StringUtils.format(
-                        "SELECT users.name\n"
-                        + "FROM users\n"
-                        + "JOIN user_roles\n"
-                        + "    ON user_roles.user_name = users.name\n"
-                        + "WHERE user_roles.role_name = :roleName"
+                        "SELECT %1$s.name\n"
+                        + "FROM %1$s\n"
+                        + "JOIN %2$s\n"
+                        + "    ON %2$s.user_name = %1$s.name\n"
+                        + "WHERE %2$s.role_name = :roleName",
+                        userTableName,
+                        userRoleTableName
                     )
                 )
                 .bind("roleName", roleName)
@@ -644,6 +604,11 @@ public abstract class SQLBasicSecurityStorageConnector
           }
         }
     );
+  }
+
+  public List<String> getTableNames()
+  {
+    return tableNames;
   }
 
   private class PermissionsMapper implements ResultSetMapper<Map<String, Object>>
@@ -685,9 +650,10 @@ public abstract class SQLBasicSecurityStorageConnector
             return handle
                 .createQuery(
                     StringUtils.format(
-                        "SELECT permissions.id, permissions.resource_json\n"
-                        + "FROM permissions\n"
-                        + "WHERE permissions.role_name = :roleName"
+                        "SELECT %1$s.id, %1$s.resource_json\n"
+                        + "FROM %1$s\n"
+                        + "WHERE %1$s.role_name = :roleName",
+                        permissionTableName
                     )
                 )
                 .map(permMapper)
@@ -716,13 +682,16 @@ public abstract class SQLBasicSecurityStorageConnector
             return handle
                 .createQuery(
                     StringUtils.format(
-                        "SELECT permissions.id, permissions.resource_json, roles.name\n"
-                        + "FROM permissions\n"
-                        + "JOIN roles\n"
-                        + "    ON permissions.role_name = roles.name\n"
-                        + "JOIN user_roles\n"
-                        + "    ON user_roles.role_name = roles.name\n"
-                        + "WHERE user_roles.user_name = :userName"
+                        "SELECT %1$s.id, %1$s.resource_json, %2$s.name\n"
+                        + "FROM %1$s\n"
+                        + "JOIN %2$s\n"
+                        + "    ON %1$s.role_name = %2$s.name\n"
+                        + "JOIN %3$s\n"
+                        + "    ON %3$s.role_name = %2$s.name\n"
+                        + "WHERE %3$s.user_name = :userName",
+                        permissionTableName,
+                        roleTableName,
+                        userRoleTableName
                     )
                 )
                 .map(permMapper)
@@ -733,157 +702,42 @@ public abstract class SQLBasicSecurityStorageConnector
     );
   }
 
-  private static class UserCredentialsMapper implements ResultSetMapper<Map<String, Object>>
+  public MetadataStorageConnectorConfig getConfig()
   {
-    @Override
-    public Map<String, Object> map(int index, ResultSet resultSet, StatementContext context)
-        throws SQLException
-    {
-      String user_name = resultSet.getString("user_name");
-      byte[] salt = resultSet.getBytes("salt");
-      byte[] hash = resultSet.getBytes("hash");
-      int iterations = resultSet.getInt("iterations");
-      return ImmutableMap.of(
-          "user_name", user_name,
-          "salt", salt,
-          "hash", hash,
-          "iterations", iterations
-      );
-    }
+    return config.get();
   }
 
-  @Override
-  public Map<String, Object> getUserCredentials(String userName)
+  public String getValidationQuery()
   {
-    return getDBI().inTransaction(
-        new TransactionCallback<Map<String, Object>>()
-        {
-          @Override
-          public Map<String, Object> inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
-          {
-            int userCount = getUserCount(handle, userName);
-            if (userCount == 0) {
-              throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
-            }
-
-            return handle
-                .createQuery(
-                    StringUtils.format("SELECT * FROM %1$s where user_name = :userName", USER_CREDENTIALS)
-                )
-                .map(credsMapper)
-                .bind("userName", userName)
-                .first();
-          }
-        }
-    );
+    return "SELECT 1";
   }
 
-  @Override
-  public void setUserCredentials(String userName, char[] password)
+  protected BasicDataSource getDatasource()
   {
-    getDBI().inTransaction(
-        new TransactionCallback<Void>()
-        {
-          @Override
-          public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
-          {
-            int userCount = getUserCount(handle, userName);
-            if (userCount == 0) {
-              throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
-            }
+    MetadataStorageConnectorConfig connectorConfig = getConfig();
 
-            Map<String, Object> existingMapping = handle
-                .createQuery(
-                    StringUtils.format(
-                        "SELECT user_name FROM %1$s WHERE user_name = :userName",
-                        USER_CREDENTIALS
-                    )
-                )
-                .bind("userName", userName)
-                .first();
+    BasicDataSource dataSource = new BasicDataSource();
+    dataSource.setUsername(connectorConfig.getUser());
+    dataSource.setPassword(connectorConfig.getPassword());
+    String uri = connectorConfig.getConnectURI();
+    dataSource.setUrl(uri);
 
-            int iterations = BasicAuthUtils.KEY_ITERATIONS;
-            byte[] salt = BasicAuthUtils.generateSalt();
-            byte[] hash = BasicAuthUtils.hashPassword(password, salt, iterations);
+    dataSource.setValidationQuery(getValidationQuery());
+    dataSource.setTestOnBorrow(true);
 
-            if (existingMapping == null) {
-              handle.createStatement(
-                  StringUtils.format(
-                      "INSERT INTO %1$s (user_name, salt, hash, iterations) " +
-                      "VALUES (:userName, :salt, :hash, :iterations)",
-                      USER_CREDENTIALS
-                  )
-              )
-                    .bind("userName", userName)
-                    .bind("salt", salt)
-                    .bind("hash", hash)
-                    .bind("iterations", iterations)
-                    .execute();
-            } else {
-              handle.createStatement(
-                  StringUtils.format(
-                      "UPDATE %1$s SET " +
-                      "salt = :salt, " +
-                      "hash = :hash, " +
-                      "iterations = :iterations " +
-                      "WHERE user_name = :userName",
-                      USER_CREDENTIALS
-                  )
-              )
-                    .bind("userName", userName)
-                    .bind("salt", salt)
-                    .bind("hash", hash)
-                    .bind("iterations", iterations)
-                    .execute();
-            }
-
-            return null;
-          }
-        }
-    );
+    return dataSource;
   }
 
-  @Override
-  public boolean checkCredentials(String userName, char[] password)
+  protected String getPrefixedTableName(String baseTableName)
   {
-    return getDBI().inTransaction(
-        new TransactionCallback<Boolean>()
-        {
-          @Override
-          public Boolean inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
-          {
-            Map<String, Object> credentials = handle
-                .createQuery(
-                    StringUtils.format(
-                        "SELECT * FROM %1$s WHERE user_name = :userName",
-                        USER_CREDENTIALS
-                    )
-                )
-                .bind("userName", userName)
-                .map(credsMapper)
-                .first();
-
-            if (credentials == null) {
-              return false;
-            }
-
-            byte[] dbSalt = (byte[]) credentials.get("salt");
-            byte[] dbHash = (byte[]) credentials.get("hash");
-            int iterations = (int) credentials.get("iterations");
-
-            byte[] hash = BasicAuthUtils.hashPassword(password, dbSalt, iterations);
-
-            return Arrays.equals(dbHash, hash);
-          }
-        }
-    );
+    return StringUtils.format("basic_authorization_%s_%s", dbConfigSupplier.get().getDbPrefix(), baseTableName);
   }
 
   private int getUserCount(Handle handle, String userName)
   {
     return handle
         .createQuery(
-            StringUtils.format("SELECT COUNT(*) FROM %1$s WHERE %2$s = :key", USERS, "name")
+            StringUtils.format("SELECT COUNT(*) FROM %1$s WHERE %2$s = :key", userTableName, "name")
         )
         .bind("key", userName)
         .map(IntegerMapper.FIRST)
@@ -894,7 +748,7 @@ public abstract class SQLBasicSecurityStorageConnector
   {
     return handle
         .createQuery(
-            StringUtils.format("SELECT COUNT(*) FROM %1$s WHERE %2$s = :key", ROLES, "name")
+            StringUtils.format("SELECT COUNT(*) FROM %1$s WHERE %2$s = :key", roleTableName, "name")
         )
         .bind("key", roleName)
         .map(IntegerMapper.FIRST)
@@ -905,7 +759,7 @@ public abstract class SQLBasicSecurityStorageConnector
   {
     return handle
         .createQuery(
-            StringUtils.format("SELECT COUNT(*) FROM %1$s WHERE %2$s = :key", PERMISSIONS, "id")
+            StringUtils.format("SELECT COUNT(*) FROM %1$s WHERE %2$s = :key", permissionTableName, "id")
         )
         .bind("key", permissionId)
         .map(IntegerMapper.FIRST)
@@ -917,7 +771,7 @@ public abstract class SQLBasicSecurityStorageConnector
     return handle
         .createQuery(
             StringUtils.format("SELECT COUNT(*) FROM %1$s WHERE %2$s = :userkey AND %3$s = :rolekey",
-                               USER_ROLES,
+                               userRoleTableName,
                                "user_name",
                                "role_name"
             )
@@ -928,7 +782,7 @@ public abstract class SQLBasicSecurityStorageConnector
         .first();
   }
 
-  private void makeDefaultSuperuser(String username, String password, String role)
+  private void makeDefaultSuperuser(String username, String role)
   {
     if (getUser(username) != null) {
       return;
@@ -973,7 +827,5 @@ public abstract class SQLBasicSecurityStorageConnector
     for (ResourceAction resAct : resActs) {
       addPermission(role, resAct);
     }
-
-    setUserCredentials(username, password.toCharArray());
   }
 }

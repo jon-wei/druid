@@ -17,31 +17,28 @@
  * under the License.
  */
 
-package io.druid.server.security;
+package io.druid.security.basic.db;
 
-import io.druid.guice.ManageLifecycle;
-
+import java.util.List;
 import java.util.Map;
 
-@ManageLifecycle
-public class AuthorizerMapper
+public interface BasicAuthenticatorStorageConnector
 {
-  private Map<String, Authorizer> authorizerMap;
+  void createUser(String userName);
 
-  public AuthorizerMapper(
-      Map<String, Authorizer> authorizerMap
-  )
-  {
-    this.authorizerMap = authorizerMap;
-  }
+  void deleteUser(String userName);
 
-  public Authorizer getAuthorizer(String name)
-  {
-    return authorizerMap.get(name);
-  }
+  List<Map<String, Object>> getAllUsers();
 
-  public Map<String, Authorizer> getAuthorizerMap()
-  {
-    return authorizerMap;
-  }
+  Map<String, Object> getUser(String userName);
+
+  void setUserCredentials(String userName, char[] password);
+
+  boolean checkCredentials(String userName, char[] password);
+
+  Map<String, Object> getUserCredentials(String userName);
+
+  void createUserTable();
+
+  void createUserCredentialsTable();
 }

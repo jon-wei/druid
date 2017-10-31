@@ -21,11 +21,23 @@ package io.druid.security.basic.authorization;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
+import com.google.inject.Binder;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.Module;
+import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.annotations.Self;
 import io.druid.java.util.common.IAE;
 import io.druid.security.basic.BasicAuthConfig;
+import io.druid.security.basic.db.BasicAuthDBConfig;
+import io.druid.security.basic.db.BasicAuthenticatorStorageConnector;
+import io.druid.security.basic.db.BasicAuthorizerStorageConnector;
 import io.druid.security.basic.db.BasicSecurityStorageConnector;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
@@ -42,18 +54,55 @@ import java.util.regex.Pattern;
 @JsonTypeName("basic")
 public class BasicRoleBasedAuthorizer implements Authorizer
 {
-  private final BasicSecurityStorageConnector dbConnector;
+  private static final int DEFAULT_PERMISSION_CACHE_SIZE = 5000;
+  private final BasicAuthorizerStorageConnector dbConnector;
   private final LoadingCache<String, Pattern> permissionPatternCache;
+  private final int permissionCacheSize;
 
   @JsonCreator
   public BasicRoleBasedAuthorizer(
-      @JacksonInject BasicSecurityStorageConnector dbConnector,
-      @JacksonInject BasicAuthConfig authConfig
+      @JacksonInject Injector injector,
+      @JsonProperty("dbPrefix") String dbPrefix,
+      @JsonProperty("permissionCacheSize") Integer permissionCacheSize
+  )
+  {
+    Injector childInjector = injector.createChildInjector(
+        ImmutableList.<Module>of(
+            new Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                JsonConfigProvider.bindInstance(
+                    binder,
+                    Key.get(BasicAuthDBConfig.class, Self.class),
+                    new BasicAuthDBConfig(dbPrefix, null, null)
+                );
+              }
+            }
+        )
+    );
+
+    this.dbConnector = childInjector.getInstance(BasicAuthorizerStorageConnector.class);
+
+    this.permissionCacheSize = permissionCacheSize == null ? DEFAULT_PERMISSION_CACHE_SIZE : permissionCacheSize;
+    this.permissionPatternCache = Caffeine.newBuilder()
+                                          .maximumSize(this.permissionCacheSize)
+                                          .build(regexStr -> Pattern.compile(regexStr));
+  }
+
+  /**
+   * constructor for unit tests
+   */
+  public BasicRoleBasedAuthorizer(
+      BasicAuthorizerStorageConnector dbConnector,
+      int permissionCacheSize
   )
   {
     this.dbConnector = dbConnector;
+    this.permissionCacheSize = permissionCacheSize;
     this.permissionPatternCache = Caffeine.newBuilder()
-                                          .maximumSize(authConfig.getPermissionCacheSize())
+                                          .maximumSize(this.permissionCacheSize)
                                           .build(regexStr -> Pattern.compile(regexStr));
   }
 
@@ -77,6 +126,11 @@ public class BasicRoleBasedAuthorizer implements Authorizer
     return new Access(false);
   }
 
+  public BasicAuthorizerStorageConnector getDbConnector()
+  {
+    return dbConnector;
+  }
+
   private boolean permissionCheck(Resource resource, Action action, Map<String, Object> permission)
   {
     ResourceAction permissionResourceAction = (ResourceAction) permission.get("resourceAction");
@@ -94,5 +148,10 @@ public class BasicRoleBasedAuthorizer implements Authorizer
     Pattern resourceNamePattern = permissionPatternCache.get(permissionResourceName);
     Matcher resourceNameMatcher = resourceNamePattern.matcher(resource.getName());
     return resourceNameMatcher.matches();
+  }
+
+  public int getPermissionCacheSize()
+  {
+    return permissionCacheSize;
   }
 }

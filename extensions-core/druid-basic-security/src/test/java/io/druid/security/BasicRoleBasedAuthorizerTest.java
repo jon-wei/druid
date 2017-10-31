@@ -23,6 +23,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.security.basic.BasicAuthConfig;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import io.druid.security.basic.db.SQLBasicSecurityStorageConnector;
+import io.druid.security.db.TestDerbyAuthorizerStorageConnector;
 import io.druid.security.db.TestDerbySecurityConnector;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
@@ -41,27 +42,18 @@ import org.skife.jdbi.v2.tweak.HandleCallback;
 public class BasicRoleBasedAuthorizerTest
 {
   @Rule
-  public final TestDerbySecurityConnector.DerbyConnectorRule derbyConnectorRule =
-      new TestDerbySecurityConnector.DerbyConnectorRule();
+  public final TestDerbyAuthorizerStorageConnector.DerbyConnectorRule derbyConnectorRule =
+      new TestDerbyAuthorizerStorageConnector.DerbyConnectorRule("test");
 
   private BasicRoleBasedAuthorizer authorizer;
-  private TestDerbySecurityConnector connector;
-  private BasicAuthConfig authConfig;
+  private TestDerbyAuthorizerStorageConnector connector;
 
   @Before
   public void setUp() throws Exception
   {
     connector = derbyConnectorRule.getConnector();
     createAllTables();
-    authConfig = new BasicAuthConfig() {
-
-      @Override
-      public int getPermissionCacheSize()
-      {
-        return 500;
-      }
-    };
-    authorizer = new BasicRoleBasedAuthorizer(connector, authConfig);
+    authorizer = new BasicRoleBasedAuthorizer(connector, 5000);
   }
 
   @Test
@@ -94,7 +86,6 @@ public class BasicRoleBasedAuthorizerTest
     Assert.assertFalse(access.isAllowed());
   }
 
-
   @Test
   public void testMorePermissionsThanCacheSize()
   {
@@ -102,7 +93,7 @@ public class BasicRoleBasedAuthorizerTest
     connector.createRole("druidRole");
     connector.assignRole("druid", "druidRole");
 
-    for (int i = 0; i < authConfig.getPermissionCacheSize() + 50; i++) {
+    for (int i = 0; i < authorizer.getPermissionCacheSize() + 50; i++) {
       ResourceAction permission = new ResourceAction(
           new Resource("testResource-" + i, ResourceType.DATASOURCE),
           Action.WRITE
@@ -139,12 +130,11 @@ public class BasicRoleBasedAuthorizerTest
     connector.createRoleTable();
     connector.createPermissionTable();
     connector.createUserRoleTable();
-    connector.createUserCredentialsTable();
   }
 
   private void dropAllTables()
   {
-    for (String table : SQLBasicSecurityStorageConnector.TABLE_NAMES) {
+    for (String table : connector.getTableNames()) {
       dropTable(table);
     }
   }
