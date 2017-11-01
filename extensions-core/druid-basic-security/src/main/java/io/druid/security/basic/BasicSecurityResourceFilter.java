@@ -38,7 +38,7 @@ import java.util.List;
 public class BasicSecurityResourceFilter extends AbstractResourceFilter
 {
   private static final List<String> applicablePaths = ImmutableList.of(
-      "druid/coordinator/v1/security/"
+      "druid/coordinator/v1/security/*"
   );
 
   @Inject

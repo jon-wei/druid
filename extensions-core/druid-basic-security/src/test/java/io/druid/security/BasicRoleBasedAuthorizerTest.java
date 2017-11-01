@@ -20,11 +20,8 @@
 package io.druid.security;
 
 import io.druid.java.util.common.StringUtils;
-import io.druid.security.basic.BasicAuthConfig;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
-import io.druid.security.basic.db.SQLBasicSecurityStorageConnector;
 import io.druid.security.db.TestDerbyAuthorizerStorageConnector;
-import io.druid.security.db.TestDerbySecurityConnector;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthenticationResult;
