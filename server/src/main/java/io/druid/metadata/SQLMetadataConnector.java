@@ -36,6 +36,7 @@ import org.skife.jdbi.v2.util.IntegerMapper;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.List;
 
 public abstract class SQLMetadataConnector extends BaseSQLMetadataConnector implements MetadataStorageConnector
@@ -337,6 +338,61 @@ public abstract class SQLMetadataConnector extends BaseSQLMetadataConnector impl
                     .execute();
             }
             return null;
+          }
+        }
+    );
+  }
+
+  @Override
+  public boolean compareAndSwap(
+      final String tableName,
+      final String keyColumn,
+      final String valueColumn,
+      final String key,
+      final byte[] oldValue,
+      final byte[] newValue
+  ) throws Exception
+  {
+    return getDBI().inTransaction(
+        new TransactionCallback<Boolean>()
+        {
+          @Override
+          public Boolean inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
+          {
+            byte[] currentValue = handle
+                .createQuery(
+                    StringUtils.format("SELECT %1$s FROM %2$s WHERE %3$s = :key", valueColumn, tableName, keyColumn)
+                )
+                .bind("key", key)
+                .map(ByteArrayMapper.FIRST)
+                .first();
+
+            if (currentValue != null && !Arrays.equals(currentValue, oldValue)) {
+              return false;
+            }
+
+            if (currentValue == null) {
+              handle.createStatement(
+                  StringUtils.format(
+                      "INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value)",
+                      tableName, keyColumn, valueColumn
+                  )
+              )
+                    .bind("key", key)
+                    .bind("value", newValue)
+                    .execute();
+            } else {
+              handle.createStatement(
+                  StringUtils.format(
+                      "UPDATE %1$s SET %3$s=:value WHERE %2$s=:key",
+                      tableName, keyColumn, valueColumn
+                  )
+              )
+                    .bind("key", key)
+                    .bind("value", newValue)
+                    .execute();
+            }
+            return true;
           }
         }
     );

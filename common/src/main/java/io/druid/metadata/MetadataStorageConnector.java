@@ -38,6 +38,21 @@ public interface MetadataStorageConnector
       String key
   );
 
+  /**
+   * Atomic compare-and-swap variant of insertOrUpdate()
+   */
+  default boolean compareAndSwap(
+      String tableName,
+      String keyColumn,
+      String valueColumn,
+      String key,
+      byte[] oldValue,
+      byte[] newValue
+  ) throws Exception
+  {
+    throw new UnsupportedOperationException("compareAndSwap is not implemented.");
+  }
+
   void createDataSourceTable();
 
   void createPendingSegmentsTable();
