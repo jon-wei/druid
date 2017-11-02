@@ -110,7 +110,7 @@ public abstract class SQLBasicAuthorizerStorageConnector
         BasicRoleBasedAuthorizer basicRoleBasedAuthorizer = (BasicRoleBasedAuthorizer) authorizer;
         BasicAuthDBConfig dbConfig = basicRoleBasedAuthorizer.getDbConfig();
 
-        getDBI().inTransaction(
+        retryTransaction(
             new TransactionCallback<Void>()
             {
               @Override
@@ -139,7 +139,9 @@ public abstract class SQLBasicAuthorizerStorageConnector
 
                 return null;
               }
-            }
+            },
+            3,
+            10
         );
       }
     }

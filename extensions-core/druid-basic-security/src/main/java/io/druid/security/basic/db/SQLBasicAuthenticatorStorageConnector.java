@@ -98,7 +98,7 @@ public abstract class SQLBasicAuthenticatorStorageConnector
         BasicHTTPAuthenticator basicHTTPAuthenticator = (BasicHTTPAuthenticator) authenticator;
         BasicAuthDBConfig dbConfig = basicHTTPAuthenticator.getDbConfig();
 
-        getDBI().inTransaction(
+        retryTransaction(
             new TransactionCallback<Void>()
             {
               @Override
@@ -125,7 +125,9 @@ public abstract class SQLBasicAuthenticatorStorageConnector
 
                 return null;
               }
-            }
+            },
+            3,
+            10
         );
       }
     }
