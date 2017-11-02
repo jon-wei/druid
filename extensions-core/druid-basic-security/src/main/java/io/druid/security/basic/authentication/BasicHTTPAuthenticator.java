@@ -70,6 +70,7 @@ public class BasicHTTPAuthenticator implements Authenticator
   private final String internalClientUsername;
   private final String internalClientPassword;
   private final String authorizerName;
+  private final BasicAuthDBConfig dbConfig;
 
   @JsonCreator
   public BasicHTTPAuthenticator(
@@ -85,7 +86,7 @@ public class BasicHTTPAuthenticator implements Authenticator
     this.internalClientUsername = internalClientUsername;
     this.internalClientPassword = internalClientPassword;
     this.authorizerName = authorizerName;
-    BasicAuthDBConfig dbConfig = new BasicAuthDBConfig(dbPrefix, initialAdminPassword, initialInternalClientPassword);
+    this.dbConfig = new BasicAuthDBConfig(dbPrefix, initialAdminPassword, initialInternalClientPassword);
 
     Injector childInjector = injector.createChildInjector(
         ImmutableList.<Module>of(
@@ -121,6 +122,7 @@ public class BasicHTTPAuthenticator implements Authenticator
     this.internalClientUsername = internalClientUsername;
     this.internalClientPassword = internalClientPassword;
     this.authorizerName = authorizerName;
+    this.dbConfig = new BasicAuthDBConfig(null, null, null);
   }
 
   @Override
@@ -146,7 +148,7 @@ public class BasicHTTPAuthenticator implements Authenticator
       return null;
     }
 
-    if (dbConnector.checkCredentials(user, password.toCharArray())) {
+    if (dbConnector.checkCredentials(dbConfig.getDbPrefix(), user, password.toCharArray())) {
       return new AuthenticationResult(user, authorizerName, null);
     } else {
       return null;
@@ -239,6 +241,16 @@ public class BasicHTTPAuthenticator implements Authenticator
     return dbConnector;
   }
 
+  public BasicAuthDBConfig getDbConfig()
+  {
+    return dbConfig;
+  }
+
+  public String getDBPrefix()
+  {
+    return dbConfig.getDbPrefix();
+  }
+
   public class BasicHTTPAuthenticationFilter implements Filter
   {
     @Override
@@ -269,7 +281,7 @@ public class BasicHTTPAuthenticator implements Authenticator
       String user = splits[0];
       char[] password = splits[1].toCharArray();
 
-      if (dbConnector.checkCredentials(user, password)) {
+      if (dbConnector.checkCredentials(dbConfig.getDbPrefix(), user, password)) {
         AuthenticationResult authenticationResult = new AuthenticationResult(user, authorizerName, null);
         servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
         filterChain.doFilter(servletRequest, servletResponse);

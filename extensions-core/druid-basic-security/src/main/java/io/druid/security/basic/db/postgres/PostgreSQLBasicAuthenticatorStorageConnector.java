@@ -27,6 +27,7 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.security.basic.db.BasicAuthDBConfig;
 import io.druid.security.basic.db.SQLBasicAuthenticatorStorageConnector;
+import io.druid.server.security.AuthenticatorMapper;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
@@ -41,10 +42,10 @@ public class PostgreSQLBasicAuthenticatorStorageConnector extends SQLBasicAuthen
   @Inject
   public PostgreSQLBasicAuthenticatorStorageConnector(
       Supplier<MetadataStorageConnectorConfig> config,
-      Supplier<BasicAuthDBConfig> dbConfigSupplier
+      AuthenticatorMapper authenticatorMapper
   )
   {
-    super(config, dbConfigSupplier);
+    super(config, authenticatorMapper);
 
     final BasicDataSource datasource = getDatasource();
     // PostgreSQL driver is classloader isolated as part of the extension
@@ -76,8 +77,11 @@ public class PostgreSQLBasicAuthenticatorStorageConnector extends SQLBasicAuthen
   }
 
   @Override
-  public void createUserCredentialsTable()
+  public void createUserCredentialsTable(String dbPrefix)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+    final String credentialsTableName = getPrefixedTableName(dbPrefix, USER_CREDENTIALS);
+
     createTable(
         credentialsTableName,
         ImmutableList.of(

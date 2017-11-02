@@ -51,19 +51,23 @@ import java.util.Map;
 @Path("/druid/coordinator/v1/security/authorization")
 public class BasicAuthorizerResource
 {
-  private final Map<String, BasicAuthorizerStorageConnector> dbConnectors;
+  private final BasicAuthorizerStorageConnector dbConnector;
+  private final Map<String, BasicRoleBasedAuthorizer> authorizerMap;
 
   @Inject
   public BasicAuthorizerResource(
+      BasicAuthorizerStorageConnector dbConnector,
       AuthorizerMapper authorizerMapper
   )
   {
-    this.dbConnectors = Maps.newHashMap();
+    this.dbConnector = dbConnector;
+    this.authorizerMap = Maps.newHashMap();
+
     for (Map.Entry<String, Authorizer> authorizerEntry : authorizerMapper.getAuthorizerMap().entrySet()) {
       final String authorizerName = authorizerEntry.getKey();
       final Authorizer authorizer = authorizerEntry.getValue();
       if (authorizer instanceof BasicRoleBasedAuthorizer) {
-        dbConnectors.put(authorizerName, ((BasicRoleBasedAuthorizer) authorizer).getDbConnector());
+        authorizerMap.put(authorizerName, ((BasicRoleBasedAuthorizer) authorizer));
       }
     }
   }
@@ -83,12 +87,12 @@ public class BasicAuthorizerResource
       @PathParam("authorizerName") final String authorizerName
   )
   {
-    final BasicAuthorizerStorageConnector dbConnector = dbConnectors.get(authorizerName);
-    if (dbConnector == null) {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
       return makeResponseForAuthorizerNotFound(authorizerName);
     }
 
-    List<Map<String, Object>> users = dbConnector.getAllUsers();
+    List<Map<String, Object>> users = dbConnector.getAllUsers(authorizer.getDBPrefix());
     return Response.ok(users).build();
   }
 
@@ -109,15 +113,15 @@ public class BasicAuthorizerResource
       @PathParam("userName") final String userName
   )
   {
-    final BasicAuthorizerStorageConnector dbConnector = dbConnectors.get(authorizerName);
-    if (dbConnector == null) {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
       return makeResponseForAuthorizerNotFound(authorizerName);
     }
 
     try {
-      Map<String, Object> user = dbConnector.getUser(userName);
-      List<Map<String, Object>> roles = dbConnector.getRolesForUser(userName);
-      List<Map<String, Object>> permissions = dbConnector.getPermissionsForUser(userName);
+      Map<String, Object> user = dbConnector.getUser(authorizer.getDBPrefix(), userName);
+      List<Map<String, Object>> roles = dbConnector.getRolesForUser(authorizer.getDBPrefix(), userName);
+      List<Map<String, Object>> permissions = dbConnector.getPermissionsForUser(authorizer.getDBPrefix(), userName);
 
       Map<String, Object> userInfo = ImmutableMap.of(
           "user", user,
@@ -151,13 +155,13 @@ public class BasicAuthorizerResource
       @PathParam("userName") String userName
   )
   {
-    final BasicAuthorizerStorageConnector dbConnector = dbConnectors.get(authorizerName);
-    if (dbConnector == null) {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
       return makeResponseForAuthorizerNotFound(authorizerName);
     }
 
     try {
-      dbConnector.createUser(userName);
+      dbConnector.createUser(authorizer.getDBPrefix(), userName);
       return Response.ok().build();
     }
     catch (CallbackFailedException cfe) {
@@ -184,13 +188,13 @@ public class BasicAuthorizerResource
       @PathParam("userName") String userName
   )
   {
-    final BasicAuthorizerStorageConnector dbConnector = dbConnectors.get(authorizerName);
-    if (dbConnector == null) {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
       return makeResponseForAuthorizerNotFound(authorizerName);
     }
 
     try {
-      dbConnector.deleteUser(userName);
+      dbConnector.deleteUser(authorizer.getDBPrefix(), userName);
       return Response.ok().build();
     }
     catch (CallbackFailedException cfe) {
@@ -213,12 +217,12 @@ public class BasicAuthorizerResource
       @PathParam("authorizerName") final String authorizerName
   )
   {
-    final BasicAuthorizerStorageConnector dbConnector = dbConnectors.get(authorizerName);
-    if (dbConnector == null) {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
       return makeResponseForAuthorizerNotFound(authorizerName);
     }
 
-    List<Map<String, Object>> roles = dbConnector.getAllRoles();
+    List<Map<String, Object>> roles = dbConnector.getAllRoles(authorizer.getDBPrefix());
     return Response.ok(roles).build();
   }
 
@@ -241,15 +245,15 @@ public class BasicAuthorizerResource
       @PathParam("roleName") final String roleName
   )
   {
-    final BasicAuthorizerStorageConnector dbConnector = dbConnectors.get(authorizerName);
-    if (dbConnector == null) {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
       return makeResponseForAuthorizerNotFound(authorizerName);
     }
 
     try {
-      Map<String, Object> role = dbConnector.getRole(roleName);
-      List<Map<String, Object>> users = dbConnector.getUsersWithRole(roleName);
-      List<Map<String, Object>> permissions = dbConnector.getPermissionsForRole(roleName);
+      Map<String, Object> role = dbConnector.getRole(authorizer.getDBPrefix(), roleName);
+      List<Map<String, Object>> users = dbConnector.getUsersWithRole(authorizer.getDBPrefix(), roleName);
+      List<Map<String, Object>> permissions = dbConnector.getPermissionsForRole(authorizer.getDBPrefix(), roleName);
 
       Map<String, Object> roleInfo = ImmutableMap.of(
           "role", role,
@@ -283,13 +287,13 @@ public class BasicAuthorizerResource
       @PathParam("roleName") final String roleName
   )
   {
-    final BasicAuthorizerStorageConnector dbConnector = dbConnectors.get(authorizerName);
-    if (dbConnector == null) {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
       return makeResponseForAuthorizerNotFound(authorizerName);
     }
 
     try {
-      dbConnector.createRole(roleName);
+      dbConnector.createRole(authorizer.getDBPrefix(), roleName);
       return Response.ok().build();
     }
     catch (CallbackFailedException cfe) {
@@ -316,13 +320,13 @@ public class BasicAuthorizerResource
       @PathParam("roleName") String roleName
   )
   {
-    final BasicAuthorizerStorageConnector dbConnector = dbConnectors.get(authorizerName);
-    if (dbConnector == null) {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
       return makeResponseForAuthorizerNotFound(authorizerName);
     }
 
     try {
-      dbConnector.deleteRole(roleName);
+      dbConnector.deleteRole(authorizer.getDBPrefix(), roleName);
       return Response.ok().build();
     }
     catch (CallbackFailedException cfe) {
@@ -351,13 +355,13 @@ public class BasicAuthorizerResource
       @PathParam("roleName") String roleName
   )
   {
-    final BasicAuthorizerStorageConnector dbConnector = dbConnectors.get(authorizerName);
-    if (dbConnector == null) {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
       return makeResponseForAuthorizerNotFound(authorizerName);
     }
 
     try {
-      dbConnector.assignRole(userName, roleName);
+      dbConnector.assignRole(authorizer.getDBPrefix(), userName, roleName);
       return Response.ok().build();
     }
     catch (CallbackFailedException cfe) {
@@ -386,13 +390,13 @@ public class BasicAuthorizerResource
       @PathParam("roleName") String roleName
   )
   {
-    final BasicAuthorizerStorageConnector dbConnector = dbConnectors.get(authorizerName);
-    if (dbConnector == null) {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
       return makeResponseForAuthorizerNotFound(authorizerName);
     }
 
     try {
-      dbConnector.unassignRole(userName, roleName);
+      dbConnector.unassignRole(authorizer.getDBPrefix(), userName, roleName);
       return Response.ok().build();
     }
     catch (CallbackFailedException cfe) {
@@ -421,14 +425,14 @@ public class BasicAuthorizerResource
       List<ResourceAction> resourceActions
   )
   {
-    final BasicAuthorizerStorageConnector dbConnector = dbConnectors.get(authorizerName);
-    if (dbConnector == null) {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
       return makeResponseForAuthorizerNotFound(authorizerName);
     }
 
     try {
       for (ResourceAction resourceAction : resourceActions) {
-        dbConnector.addPermission(roleName, resourceAction);
+        dbConnector.addPermission(authorizer.getDBPrefix(), roleName, resourceAction);
       }
 
       return Response.ok().build();
@@ -457,13 +461,13 @@ public class BasicAuthorizerResource
       @PathParam("permId") Integer permId
   )
   {
-    final BasicAuthorizerStorageConnector dbConnector = dbConnectors.get(authorizerName);
-    if (dbConnector == null) {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
       return makeResponseForAuthorizerNotFound(authorizerName);
     }
 
     try {
-      dbConnector.deletePermission(permId);
+      dbConnector.deletePermission(authorizer.getDBPrefix(), permId);
       return Response.ok().build();
     }
     catch (CallbackFailedException cfe) {

@@ -41,12 +41,14 @@ import java.util.Map;
 
 public class SQLBasicAuthorizerStorageConnectorTest
 {
+  private final String TEST_DB_PREFIX = "test";
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
   @Rule
   public final TestDerbyAuthorizerStorageConnector.DerbyConnectorRule authorizerRule =
-      new TestDerbyAuthorizerStorageConnector.DerbyConnectorRule("test");
+      new TestDerbyAuthorizerStorageConnector.DerbyConnectorRule(TEST_DB_PREFIX);
 
   private TestDerbyAuthorizerStorageConnector authorizerConnector;
 
@@ -72,7 +74,7 @@ public class SQLBasicAuthorizerStorageConnectorTest
           @Override
           public Void withHandle(Handle handle) throws Exception
           {
-            for (String table : authorizerConnector.getTableNames()) {
+            for (String table : authorizerConnector.getTableNames(TEST_DB_PREFIX)) {
               Assert.assertTrue(
                   StringUtils.format("authorization table %s was not created!", table),
                   authorizerConnector.tableExists(handle, table)
@@ -89,15 +91,15 @@ public class SQLBasicAuthorizerStorageConnectorTest
   @Test
   public void testCreateDeleteUser() throws Exception
   {
-    authorizerConnector.createUser("druid");
+    authorizerConnector.createUser(TEST_DB_PREFIX, "druid");
     Map<String, Object> expectedUser = ImmutableMap.of(
         "name", "druid"
     );
-    Map<String, Object> dbUser = authorizerConnector.getUser("druid");
+    Map<String, Object> dbUser = authorizerConnector.getUser(TEST_DB_PREFIX, "druid");
     Assert.assertEquals(expectedUser, dbUser);
 
-    authorizerConnector.deleteUser("druid");
-    dbUser = authorizerConnector.getUser("druid");
+    authorizerConnector.deleteUser(TEST_DB_PREFIX, "druid");
+    dbUser = authorizerConnector.getUser(TEST_DB_PREFIX, "druid");
     Assert.assertEquals(null, dbUser);
   }
 
@@ -106,7 +108,7 @@ public class SQLBasicAuthorizerStorageConnectorTest
   {
     expectedException.expect(CallbackFailedException.class);
     expectedException.expectMessage("User [druid] does not exist.");
-    authorizerConnector.deleteUser("druid");
+    authorizerConnector.deleteUser(TEST_DB_PREFIX, "druid");
   }
 
   @Test
@@ -114,19 +116,19 @@ public class SQLBasicAuthorizerStorageConnectorTest
   {
     expectedException.expect(CallbackFailedException.class);
     expectedException.expectMessage("User [druid] already exists.");
-    authorizerConnector.createUser("druid");
-    authorizerConnector.createUser("druid");
+    authorizerConnector.createUser(TEST_DB_PREFIX, "druid");
+    authorizerConnector.createUser(TEST_DB_PREFIX, "druid");
   }
 
   // role tests
   @Test
   public void testCreateRole() throws Exception
   {
-    authorizerConnector.createRole("druid");
+    authorizerConnector.createRole(TEST_DB_PREFIX, "druid");
     Map<String, Object> expectedRole = ImmutableMap.of(
         "name", "druid"
     );
-    Map<String, Object> dbRole = authorizerConnector.getRole("druid");
+    Map<String, Object> dbRole = authorizerConnector.getRole(TEST_DB_PREFIX, "druid");
     Assert.assertEquals(expectedRole, dbRole);
   }
 
@@ -135,7 +137,7 @@ public class SQLBasicAuthorizerStorageConnectorTest
   {
     expectedException.expect(CallbackFailedException.class);
     expectedException.expectMessage("Role [druid] does not exist.");
-    authorizerConnector.deleteRole("druid");
+    authorizerConnector.deleteRole(TEST_DB_PREFIX, "druid");
   }
 
   @Test
@@ -143,17 +145,17 @@ public class SQLBasicAuthorizerStorageConnectorTest
   {
     expectedException.expect(CallbackFailedException.class);
     expectedException.expectMessage("Role [druid] already exists.");
-    authorizerConnector.createRole("druid");
-    authorizerConnector.createRole("druid");
+    authorizerConnector.createRole(TEST_DB_PREFIX, "druid");
+    authorizerConnector.createRole(TEST_DB_PREFIX, "druid");
   }
 
   // role and user tests
   @Test
   public void testAddAndRemoveRole() throws Exception
   {
-    authorizerConnector.createUser("druid");
-    authorizerConnector.createRole("druidRole");
-    authorizerConnector.assignRole("druid", "druidRole");
+    authorizerConnector.createUser(TEST_DB_PREFIX, "druid");
+    authorizerConnector.createRole(TEST_DB_PREFIX, "druidRole");
+    authorizerConnector.assignRole(TEST_DB_PREFIX, "druid", "druidRole");
 
     List<Map<String, Object>> expectedUsersWithRole = ImmutableList.of(
         ImmutableMap.of("name", "druid")
@@ -163,15 +165,15 @@ public class SQLBasicAuthorizerStorageConnectorTest
         ImmutableMap.of("name", "druidRole")
     );
 
-    List<Map<String, Object>> usersWithRole = authorizerConnector.getUsersWithRole("druidRole");
-    List<Map<String, Object>> rolesForUser = authorizerConnector.getRolesForUser("druid");
+    List<Map<String, Object>> usersWithRole = authorizerConnector.getUsersWithRole(TEST_DB_PREFIX, "druidRole");
+    List<Map<String, Object>> rolesForUser = authorizerConnector.getRolesForUser(TEST_DB_PREFIX, "druid");
 
     Assert.assertEquals(expectedUsersWithRole, usersWithRole);
     Assert.assertEquals(expectedRolesForUser, rolesForUser);
 
-    authorizerConnector.unassignRole("druid", "druidRole");
-    usersWithRole = authorizerConnector.getUsersWithRole("druidRole");
-    rolesForUser = authorizerConnector.getRolesForUser("druid");
+    authorizerConnector.unassignRole(TEST_DB_PREFIX, "druid", "druidRole");
+    usersWithRole = authorizerConnector.getUsersWithRole(TEST_DB_PREFIX, "druidRole");
+    rolesForUser = authorizerConnector.getRolesForUser(TEST_DB_PREFIX, "druid");
 
     Assert.assertEquals(ImmutableList.of(), usersWithRole);
     Assert.assertEquals(ImmutableList.of(), rolesForUser);
@@ -182,8 +184,8 @@ public class SQLBasicAuthorizerStorageConnectorTest
   {
     expectedException.expect(CallbackFailedException.class);
     expectedException.expectMessage("User [nonUser] does not exist.");
-    authorizerConnector.createRole("druid");
-    authorizerConnector.assignRole("nonUser", "druid");
+    authorizerConnector.createRole(TEST_DB_PREFIX, "druid");
+    authorizerConnector.assignRole(TEST_DB_PREFIX, "nonUser", "druid");
   }
 
   @Test
@@ -191,8 +193,8 @@ public class SQLBasicAuthorizerStorageConnectorTest
   {
     expectedException.expect(CallbackFailedException.class);
     expectedException.expectMessage("Role [nonRole] does not exist.");
-    authorizerConnector.createUser("druid");
-    authorizerConnector.assignRole("druid", "nonRole");
+    authorizerConnector.createUser(TEST_DB_PREFIX, "druid");
+    authorizerConnector.assignRole(TEST_DB_PREFIX, "druid", "nonRole");
   }
 
   @Test
@@ -200,10 +202,10 @@ public class SQLBasicAuthorizerStorageConnectorTest
   {
     expectedException.expect(CallbackFailedException.class);
     expectedException.expectMessage("User [druid] already has role [druidRole].");
-    authorizerConnector.createUser("druid");
-    authorizerConnector.createRole("druidRole");
-    authorizerConnector.assignRole("druid", "druidRole");
-    authorizerConnector.assignRole("druid", "druidRole");
+    authorizerConnector.createUser(TEST_DB_PREFIX, "druid");
+    authorizerConnector.createRole(TEST_DB_PREFIX, "druidRole");
+    authorizerConnector.assignRole(TEST_DB_PREFIX, "druid", "druidRole");
+    authorizerConnector.assignRole(TEST_DB_PREFIX, "druid", "druidRole");
   }
 
   @Test
@@ -212,31 +214,31 @@ public class SQLBasicAuthorizerStorageConnectorTest
     expectedException.expect(CallbackFailedException.class);
     expectedException.expectMessage("User [druid] does not have role [druidRole].");
 
-    authorizerConnector.createUser("druid");
-    authorizerConnector.createRole("druidRole");
+    authorizerConnector.createUser(TEST_DB_PREFIX, "druid");
+    authorizerConnector.createRole(TEST_DB_PREFIX, "druidRole");
 
-    List<Map<String, Object>> usersWithRole = authorizerConnector.getUsersWithRole("druidRole");
-    List<Map<String, Object>> rolesForUser = authorizerConnector.getRolesForUser("druid");
+    List<Map<String, Object>> usersWithRole = authorizerConnector.getUsersWithRole(TEST_DB_PREFIX, "druidRole");
+    List<Map<String, Object>> rolesForUser = authorizerConnector.getRolesForUser(TEST_DB_PREFIX, "druid");
 
     Assert.assertEquals(ImmutableList.of(), usersWithRole);
     Assert.assertEquals(ImmutableList.of(), rolesForUser);
 
-    authorizerConnector.unassignRole("druid", "druidRole");
+    authorizerConnector.unassignRole(TEST_DB_PREFIX, "druid", "druidRole");
   }
 
   // role and permission tests
   @Test
   public void testAddPermissionToRole() throws Exception
   {
-    authorizerConnector.createUser("druid");
-    authorizerConnector.createRole("druidRole");
-    authorizerConnector.assignRole("druid", "druidRole");
+    authorizerConnector.createUser(TEST_DB_PREFIX, "druid");
+    authorizerConnector.createRole(TEST_DB_PREFIX, "druidRole");
+    authorizerConnector.assignRole(TEST_DB_PREFIX, "druid", "druidRole");
 
     ResourceAction permission = new ResourceAction(
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.WRITE
     );
-    authorizerConnector.addPermission("druidRole", permission);
+    authorizerConnector.addPermission(TEST_DB_PREFIX, "druidRole", permission);
 
     List<Map<String, Object>> expectedPerms = ImmutableList.of(
         ImmutableMap.of(
@@ -244,15 +246,15 @@ public class SQLBasicAuthorizerStorageConnectorTest
             "resourceAction", permission
         )
     );
-    List<Map<String, Object>> dbPermsRole = authorizerConnector.getPermissionsForRole("druidRole");
+    List<Map<String, Object>> dbPermsRole = authorizerConnector.getPermissionsForRole(TEST_DB_PREFIX, "druidRole");
     Assert.assertEquals(expectedPerms, dbPermsRole);
-    List<Map<String, Object>> dbPermsUser = authorizerConnector.getPermissionsForUser("druid");
+    List<Map<String, Object>> dbPermsUser = authorizerConnector.getPermissionsForUser(TEST_DB_PREFIX, "druid");
     Assert.assertEquals(expectedPerms, dbPermsUser);
 
-    authorizerConnector.deletePermission(1);
-    dbPermsRole = authorizerConnector.getPermissionsForRole("druidRole");
+    authorizerConnector.deletePermission(TEST_DB_PREFIX, 1);
+    dbPermsRole = authorizerConnector.getPermissionsForRole(TEST_DB_PREFIX, "druidRole");
     Assert.assertEquals(ImmutableList.of(), dbPermsRole);
-    dbPermsUser = authorizerConnector.getPermissionsForUser("druid");
+    dbPermsUser = authorizerConnector.getPermissionsForUser(TEST_DB_PREFIX, "druid");
     Assert.assertEquals(ImmutableList.of(), dbPermsUser);
   }
 
@@ -266,7 +268,7 @@ public class SQLBasicAuthorizerStorageConnectorTest
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.WRITE
     );
-    authorizerConnector.addPermission("druidRole", permission);
+    authorizerConnector.addPermission(TEST_DB_PREFIX, "druidRole", permission);
   }
 
   @Test
@@ -274,12 +276,12 @@ public class SQLBasicAuthorizerStorageConnectorTest
   {
     expectedException.expect(CallbackFailedException.class);
     expectedException.expectMessage("Invalid permission, resource name regex[??????????] does not compile.");
-    authorizerConnector.createRole("druidRole");
+    authorizerConnector.createRole(TEST_DB_PREFIX, "druidRole");
     ResourceAction permission = new ResourceAction(
         new Resource("??????????", ResourceType.DATASOURCE),
         Action.WRITE
     );
-    authorizerConnector.addPermission("druidRole", permission);
+    authorizerConnector.addPermission(TEST_DB_PREFIX, "druidRole", permission);
   }
 
   @Test
@@ -287,7 +289,7 @@ public class SQLBasicAuthorizerStorageConnectorTest
   {
     expectedException.expect(CallbackFailedException.class);
     expectedException.expectMessage("Role [druidRole] does not exist.");
-    authorizerConnector.getPermissionsForRole("druidRole");
+    authorizerConnector.getPermissionsForRole(TEST_DB_PREFIX, "druidRole");
   }
 
   @Test
@@ -295,20 +297,20 @@ public class SQLBasicAuthorizerStorageConnectorTest
   {
     expectedException.expect(CallbackFailedException.class);
     expectedException.expectMessage("User [druid] does not exist.");
-    authorizerConnector.getPermissionsForUser("druid");
+    authorizerConnector.getPermissionsForUser(TEST_DB_PREFIX, "druid");
   }
 
   private void createAllTables()
   {
-    authorizerConnector.createUserTable();
-    authorizerConnector.createRoleTable();
-    authorizerConnector.createPermissionTable();
-    authorizerConnector.createUserRoleTable();
+    authorizerConnector.createUserTable(TEST_DB_PREFIX);
+    authorizerConnector.createRoleTable(TEST_DB_PREFIX);
+    authorizerConnector.createPermissionTable(TEST_DB_PREFIX);
+    authorizerConnector.createUserRoleTable(TEST_DB_PREFIX);
   }
 
   private void dropAllTables()
   {
-    for (String table : authorizerConnector.getTableNames()) {
+    for (String table : authorizerConnector.getTableNames(TEST_DB_PREFIX)) {
       dropAuthorizerTable(table);
     }
   }

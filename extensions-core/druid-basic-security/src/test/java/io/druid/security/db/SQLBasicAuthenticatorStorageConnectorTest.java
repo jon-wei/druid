@@ -36,12 +36,14 @@ import java.util.Map;
 
 public class SQLBasicAuthenticatorStorageConnectorTest
 {
+  private final String TEST_DB_PREFIX = "test";
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
   @Rule
   public final TestDerbyAuthenticatorStorageConnector.DerbyConnectorRule authenticatorRule =
-      new TestDerbyAuthenticatorStorageConnector.DerbyConnectorRule("test");
+      new TestDerbyAuthenticatorStorageConnector.DerbyConnectorRule(TEST_DB_PREFIX);
 
   private TestDerbyAuthenticatorStorageConnector authenticatorConnector;
 
@@ -67,7 +69,7 @@ public class SQLBasicAuthenticatorStorageConnectorTest
           @Override
           public Void withHandle(Handle handle) throws Exception
           {
-            for (String table : authenticatorConnector.getTableNames()) {
+            for (String table : authenticatorConnector.getTableNamesForPrefix(TEST_DB_PREFIX)) {
               Assert.assertTrue(
                   StringUtils.format("authentication table %s was not created!", table),
                   authenticatorConnector.tableExists(handle, table)
@@ -84,15 +86,15 @@ public class SQLBasicAuthenticatorStorageConnectorTest
   @Test
   public void testCreateDeleteUser() throws Exception
   {
-    authenticatorConnector.createUser("druid");
+    authenticatorConnector.createUser(TEST_DB_PREFIX, "druid");
     Map<String, Object> expectedUser = ImmutableMap.of(
         "name", "druid"
     );
-    Map<String, Object> dbUser = authenticatorConnector.getUser("druid");
+    Map<String, Object> dbUser = authenticatorConnector.getUser(TEST_DB_PREFIX, "druid");
     Assert.assertEquals(expectedUser, dbUser);
 
-    authenticatorConnector.deleteUser("druid");
-    dbUser = authenticatorConnector.getUser("druid");
+    authenticatorConnector.deleteUser(TEST_DB_PREFIX, "druid");
+    dbUser = authenticatorConnector.getUser(TEST_DB_PREFIX, "druid");
     Assert.assertEquals(null, dbUser);
   }
 
@@ -101,7 +103,7 @@ public class SQLBasicAuthenticatorStorageConnectorTest
   {
     expectedException.expect(CallbackFailedException.class);
     expectedException.expectMessage("User [druid] does not exist.");
-    authenticatorConnector.deleteUser("druid");
+    authenticatorConnector.deleteUser(TEST_DB_PREFIX, "druid");
   }
 
   @Test
@@ -109,8 +111,8 @@ public class SQLBasicAuthenticatorStorageConnectorTest
   {
     expectedException.expect(CallbackFailedException.class);
     expectedException.expectMessage("User [druid] already exists.");
-    authenticatorConnector.createUser("druid");
-    authenticatorConnector.createUser("druid");
+    authenticatorConnector.createUser(TEST_DB_PREFIX, "druid");
+    authenticatorConnector.createUser(TEST_DB_PREFIX, "druid");
   }
 
   // user credentials
@@ -118,12 +120,12 @@ public class SQLBasicAuthenticatorStorageConnectorTest
   public void testAddUserCredentials() throws Exception
   {
     char[] pass = "blah".toCharArray();
-    authenticatorConnector.createUser("druid");
-    authenticatorConnector.setUserCredentials("druid", pass);
-    Assert.assertTrue(authenticatorConnector.checkCredentials("druid", pass));
-    Assert.assertFalse(authenticatorConnector.checkCredentials("druid", "wrongPass".toCharArray()));
+    authenticatorConnector.createUser(TEST_DB_PREFIX, "druid");
+    authenticatorConnector.setUserCredentials(TEST_DB_PREFIX, "druid", pass);
+    Assert.assertTrue(authenticatorConnector.checkCredentials(TEST_DB_PREFIX, "druid", pass));
+    Assert.assertFalse(authenticatorConnector.checkCredentials(TEST_DB_PREFIX, "druid", "wrongPass".toCharArray()));
 
-    Map<String, Object> creds = authenticatorConnector.getUserCredentials("druid");
+    Map<String, Object> creds = authenticatorConnector.getUserCredentials(TEST_DB_PREFIX, "druid");
     Assert.assertEquals("druid", creds.get("user_name"));
     byte[] salt = (byte[]) creds.get("salt");
     byte[] hash = (byte[]) creds.get("hash");
@@ -146,7 +148,7 @@ public class SQLBasicAuthenticatorStorageConnectorTest
     expectedException.expect(CallbackFailedException.class);
     expectedException.expectMessage("User [druid] does not exist.");
     char[] pass = "blah".toCharArray();
-    authenticatorConnector.setUserCredentials("druid", pass);
+    authenticatorConnector.setUserCredentials(TEST_DB_PREFIX, "druid", pass);
   }
 
   @Test
@@ -154,19 +156,19 @@ public class SQLBasicAuthenticatorStorageConnectorTest
   {
     expectedException.expect(CallbackFailedException.class);
     expectedException.expectMessage("User [druid] does not exist.");
-    authenticatorConnector.getUserCredentials("druid");
+    authenticatorConnector.getUserCredentials(TEST_DB_PREFIX, "druid");
   }
 
 
   private void createAllTables()
   {
-    authenticatorConnector.createUserTable();
-    authenticatorConnector.createUserCredentialsTable();
+    authenticatorConnector.createUserTable(TEST_DB_PREFIX);
+    authenticatorConnector.createUserCredentialsTable(TEST_DB_PREFIX);
   }
 
   private void dropAllTables()
   {
-    for (String table : authenticatorConnector.getTableNames()) {
+    for (String table : authenticatorConnector.getTableNamesForPrefix(TEST_DB_PREFIX)) {
       dropAuthenticatorTable(table);
     }
   }

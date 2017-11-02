@@ -50,19 +50,23 @@ import java.util.Map;
 @Path("/druid/coordinator/v1/security/authentication")
 public class BasicAuthenticatorResource
 {
-  private final Map<String, BasicAuthenticatorStorageConnector> dbConnectors;
+  private final BasicAuthenticatorStorageConnector dbConnector;
+  private final Map<String, BasicHTTPAuthenticator> authenticatorMap;
 
   @Inject
   public BasicAuthenticatorResource(
+      BasicAuthenticatorStorageConnector dbConnector,
       AuthenticatorMapper authenticatorMapper
   )
   {
-    this.dbConnectors = Maps.newHashMap();
+    this.dbConnector = dbConnector;
+
+    this.authenticatorMap = Maps.newHashMap();
     for (Map.Entry<String, Authenticator> authenticatorEntry : authenticatorMapper.getAuthenticatorMap().entrySet()) {
       final String authenticatorName = authenticatorEntry.getKey();
       final Authenticator authenticator = authenticatorEntry.getValue();
       if (authenticator instanceof BasicHTTPAuthenticator) {
-        dbConnectors.put(authenticatorName, ((BasicHTTPAuthenticator) authenticator).getDbConnector());
+        authenticatorMap.put(authenticatorName, (BasicHTTPAuthenticator) authenticator);
       }
     }
   }
@@ -82,12 +86,12 @@ public class BasicAuthenticatorResource
       @PathParam("authenticatorName") final String authenticatorName
   )
   {
-    final BasicAuthenticatorStorageConnector dbConnector = dbConnectors.get(authenticatorName);
-    if (dbConnector == null) {
+    final BasicHTTPAuthenticator authenticator = authenticatorMap.get(authenticatorName);
+    if (authenticator == null) {
       return makeResponseForAuthenticatorNotFound(authenticatorName);
     }
 
-    List<Map<String, Object>> users = dbConnector.getAllUsers();
+    List<Map<String, Object>> users = dbConnector.getAllUsers(authenticator.getDBPrefix());
     return Response.ok(users).build();
   }
 
@@ -108,14 +112,14 @@ public class BasicAuthenticatorResource
       @PathParam("userName") final String userName
   )
   {
-    final BasicAuthenticatorStorageConnector dbConnector = dbConnectors.get(authenticatorName);
-    if (dbConnector == null) {
+    final BasicHTTPAuthenticator authenticator = authenticatorMap.get(authenticatorName);
+    if (authenticator == null) {
       return makeResponseForAuthenticatorNotFound(authenticatorName);
     }
 
     try {
-      Map<String, Object> user = dbConnector.getUser(userName);
-      Map<String, Object> credentials = dbConnector.getUserCredentials(userName);
+      Map<String, Object> user = dbConnector.getUser(authenticator.getDBPrefix(), userName);
+      Map<String, Object> credentials = dbConnector.getUserCredentials(authenticator.getDBPrefix(), userName);
 
       Map<String, Object> userInfo = Maps.newHashMap();
       userInfo.put("user", user);
@@ -148,13 +152,13 @@ public class BasicAuthenticatorResource
       @PathParam("userName") String userName
   )
   {
-    final BasicAuthenticatorStorageConnector dbConnector = dbConnectors.get(authenticatorName);
-    if (dbConnector == null) {
+    final BasicHTTPAuthenticator authenticator = authenticatorMap.get(authenticatorName);
+    if (authenticator == null) {
       return makeResponseForAuthenticatorNotFound(authenticatorName);
     }
 
     try {
-      dbConnector.createUser(userName);
+      dbConnector.createUser(authenticator.getDBPrefix(), userName);
       return Response.ok().build();
     }
     catch (CallbackFailedException cfe) {
@@ -181,13 +185,13 @@ public class BasicAuthenticatorResource
       @PathParam("userName") String userName
   )
   {
-    final BasicAuthenticatorStorageConnector dbConnector = dbConnectors.get(authenticatorName);
-    if (dbConnector == null) {
+    final BasicHTTPAuthenticator authenticator = authenticatorMap.get(authenticatorName);
+    if (authenticator == null) {
       return makeResponseForAuthenticatorNotFound(authenticatorName);
     }
 
     try {
-      dbConnector.deleteUser(userName);
+      dbConnector.deleteUser(authenticator.getDBPrefix(), userName);
       return Response.ok().build();
     }
     catch (CallbackFailedException cfe) {
@@ -216,13 +220,13 @@ public class BasicAuthenticatorResource
       String password
   )
   {
-    final BasicAuthenticatorStorageConnector dbConnector = dbConnectors.get(authenticatorName);
-    if (dbConnector == null) {
+    final BasicHTTPAuthenticator authenticator = authenticatorMap.get(authenticatorName);
+    if (authenticator == null) {
       return makeResponseForAuthenticatorNotFound(authenticatorName);
     }
 
     try {
-      dbConnector.setUserCredentials(userName, password.toCharArray());
+      dbConnector.setUserCredentials(authenticator.getDBPrefix(), userName, password.toCharArray());
       return Response.ok().build();
     }
     catch (CallbackFailedException cfe) {

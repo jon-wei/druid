@@ -28,6 +28,7 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.security.basic.db.BasicAuthDBConfig;
 import io.druid.security.basic.db.SQLBasicAuthenticatorStorageConnector;
+import io.druid.server.security.AuthenticatorMapper;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
@@ -42,10 +43,10 @@ public class MySQLBasicAuthenticatorStorageConnector extends SQLBasicAuthenticat
   @Inject
   public MySQLBasicAuthenticatorStorageConnector(
       Supplier<MetadataStorageConnectorConfig> config,
-      Supplier<BasicAuthDBConfig> dbConfigSupplier
+      AuthenticatorMapper authenticatorMapper
   )
   {
-    super(config, dbConfigSupplier);
+    super(config, authenticatorMapper);
 
     final BasicDataSource datasource = getDatasource();
     datasource.setDriverClassLoader(getClass().getClassLoader());
@@ -59,8 +60,10 @@ public class MySQLBasicAuthenticatorStorageConnector extends SQLBasicAuthenticat
   }
 
   @Override
-  public void createUserTable()
+  public void createUserTable(String dbPrefix)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+
     createTable(
         userTableName,
         ImmutableList.of(
@@ -77,8 +80,11 @@ public class MySQLBasicAuthenticatorStorageConnector extends SQLBasicAuthenticat
   }
 
   @Override
-  public void createUserCredentialsTable()
+  public void createUserCredentialsTable(String dbPrefix)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+    final String credentialsTableName = getPrefixedTableName(dbPrefix, USER_CREDENTIALS);
+
     createTable(
         credentialsTableName,
         ImmutableList.of(

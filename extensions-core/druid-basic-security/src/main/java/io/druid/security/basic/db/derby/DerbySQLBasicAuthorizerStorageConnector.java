@@ -31,6 +31,7 @@ import io.druid.metadata.MetadataStorage;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.security.basic.db.BasicAuthDBConfig;
 import io.druid.security.basic.db.SQLBasicAuthorizerStorageConnector;
+import io.druid.server.security.AuthorizerMapper;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
@@ -47,11 +48,11 @@ public class DerbySQLBasicAuthorizerStorageConnector extends SQLBasicAuthorizerS
   public DerbySQLBasicAuthorizerStorageConnector(
       MetadataStorage storage,
       Supplier<MetadataStorageConnectorConfig> config,
-      Supplier<BasicAuthDBConfig> dbConfigSupplier,
+      AuthorizerMapper authorizerMapper,
       ObjectMapper jsonMapper
   )
   {
-    super(config, dbConfigSupplier, jsonMapper);
+    super(config, authorizerMapper, jsonMapper);
 
     final BasicDataSource datasource = getDatasource();
     datasource.setDriverClassLoader(getClass().getClassLoader());
@@ -65,12 +66,12 @@ public class DerbySQLBasicAuthorizerStorageConnector extends SQLBasicAuthorizerS
   public DerbySQLBasicAuthorizerStorageConnector(
       MetadataStorage storage,
       Supplier<MetadataStorageConnectorConfig> config,
-      Supplier<BasicAuthDBConfig> dbConfigSupplier,
+      AuthorizerMapper authorizerMapper,
       ObjectMapper jsonMapper,
       DBI dbi
   )
   {
-    super(config, dbConfigSupplier, jsonMapper);
+    super(config, authorizerMapper, jsonMapper);
     this.dbi = dbi;
     this.storage = storage;
   }
@@ -84,8 +85,10 @@ public class DerbySQLBasicAuthorizerStorageConnector extends SQLBasicAuthorizerS
   }
 
   @Override
-  public void createRoleTable()
+  public void createRoleTable(String dbPrefix)
   {
+    final String roleTableName = getPrefixedTableName(dbPrefix, ROLES);
+
     createTable(
         roleTableName,
         ImmutableList.of(
@@ -101,8 +104,10 @@ public class DerbySQLBasicAuthorizerStorageConnector extends SQLBasicAuthorizerS
   }
 
   @Override
-  public void createUserTable()
+  public void createUserTable(String dbPrefix)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+
     createTable(
         userTableName,
         ImmutableList.of(
@@ -118,8 +123,11 @@ public class DerbySQLBasicAuthorizerStorageConnector extends SQLBasicAuthorizerS
   }
 
   @Override
-  public void createPermissionTable()
+  public void createPermissionTable(String dbPrefix)
   {
+    final String permissionTableName = getPrefixedTableName(dbPrefix, PERMISSIONS);
+    final String roleTableName = getPrefixedTableName(dbPrefix, ROLES);
+
     createTable(
         permissionTableName,
         ImmutableList.of(

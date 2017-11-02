@@ -24,21 +24,21 @@ import java.util.Map;
 
 public interface BasicAuthenticatorStorageConnector
 {
-  void createUser(String userName);
+  void createUser(String dbPrefix, String userName);
 
-  void deleteUser(String userName);
+  void deleteUser(String dbPrefix, String userName);
 
-  List<Map<String, Object>> getAllUsers();
+  List<Map<String, Object>> getAllUsers(String dbPrefix);
 
-  Map<String, Object> getUser(String userName);
+  Map<String, Object> getUser(String dbPrefix, String userName);
 
-  void setUserCredentials(String userName, char[] password);
+  void setUserCredentials(String dbPrefix, String userName, char[] password);
 
-  boolean checkCredentials(String userName, char[] password);
+  boolean checkCredentials(String dbPrefix, String userName, char[] password);
 
-  Map<String, Object> getUserCredentials(String userName);
+  Map<String, Object> getUserCredentials(String dbPrefix, String userName);
 
-  void createUserTable();
+  void createUserTable(String dbPrefix);
 
-  void createUserCredentialsTable();
+  void createUserCredentialsTable(String dbPrefix);
 }

@@ -31,6 +31,9 @@ import io.druid.metadata.BaseSQLMetadataConnector;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.BasicSecurityDBResourceException;
+import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
+import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.StatementContext;
@@ -60,21 +63,17 @@ public abstract class SQLBasicAuthenticatorStorageConnector
   private static final String DEFAULT_SYSTEM_USER_NAME = "druid_system";
 
   private final Supplier<MetadataStorageConnectorConfig> config;
-  private final Supplier<BasicAuthDBConfig> dbConfigSupplier;
+  private final AuthenticatorMapper authenticatorMapper;
   private final UserCredentialsMapper credsMapper;
-
-  protected final String userTableName;
-  protected final String credentialsTableName;
-  protected final List<String> tableNames;
 
   @Inject
   public SQLBasicAuthenticatorStorageConnector(
       Supplier<MetadataStorageConnectorConfig> config,
-      Supplier<BasicAuthDBConfig> dbConfigSupplier
+      AuthenticatorMapper authenticatorMapper
   )
   {
     this.config = config;
-    this.dbConfigSupplier = dbConfigSupplier;
+    this.authenticatorMapper = authenticatorMapper;
     this.credsMapper = new UserCredentialsMapper();
     this.shouldRetry = new Predicate<Throwable>()
     {
@@ -84,28 +83,40 @@ public abstract class SQLBasicAuthenticatorStorageConnector
         return isTransientException(e);
       }
     };
-
-    this.userTableName = getPrefixedTableName(USERS);
-    this.credentialsTableName = getPrefixedTableName(USER_CREDENTIALS);
-    this.tableNames = ImmutableList.of(
-        credentialsTableName,
-        userTableName
-    );
   }
 
   @LifecycleStart
   public void start()
   {
-    createUserTable();
-    createUserCredentialsTable();
+    for (Map.Entry<String, Authenticator> entry : authenticatorMapper.getAuthenticatorMap().entrySet()) {
+      Authenticator authenticator = entry.getValue();
+      if (authenticator instanceof BasicHTTPAuthenticator) {
+        String authenticatorName = entry.getKey();
+        BasicHTTPAuthenticator basicHTTPAuthenticator = (BasicHTTPAuthenticator) authenticator;
+        BasicAuthDBConfig dbConfig = basicHTTPAuthenticator.getDbConfig();
 
-    makeDefaultSuperuser(DEFAULT_ADMIN_NAME, dbConfigSupplier.get().getInitialAdminPassword());
-    makeDefaultSuperuser(DEFAULT_SYSTEM_USER_NAME, dbConfigSupplier.get().getInitialInternalClientPassword());
+        createUserTable(dbConfig.getDbPrefix());
+        createUserCredentialsTable(dbConfig.getDbPrefix());
+
+        makeDefaultSuperuser(
+            dbConfig.getDbPrefix(),
+            DEFAULT_ADMIN_NAME,
+            dbConfig.getInitialAdminPassword()
+        );
+
+        makeDefaultSuperuser(
+            dbConfig.getDbPrefix(),
+            DEFAULT_SYSTEM_USER_NAME,
+            dbConfig.getInitialInternalClientPassword()
+        );
+      }
+    }
   }
 
   @Override
-  public void createUserTable()
+  public void createUserTable(String dbPrefix)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
     createTable(
         userTableName,
         ImmutableList.of(
@@ -122,8 +133,11 @@ public abstract class SQLBasicAuthenticatorStorageConnector
   }
 
   @Override
-  public void createUserCredentialsTable()
+  public void createUserCredentialsTable(String dbPrefix)
   {
+    final String credentialsTableName = getPrefixedTableName(dbPrefix, USER_CREDENTIALS);
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+
     createTable(
         credentialsTableName,
         ImmutableList.of(
@@ -143,15 +157,17 @@ public abstract class SQLBasicAuthenticatorStorageConnector
   }
 
   @Override
-  public void createUser(String userName)
+  public void createUser(String dbPrefix, String userName)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+
     getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int count = getUserCount(handle, userName);
+            int count = getUserCount(handle, dbPrefix, userName);
             if (count != 0) {
               throw new BasicSecurityDBResourceException("User [%s] already exists.", userName);
             }
@@ -170,15 +186,17 @@ public abstract class SQLBasicAuthenticatorStorageConnector
   }
 
   @Override
-  public void deleteUser(String userName)
+  public void deleteUser(String dbPrefix, String userName)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+
     getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int count = getUserCount(handle, userName);
+            int count = getUserCount(handle, dbPrefix, userName);
             if (count == 0) {
               throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
             }
@@ -196,8 +214,10 @@ public abstract class SQLBasicAuthenticatorStorageConnector
   }
 
   @Override
-  public List<Map<String, Object>> getAllUsers()
+  public List<Map<String, Object>> getAllUsers(String dbPrefix)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+
     return getDBI().inTransaction(
         new TransactionCallback<List<Map<String, Object>>>()
         {
@@ -216,8 +236,10 @@ public abstract class SQLBasicAuthenticatorStorageConnector
   }
 
   @Override
-  public Map<String, Object> getUser(String userName)
+  public Map<String, Object> getUser(String dbPrefix, String userName)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+
     return getDBI().inTransaction(
         new TransactionCallback<Map<String, Object>>()
         {
@@ -236,15 +258,17 @@ public abstract class SQLBasicAuthenticatorStorageConnector
   }
 
   @Override
-  public Map<String, Object> getUserCredentials(String userName)
+  public Map<String, Object> getUserCredentials(String dbPrefix, String userName)
   {
+    final String credentialsTableName = getPrefixedTableName(dbPrefix, USER_CREDENTIALS);
+
     return getDBI().inTransaction(
         new TransactionCallback<Map<String, Object>>()
         {
           @Override
           public Map<String, Object> inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int userCount = getUserCount(handle, userName);
+            int userCount = getUserCount(handle, dbPrefix, userName);
             if (userCount == 0) {
               throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
             }
@@ -262,15 +286,17 @@ public abstract class SQLBasicAuthenticatorStorageConnector
   }
 
   @Override
-  public void setUserCredentials(String userName, char[] password)
+  public void setUserCredentials(String dbPrefix, String userName, char[] password)
   {
+    final String credentialsTableName = getPrefixedTableName(dbPrefix, USER_CREDENTIALS);
+
     getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int userCount = getUserCount(handle, userName);
+            int userCount = getUserCount(handle, dbPrefix, userName);
             if (userCount == 0) {
               throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
             }
@@ -327,8 +353,10 @@ public abstract class SQLBasicAuthenticatorStorageConnector
   }
 
   @Override
-  public boolean checkCredentials(String userName, char[] password)
+  public boolean checkCredentials(String dbPrefix, String userName, char[] password)
   {
+    final String credentialsTableName = getPrefixedTableName(dbPrefix, USER_CREDENTIALS);
+
     return getDBI().inTransaction(
         new TransactionCallback<Boolean>()
         {
@@ -362,9 +390,12 @@ public abstract class SQLBasicAuthenticatorStorageConnector
     );
   }
 
-  public List<String> getTableNames()
+  public List<String> getTableNamesForPrefix(String dbPrefix)
   {
-    return tableNames;
+    return ImmutableList.of(
+        getPrefixedTableName(dbPrefix, USER_CREDENTIALS),
+        getPrefixedTableName(dbPrefix, USERS)
+    );
   }
 
   public MetadataStorageConnectorConfig getConfig()
@@ -393,23 +424,25 @@ public abstract class SQLBasicAuthenticatorStorageConnector
     return dataSource;
   }
 
-  protected String getPrefixedTableName(String baseTableName)
+  protected static String getPrefixedTableName(String dbPrefix, String baseTableName)
   {
-    return StringUtils.format("basic_authentication_%s_%s", dbConfigSupplier.get().getDbPrefix(), baseTableName);
+    return StringUtils.format("basic_authentication_%s_%s", dbPrefix, baseTableName);
   }
 
-  private void makeDefaultSuperuser(String username, String password)
+  private void makeDefaultSuperuser(String dbPrefix, String username, String password)
   {
-    if (getUser(username) != null) {
+    if (getUser(dbPrefix, username) != null) {
       return;
     }
 
-    createUser(username);
-    setUserCredentials(username, password.toCharArray());
+    createUser(dbPrefix, username);
+    setUserCredentials(dbPrefix, username, password.toCharArray());
   }
 
-  private int getUserCount(Handle handle, String userName)
+  private int getUserCount(Handle handle, String dbPrefix, String userName)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+
     return handle
         .createQuery(
             StringUtils.format("SELECT COUNT(*) FROM %1$s WHERE %2$s = :key", userTableName, "name")

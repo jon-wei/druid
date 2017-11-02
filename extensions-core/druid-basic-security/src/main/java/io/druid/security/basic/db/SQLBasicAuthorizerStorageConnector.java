@@ -33,7 +33,12 @@ import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.metadata.BaseSQLMetadataConnector;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.security.basic.BasicSecurityDBResourceException;
+import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
+import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import io.druid.server.security.Action;
+import io.druid.server.security.Authenticator;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceAction;
 import io.druid.server.security.ResourceType;
@@ -69,25 +74,19 @@ public abstract class SQLBasicAuthorizerStorageConnector
   private static final String DEFAULT_SYSTEM_USER_ROLE = "druid_system";
 
   private final Supplier<MetadataStorageConnectorConfig> config;
-  private final Supplier<BasicAuthDBConfig> dbConfigSupplier;
+  private final AuthorizerMapper authorizerMapper;
   private final ObjectMapper jsonMapper;
   private final PermissionsMapper permMapper;
-
-  protected final String userTableName;
-  protected final String roleTableName;
-  protected final String permissionTableName;
-  protected final String userRoleTableName;
-  protected final List<String> tableNames;
 
   @Inject
   public SQLBasicAuthorizerStorageConnector(
       Supplier<MetadataStorageConnectorConfig> config,
-      Supplier<BasicAuthDBConfig> dbConfigSupplier,
+      AuthorizerMapper authorizerMapper,
       ObjectMapper jsonMapper
   )
   {
     this.config = config;
-    this.dbConfigSupplier = dbConfigSupplier;
+    this.authorizerMapper = authorizerMapper;
     this.jsonMapper = jsonMapper;
     this.permMapper = new PermissionsMapper();
     this.shouldRetry = new Predicate<Throwable>()
@@ -98,34 +97,43 @@ public abstract class SQLBasicAuthorizerStorageConnector
         return isTransientException(e);
       }
     };
-
-    this.userTableName = getPrefixedTableName(USERS);
-    this.roleTableName = getPrefixedTableName(ROLES);
-    this.permissionTableName = getPrefixedTableName(PERMISSIONS);
-    this.userRoleTableName = getPrefixedTableName(USER_ROLES);
-    this.tableNames = ImmutableList.of(
-        userRoleTableName,
-        permissionTableName,
-        roleTableName,
-        userTableName
-    );
   }
 
   @LifecycleStart
   public void start()
   {
-    createUserTable();
-    createRoleTable();
-    createPermissionTable();
-    createUserRoleTable();
+    for (Map.Entry<String, Authorizer> entry : authorizerMapper.getAuthorizerMap().entrySet()) {
+      Authorizer authorizer = entry.getValue();
+      if (authorizer instanceof BasicRoleBasedAuthorizer) {
+        String authorizerName = entry.getKey();
+        BasicRoleBasedAuthorizer basicRoleBasedAuthorizer = (BasicRoleBasedAuthorizer) authorizer;
+        BasicAuthDBConfig dbConfig = basicRoleBasedAuthorizer.getDbConfig();
 
-    makeDefaultSuperuser(DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_ROLE);
-    makeDefaultSuperuser(DEFAULT_SYSTEM_USER_NAME, DEFAULT_SYSTEM_USER_ROLE);
+        createUserTable(dbConfig.getDbPrefix());
+        createRoleTable(dbConfig.getDbPrefix());
+        createPermissionTable(dbConfig.getDbPrefix());
+        createUserRoleTable(dbConfig.getDbPrefix());
+
+        makeDefaultSuperuser(
+            dbConfig.getDbPrefix(),
+            DEFAULT_ADMIN_NAME,
+            DEFAULT_ADMIN_ROLE
+        );
+
+        makeDefaultSuperuser(
+            dbConfig.getDbPrefix(),
+            DEFAULT_SYSTEM_USER_NAME,
+            DEFAULT_SYSTEM_USER_ROLE
+        );
+      }
+    }
   }
 
   @Override
-  public void createRoleTable()
+  public void createRoleTable(String dbPrefix)
   {
+    final String roleTableName = getPrefixedTableName(dbPrefix, ROLES);
+
     createTable(
         roleTableName,
         ImmutableList.of(
@@ -142,8 +150,10 @@ public abstract class SQLBasicAuthorizerStorageConnector
   }
 
   @Override
-  public void createUserTable()
+  public void createUserTable(String dbPrefix)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+
     createTable(
         userTableName,
         ImmutableList.of(
@@ -160,8 +170,11 @@ public abstract class SQLBasicAuthorizerStorageConnector
   }
 
   @Override
-  public void createPermissionTable()
+  public void createPermissionTable(String dbPrefix)
   {
+    final String roleTableName = getPrefixedTableName(dbPrefix, ROLES);
+    final String permissionTableName = getPrefixedTableName(dbPrefix, PERMISSIONS);
+
     createTable(
         permissionTableName,
         ImmutableList.of(
@@ -181,8 +194,12 @@ public abstract class SQLBasicAuthorizerStorageConnector
   }
 
   @Override
-  public void createUserRoleTable()
+  public void createUserRoleTable(String dbPrefix)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+    final String roleTableName = getPrefixedTableName(dbPrefix, ROLES);
+    final String userRoleTableName = getPrefixedTableName(dbPrefix, USER_ROLES);
+
     createTable(
         userRoleTableName,
         ImmutableList.of(
@@ -202,15 +219,17 @@ public abstract class SQLBasicAuthorizerStorageConnector
   }
 
   @Override
-  public void createUser(String userName)
+  public void createUser(String dbPrefix, String userName)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+
     getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int count = getUserCount(handle, userName);
+            int count = getUserCount(handle, dbPrefix, userName);
             if (count != 0) {
               throw new BasicSecurityDBResourceException("User [%s] already exists.", userName);
             }
@@ -229,15 +248,17 @@ public abstract class SQLBasicAuthorizerStorageConnector
   }
 
   @Override
-  public void deleteUser(String userName)
+  public void deleteUser(String dbPrefix, String userName)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+
     getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int count = getUserCount(handle, userName);
+            int count = getUserCount(handle, dbPrefix, userName);
             if (count == 0) {
               throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
             }
@@ -255,15 +276,17 @@ public abstract class SQLBasicAuthorizerStorageConnector
   }
 
   @Override
-  public void createRole(String roleName)
+  public void createRole(String dbPrefix, String roleName)
   {
+    final String roleTableName = getPrefixedTableName(dbPrefix, ROLES);
+
     getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int count = getRoleCount(handle, roleName);
+            int count = getRoleCount(handle, dbPrefix, roleName);
             if (count != 0) {
               throw new BasicSecurityDBResourceException("Role [%s] already exists.", roleName);
             }
@@ -281,15 +304,17 @@ public abstract class SQLBasicAuthorizerStorageConnector
   }
 
   @Override
-  public void deleteRole(String roleName)
+  public void deleteRole(String dbPrefix, String roleName)
   {
+    final String roleTableName = getPrefixedTableName(dbPrefix, ROLES);
+
     getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int count = getRoleCount(handle, roleName);
+            int count = getRoleCount(handle, dbPrefix, roleName);
             if (count == 0) {
               throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
             }
@@ -307,15 +332,17 @@ public abstract class SQLBasicAuthorizerStorageConnector
   }
 
   @Override
-  public void addPermission(String roleName, ResourceAction resourceAction)
+  public void addPermission(String dbPrefix, String roleName, ResourceAction resourceAction)
   {
+    final String permissionTableName = getPrefixedTableName(dbPrefix, PERMISSIONS);
+
     getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int roleCount = getRoleCount(handle, roleName);
+            int roleCount = getRoleCount(handle, dbPrefix, roleName);
             if (roleCount == 0) {
               throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
             }
@@ -354,15 +381,17 @@ public abstract class SQLBasicAuthorizerStorageConnector
   }
 
   @Override
-  public void deletePermission(int permissionId)
+  public void deletePermission(String dbPrefix, int permissionId)
   {
+    final String permissionTableName = getPrefixedTableName(dbPrefix, PERMISSIONS);
+
     getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int permCount = getPermissionCount(handle, permissionId);
+            int permCount = getPermissionCount(handle, dbPrefix, permissionId);
             if (permCount == 0) {
               throw new BasicSecurityDBResourceException("Permission with id [%s] does not exist.", permissionId);
             }
@@ -380,16 +409,18 @@ public abstract class SQLBasicAuthorizerStorageConnector
   }
 
   @Override
-  public void assignRole(String userName, String roleName)
+  public void assignRole(String dbPrefix, String userName, String roleName)
   {
+    final String userRoleTableName = getPrefixedTableName(dbPrefix, USER_ROLES);
+
     getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int userCount = getUserCount(handle, userName);
-            int roleCount = getRoleCount(handle, roleName);
+            int userCount = getUserCount(handle, dbPrefix, userName);
+            int roleCount = getRoleCount(handle, dbPrefix, roleName);
 
             if (userCount == 0) {
               throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
@@ -399,7 +430,7 @@ public abstract class SQLBasicAuthorizerStorageConnector
               throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
             }
 
-            int userRoleMappingCount = getUserRoleMappingCount(handle, userName, roleName);
+            int userRoleMappingCount = getUserRoleMappingCount(handle, dbPrefix, userName, roleName);
             if (userRoleMappingCount != 0) {
               throw new BasicSecurityDBResourceException("User [%s] already has role [%s].", userName, roleName);
             }
@@ -419,16 +450,18 @@ public abstract class SQLBasicAuthorizerStorageConnector
   }
 
   @Override
-  public void unassignRole(String userName, String roleName)
+  public void unassignRole(String dbPrefix, String userName, String roleName)
   {
+    final String userRoleTableName = getPrefixedTableName(dbPrefix, USER_ROLES);
+
     getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int userCount = getUserCount(handle, userName);
-            int roleCount = getRoleCount(handle, roleName);
+            int userCount = getUserCount(handle, dbPrefix, userName);
+            int roleCount = getRoleCount(handle, dbPrefix, roleName);
 
             if (userCount == 0) {
               throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
@@ -438,7 +471,7 @@ public abstract class SQLBasicAuthorizerStorageConnector
               throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
             }
 
-            int userRoleMappingCount = getUserRoleMappingCount(handle, userName, roleName);
+            int userRoleMappingCount = getUserRoleMappingCount(handle, dbPrefix, userName, roleName);
             if (userRoleMappingCount == 0) {
               throw new BasicSecurityDBResourceException("User [%s] does not have role [%s].", userName, roleName);
             }
@@ -459,8 +492,10 @@ public abstract class SQLBasicAuthorizerStorageConnector
   }
 
   @Override
-  public List<Map<String, Object>> getAllUsers()
+  public List<Map<String, Object>> getAllUsers(String dbPrefix)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+
     return getDBI().inTransaction(
         new TransactionCallback<List<Map<String, Object>>>()
         {
@@ -479,8 +514,10 @@ public abstract class SQLBasicAuthorizerStorageConnector
   }
 
   @Override
-  public List<Map<String, Object>> getAllRoles()
+  public List<Map<String, Object>> getAllRoles(String dbPrefix)
   {
+    final String roleTableName = getPrefixedTableName(dbPrefix, ROLES);
+
     return getDBI().inTransaction(
         new TransactionCallback<List<Map<String, Object>>>()
         {
@@ -499,8 +536,10 @@ public abstract class SQLBasicAuthorizerStorageConnector
   }
 
   @Override
-  public Map<String, Object> getUser(String userName)
+  public Map<String, Object> getUser(String dbPrefix, String userName)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+
     return getDBI().inTransaction(
         new TransactionCallback<Map<String, Object>>()
         {
@@ -519,8 +558,10 @@ public abstract class SQLBasicAuthorizerStorageConnector
   }
 
   @Override
-  public Map<String, Object> getRole(String roleName)
+  public Map<String, Object> getRole(String dbPrefix, String roleName)
   {
+    final String roleTableName = getPrefixedTableName(dbPrefix, ROLES);
+
     return getDBI().inTransaction(
         new TransactionCallback<Map<String, Object>>()
         {
@@ -539,8 +580,11 @@ public abstract class SQLBasicAuthorizerStorageConnector
   }
 
   @Override
-  public List<Map<String, Object>> getRolesForUser(String userName)
+  public List<Map<String, Object>> getRolesForUser(String dbPrefix, String userName)
   {
+    final String roleTableName = getPrefixedTableName(dbPrefix, ROLES);
+    final String userRoleTableName = getPrefixedTableName(dbPrefix, USER_ROLES);
+
     return getDBI().inTransaction(
         new TransactionCallback<List<Map<String, Object>>>()
         {
@@ -548,7 +592,7 @@ public abstract class SQLBasicAuthorizerStorageConnector
           public List<Map<String, Object>> inTransaction(Handle handle, TransactionStatus transactionStatus)
               throws Exception
           {
-            int userCount = getUserCount(handle, userName);
+            int userCount = getUserCount(handle, dbPrefix, userName);
             if (userCount == 0) {
               throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
             }
@@ -573,8 +617,11 @@ public abstract class SQLBasicAuthorizerStorageConnector
   }
 
   @Override
-  public List<Map<String, Object>> getUsersWithRole(String roleName)
+  public List<Map<String, Object>> getUsersWithRole(String dbPrefix, String roleName)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+    final String userRoleTableName = getPrefixedTableName(dbPrefix, USER_ROLES);
+
     return getDBI().inTransaction(
         new TransactionCallback<List<Map<String, Object>>>()
         {
@@ -582,7 +629,7 @@ public abstract class SQLBasicAuthorizerStorageConnector
           public List<Map<String, Object>> inTransaction(Handle handle, TransactionStatus transactionStatus)
               throws Exception
           {
-            int roleCount = getRoleCount(handle, roleName);
+            int roleCount = getRoleCount(handle, dbPrefix, roleName);
             if (roleCount == 0) {
               throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
             }
@@ -606,9 +653,14 @@ public abstract class SQLBasicAuthorizerStorageConnector
     );
   }
 
-  public List<String> getTableNames()
+  public List<String> getTableNames(String dbPrefix)
   {
-    return tableNames;
+    return ImmutableList.of(
+      getPrefixedTableName(dbPrefix, USER_ROLES),
+      getPrefixedTableName(dbPrefix, PERMISSIONS),
+      getPrefixedTableName(dbPrefix, ROLES),
+      getPrefixedTableName(dbPrefix, USERS)
+    );
   }
 
   private class PermissionsMapper implements ResultSetMapper<Map<String, Object>>
@@ -633,8 +685,10 @@ public abstract class SQLBasicAuthorizerStorageConnector
   }
 
   @Override
-  public List<Map<String, Object>> getPermissionsForRole(String roleName)
+  public List<Map<String, Object>> getPermissionsForRole(String dbPrefix, String roleName)
   {
+    final String permissionTableName = getPrefixedTableName(dbPrefix, PERMISSIONS);
+
     return getDBI().inTransaction(
         new TransactionCallback<List<Map<String, Object>>>()
         {
@@ -642,7 +696,7 @@ public abstract class SQLBasicAuthorizerStorageConnector
           public List<Map<String, Object>> inTransaction(Handle handle, TransactionStatus transactionStatus)
               throws Exception
           {
-            int roleCount = getRoleCount(handle, roleName);
+            int roleCount = getRoleCount(handle, dbPrefix, roleName);
             if (roleCount == 0) {
               throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
             }
@@ -665,8 +719,12 @@ public abstract class SQLBasicAuthorizerStorageConnector
   }
 
   @Override
-  public List<Map<String, Object>> getPermissionsForUser(String userName)
+  public List<Map<String, Object>> getPermissionsForUser(String dbPrefix, String userName)
   {
+    final String roleTableName = getPrefixedTableName(dbPrefix, ROLES);
+    final String userRoleTableName = getPrefixedTableName(dbPrefix, USER_ROLES);
+    final String permissionTableName = getPrefixedTableName(dbPrefix, PERMISSIONS);
+
     return getDBI().inTransaction(
         new TransactionCallback<List<Map<String, Object>>>()
         {
@@ -674,7 +732,7 @@ public abstract class SQLBasicAuthorizerStorageConnector
           public List<Map<String, Object>> inTransaction(Handle handle, TransactionStatus transactionStatus)
               throws Exception
           {
-            int userCount = getUserCount(handle, userName);
+            int userCount = getUserCount(handle, dbPrefix, userName);
             if (userCount == 0) {
               throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
             }
@@ -728,13 +786,15 @@ public abstract class SQLBasicAuthorizerStorageConnector
     return dataSource;
   }
 
-  protected String getPrefixedTableName(String baseTableName)
+  protected static String getPrefixedTableName(String dbPrefix, String baseTableName)
   {
-    return StringUtils.format("basic_authorization_%s_%s", dbConfigSupplier.get().getDbPrefix(), baseTableName);
+    return StringUtils.format("basic_authorization_%s_%s", dbPrefix, baseTableName);
   }
 
-  private int getUserCount(Handle handle, String userName)
+  private int getUserCount(Handle handle, String dbPrefix, String userName)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+
     return handle
         .createQuery(
             StringUtils.format("SELECT COUNT(*) FROM %1$s WHERE %2$s = :key", userTableName, "name")
@@ -744,8 +804,10 @@ public abstract class SQLBasicAuthorizerStorageConnector
         .first();
   }
 
-  private int getRoleCount(Handle handle, String roleName)
+  private int getRoleCount(Handle handle, String dbPrefix, String roleName)
   {
+    final String roleTableName = getPrefixedTableName(dbPrefix, ROLES);
+
     return handle
         .createQuery(
             StringUtils.format("SELECT COUNT(*) FROM %1$s WHERE %2$s = :key", roleTableName, "name")
@@ -755,8 +817,10 @@ public abstract class SQLBasicAuthorizerStorageConnector
         .first();
   }
 
-  private int getPermissionCount(Handle handle, int permissionId)
+  private int getPermissionCount(Handle handle, String dbPrefix, int permissionId)
   {
+    final String permissionTableName = getPrefixedTableName(dbPrefix, PERMISSIONS);
+
     return handle
         .createQuery(
             StringUtils.format("SELECT COUNT(*) FROM %1$s WHERE %2$s = :key", permissionTableName, "id")
@@ -766,8 +830,10 @@ public abstract class SQLBasicAuthorizerStorageConnector
         .first();
   }
 
-  private int getUserRoleMappingCount(Handle handle, String userName, String roleName)
+  private int getUserRoleMappingCount(Handle handle, String dbPrefix, String userName, String roleName)
   {
+    final String userRoleTableName = getPrefixedTableName(dbPrefix, USER_ROLES);
+
     return handle
         .createQuery(
             StringUtils.format("SELECT COUNT(*) FROM %1$s WHERE %2$s = :userkey AND %3$s = :rolekey",
@@ -782,15 +848,15 @@ public abstract class SQLBasicAuthorizerStorageConnector
         .first();
   }
 
-  private void makeDefaultSuperuser(String username, String role)
+  private void makeDefaultSuperuser(String dbPrefix, String username, String role)
   {
-    if (getUser(username) != null) {
+    if (getUser(dbPrefix, username) != null) {
       return;
     }
 
-    createUser(username);
-    createRole(role);
-    assignRole(username, role);
+    createUser(dbPrefix, username);
+    createRole(dbPrefix, role);
+    assignRole(dbPrefix, username, role);
 
     ResourceAction datasourceR = new ResourceAction(
         new Resource(".*", ResourceType.DATASOURCE),
@@ -825,7 +891,7 @@ public abstract class SQLBasicAuthorizerStorageConnector
     List<ResourceAction> resActs = Lists.newArrayList(datasourceR, datasourceW, configR, configW, stateR, stateW);
 
     for (ResourceAction resAct : resActs) {
-      addPermission(role, resAct);
+      addPermission(dbPrefix, role, resAct);
     }
   }
 }

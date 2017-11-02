@@ -28,6 +28,7 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.security.basic.db.BasicAuthDBConfig;
 import io.druid.security.basic.db.SQLBasicAuthorizerStorageConnector;
+import io.druid.server.security.AuthorizerMapper;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
@@ -42,11 +43,11 @@ public class PostgreSQLBasicAuthorizerStorageConnector extends SQLBasicAuthorize
   @Inject
   public PostgreSQLBasicAuthorizerStorageConnector(
       Supplier<MetadataStorageConnectorConfig> config,
-      Supplier<BasicAuthDBConfig> dbConfigSupplier,
+      AuthorizerMapper authorizerMapper,
       ObjectMapper jsonMapper
   )
   {
-    super(config, dbConfigSupplier, jsonMapper);
+    super(config, authorizerMapper, jsonMapper);
 
     final BasicDataSource datasource = getDatasource();
     // PostgreSQL driver is classloader isolated as part of the extension
@@ -78,8 +79,11 @@ public class PostgreSQLBasicAuthorizerStorageConnector extends SQLBasicAuthorize
   }
 
   @Override
-  public void createPermissionTable()
+  public void createPermissionTable(String dbPrefix)
   {
+    final String roleTableName = getPrefixedTableName(dbPrefix, ROLES);
+    final String permissionTableName = getPrefixedTableName(dbPrefix, PERMISSIONS);
+
     createTable(
         permissionTableName,
         ImmutableList.of(

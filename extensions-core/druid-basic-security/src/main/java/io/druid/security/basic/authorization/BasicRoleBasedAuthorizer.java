@@ -25,13 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
-import com.google.common.collect.ImmutableList;
-import com.google.inject.Binder;
-import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.Module;
-import io.druid.guice.JsonConfigProvider;
-import io.druid.guice.annotations.Self;
 import io.druid.java.util.common.IAE;
 import io.druid.security.basic.db.BasicAuthDBConfig;
 import io.druid.security.basic.db.BasicAuthorizerStorageConnector;
@@ -54,14 +47,18 @@ public class BasicRoleBasedAuthorizer implements Authorizer
   private final BasicAuthorizerStorageConnector dbConnector;
   private final LoadingCache<String, Pattern> permissionPatternCache;
   private final int permissionCacheSize;
+  private final BasicAuthDBConfig dbConfig;
 
   @JsonCreator
   public BasicRoleBasedAuthorizer(
-      @JacksonInject Injector injector,
+      @JacksonInject BasicAuthorizerStorageConnector dbConnector,
       @JsonProperty("dbPrefix") String dbPrefix,
       @JsonProperty("permissionCacheSize") Integer permissionCacheSize
   )
   {
+    this.dbConfig = new BasicAuthDBConfig(dbPrefix, null, null);
+
+    /*
     Injector childInjector = injector.createChildInjector(
         ImmutableList.<Module>of(
             new Module()
@@ -78,8 +75,10 @@ public class BasicRoleBasedAuthorizer implements Authorizer
             }
         )
     );
+        this.dbConnector = childInjector.getInstance(BasicAuthorizerStorageConnector.class);
 
-    this.dbConnector = childInjector.getInstance(BasicAuthorizerStorageConnector.class);
+    */
+    this.dbConnector = dbConnector;
 
     this.permissionCacheSize = permissionCacheSize == null ? DEFAULT_PERMISSION_CACHE_SIZE : permissionCacheSize;
     this.permissionPatternCache = Caffeine.newBuilder()
@@ -100,6 +99,7 @@ public class BasicRoleBasedAuthorizer implements Authorizer
     this.permissionPatternCache = Caffeine.newBuilder()
                                           .maximumSize(this.permissionCacheSize)
                                           .build(regexStr -> Pattern.compile(regexStr));
+    this.dbConfig = new BasicAuthDBConfig(null, null, null);
   }
 
   @Override
@@ -111,7 +111,7 @@ public class BasicRoleBasedAuthorizer implements Authorizer
       throw new IAE("WTF? authenticationResult should never be null.");
     }
 
-    List<Map<String, Object>> permissions = dbConnector.getPermissionsForUser(authenticationResult.getIdentity());
+    List<Map<String, Object>> permissions = dbConnector.getPermissionsForUser(dbConfig.getDbPrefix(), authenticationResult.getIdentity());
 
     for (Map<String, Object> permission : permissions) {
       if (permissionCheck(resource, action, permission)) {
@@ -125,6 +125,11 @@ public class BasicRoleBasedAuthorizer implements Authorizer
   public BasicAuthorizerStorageConnector getDbConnector()
   {
     return dbConnector;
+  }
+
+  public String getDBPrefix()
+  {
+    return dbConfig.getDbPrefix();
   }
 
   private boolean permissionCheck(Resource resource, Action action, Map<String, Object> permission)
@@ -149,5 +154,10 @@ public class BasicRoleBasedAuthorizer implements Authorizer
   public int getPermissionCacheSize()
   {
     return permissionCacheSize;
+  }
+
+  public BasicAuthDBConfig getDbConfig()
+  {
+    return dbConfig;
   }
 }
