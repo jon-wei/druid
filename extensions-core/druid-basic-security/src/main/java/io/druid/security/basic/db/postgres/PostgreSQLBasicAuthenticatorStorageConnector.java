@@ -22,11 +22,11 @@ package io.druid.security.basic.db.postgres;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.security.basic.db.SQLBasicAuthenticatorStorageConnector;
-import io.druid.server.security.AuthenticatorMapper;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
@@ -41,10 +41,10 @@ public class PostgreSQLBasicAuthenticatorStorageConnector extends SQLBasicAuthen
   @Inject
   public PostgreSQLBasicAuthenticatorStorageConnector(
       Supplier<MetadataStorageConnectorConfig> config,
-      AuthenticatorMapper authenticatorMapper
+      Injector injector
   )
   {
-    super(config, authenticatorMapper);
+    super(config, injector);
 
     final BasicDataSource datasource = getDatasource();
     // PostgreSQL driver is classloader isolated as part of the extension

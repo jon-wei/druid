@@ -22,6 +22,7 @@ package io.druid.security.basic.db.derby;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
 import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
@@ -29,7 +30,6 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorage;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.security.basic.db.SQLBasicAuthenticatorStorageConnector;
-import io.druid.server.security.AuthenticatorMapper;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
@@ -46,10 +46,10 @@ public class DerbySQLBasicAuthenticatorStorageConnector extends SQLBasicAuthenti
   public DerbySQLBasicAuthenticatorStorageConnector(
       MetadataStorage storage,
       Supplier<MetadataStorageConnectorConfig> config,
-      AuthenticatorMapper authenticatorMapper
+      Injector injector
   )
   {
-    super(config, authenticatorMapper);
+    super(config, injector);
 
     final BasicDataSource datasource = getDatasource();
     datasource.setDriverClassLoader(getClass().getClassLoader());
@@ -63,11 +63,11 @@ public class DerbySQLBasicAuthenticatorStorageConnector extends SQLBasicAuthenti
   public DerbySQLBasicAuthenticatorStorageConnector(
       MetadataStorage storage,
       Supplier<MetadataStorageConnectorConfig> config,
-      AuthenticatorMapper authenticatorMapper,
+      Injector injector,
       DBI dbi
   )
   {
-    super(config, authenticatorMapper);
+    super(config, injector);
     this.dbi = dbi;
     this.storage = storage;
   }

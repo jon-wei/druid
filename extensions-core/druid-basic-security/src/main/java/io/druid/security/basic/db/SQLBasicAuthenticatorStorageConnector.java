@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.metadata.BaseSQLMetadataConnector;
@@ -63,17 +64,17 @@ public abstract class SQLBasicAuthenticatorStorageConnector
   private static final String DEFAULT_SYSTEM_USER_NAME = "druid_system";
 
   private final Supplier<MetadataStorageConnectorConfig> config;
-  private final AuthenticatorMapper authenticatorMapper;
   private final UserCredentialsMapper credsMapper;
+  private final Injector injector;
 
   @Inject
   public SQLBasicAuthenticatorStorageConnector(
       Supplier<MetadataStorageConnectorConfig> config,
-      AuthenticatorMapper authenticatorMapper
+      Injector injector
   )
   {
     this.config = config;
-    this.authenticatorMapper = authenticatorMapper;
+    this.injector = injector;
     this.credsMapper = new UserCredentialsMapper();
     this.shouldRetry = new Predicate<Throwable>()
     {
@@ -88,6 +89,8 @@ public abstract class SQLBasicAuthenticatorStorageConnector
   @LifecycleStart
   public void start()
   {
+    AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
+
     for (Map.Entry<String, Authenticator> entry : authenticatorMapper.getAuthenticatorMap().entrySet()) {
       Authenticator authenticator = entry.getValue();
       if (authenticator instanceof BasicHTTPAuthenticator) {
@@ -95,19 +98,34 @@ public abstract class SQLBasicAuthenticatorStorageConnector
         BasicHTTPAuthenticator basicHTTPAuthenticator = (BasicHTTPAuthenticator) authenticator;
         BasicAuthDBConfig dbConfig = basicHTTPAuthenticator.getDbConfig();
 
-        createUserTable(dbConfig.getDbPrefix());
-        createUserCredentialsTable(dbConfig.getDbPrefix());
+        getDBI().inTransaction(
+            new TransactionCallback<Void>()
+            {
+              @Override
+              public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
+              {
+                if (tableExists(handle, getPrefixedTableName(dbConfig.getDbPrefix(), USERS))) {
+                  return null;
+                }
 
-        makeDefaultSuperuser(
-            dbConfig.getDbPrefix(),
-            DEFAULT_ADMIN_NAME,
-            dbConfig.getInitialAdminPassword()
-        );
+                createUserTable(dbConfig.getDbPrefix());
+                createUserCredentialsTable(dbConfig.getDbPrefix());
 
-        makeDefaultSuperuser(
-            dbConfig.getDbPrefix(),
-            DEFAULT_SYSTEM_USER_NAME,
-            dbConfig.getInitialInternalClientPassword()
+                makeDefaultSuperuser(
+                    dbConfig.getDbPrefix(),
+                    DEFAULT_ADMIN_NAME,
+                    dbConfig.getInitialAdminPassword()
+                );
+
+                makeDefaultSuperuser(
+                    dbConfig.getDbPrefix(),
+                    DEFAULT_SYSTEM_USER_NAME,
+                    dbConfig.getInitialInternalClientPassword()
+                );
+
+                return null;
+              }
+            }
         );
       }
     }

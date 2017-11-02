@@ -23,12 +23,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.security.basic.db.SQLBasicAuthorizerStorageConnector;
-import io.druid.server.security.AuthorizerMapper;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
@@ -43,11 +43,11 @@ public class MySQLBasicAuthorizerStorageConnector extends SQLBasicAuthorizerStor
   @Inject
   public MySQLBasicAuthorizerStorageConnector(
       Supplier<MetadataStorageConnectorConfig> config,
-      AuthorizerMapper authorizerMapper,
+      Injector injector,
       ObjectMapper jsonMapper
   )
   {
-    super(config, authorizerMapper, jsonMapper);
+    super(config, injector, jsonMapper);
 
     final BasicDataSource datasource = getDatasource();
     datasource.setDriverClassLoader(getClass().getClassLoader());

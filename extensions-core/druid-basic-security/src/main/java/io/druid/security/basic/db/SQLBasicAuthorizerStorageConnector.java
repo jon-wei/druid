@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
@@ -72,19 +73,19 @@ public abstract class SQLBasicAuthorizerStorageConnector
   private static final String DEFAULT_SYSTEM_USER_ROLE = "druid_system";
 
   private final Supplier<MetadataStorageConnectorConfig> config;
-  private final AuthorizerMapper authorizerMapper;
   private final ObjectMapper jsonMapper;
   private final PermissionsMapper permMapper;
+  private final Injector injector;
 
   @Inject
   public SQLBasicAuthorizerStorageConnector(
       Supplier<MetadataStorageConnectorConfig> config,
-      AuthorizerMapper authorizerMapper,
+      Injector injector,
       ObjectMapper jsonMapper
   )
   {
     this.config = config;
-    this.authorizerMapper = authorizerMapper;
+    this.injector = injector;
     this.jsonMapper = jsonMapper;
     this.permMapper = new PermissionsMapper();
     this.shouldRetry = new Predicate<Throwable>()
@@ -100,6 +101,8 @@ public abstract class SQLBasicAuthorizerStorageConnector
   @LifecycleStart
   public void start()
   {
+    final AuthorizerMapper authorizerMapper = injector.getInstance(AuthorizerMapper.class);
+
     for (Map.Entry<String, Authorizer> entry : authorizerMapper.getAuthorizerMap().entrySet()) {
       Authorizer authorizer = entry.getValue();
       if (authorizer instanceof BasicRoleBasedAuthorizer) {
@@ -107,21 +110,36 @@ public abstract class SQLBasicAuthorizerStorageConnector
         BasicRoleBasedAuthorizer basicRoleBasedAuthorizer = (BasicRoleBasedAuthorizer) authorizer;
         BasicAuthDBConfig dbConfig = basicRoleBasedAuthorizer.getDbConfig();
 
-        createUserTable(dbConfig.getDbPrefix());
-        createRoleTable(dbConfig.getDbPrefix());
-        createPermissionTable(dbConfig.getDbPrefix());
-        createUserRoleTable(dbConfig.getDbPrefix());
+        getDBI().inTransaction(
+            new TransactionCallback<Void>()
+            {
+              @Override
+              public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
+              {
+                if (tableExists(handle, getPrefixedTableName(dbConfig.getDbPrefix(), USERS))) {
+                  return null;
+                }
 
-        makeDefaultSuperuser(
-            dbConfig.getDbPrefix(),
-            DEFAULT_ADMIN_NAME,
-            DEFAULT_ADMIN_ROLE
-        );
+                createUserTable(dbConfig.getDbPrefix());
+                createRoleTable(dbConfig.getDbPrefix());
+                createPermissionTable(dbConfig.getDbPrefix());
+                createUserRoleTable(dbConfig.getDbPrefix());
 
-        makeDefaultSuperuser(
-            dbConfig.getDbPrefix(),
-            DEFAULT_SYSTEM_USER_NAME,
-            DEFAULT_SYSTEM_USER_ROLE
+                makeDefaultSuperuser(
+                    dbConfig.getDbPrefix(),
+                    DEFAULT_ADMIN_NAME,
+                    DEFAULT_ADMIN_ROLE
+                );
+
+                makeDefaultSuperuser(
+                    dbConfig.getDbPrefix(),
+                    DEFAULT_SYSTEM_USER_NAME,
+                    DEFAULT_SYSTEM_USER_ROLE
+                );
+
+                return null;
+              }
+            }
         );
       }
     }
