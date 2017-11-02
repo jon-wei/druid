@@ -51,16 +51,10 @@ public class BasicAuthenticatorResourceTest
   private BasicAuthenticatorResource resource;
   private HttpServletRequest req;
   private TestDerbyAuthenticatorStorageConnector connector;
-  private TestDerbyAuthenticatorStorageConnector connector2;
 
   @Rule
-  public final TestDerbyAuthenticatorStorageConnector.DerbyConnectorRule authenticatorRule =
+  public final TestDerbyAuthenticatorStorageConnector.DerbyConnectorRule derbyConnectorRule =
       new TestDerbyAuthenticatorStorageConnector.DerbyConnectorRule("test");
-
-
-  @Rule
-  public final TestDerbyAuthenticatorStorageConnector.DerbyConnectorRule authenticator2Rule =
-      new TestDerbyAuthenticatorStorageConnector.DerbyConnectorRule("test2");
 
 
   @Rule
@@ -70,20 +64,19 @@ public class BasicAuthenticatorResourceTest
   public void setUp() throws Exception
   {
     req = EasyMock.createStrictMock(HttpServletRequest.class);
-    connector = authenticatorRule.getConnector();
-    connector2 = authenticator2Rule.getConnector();
+    connector = derbyConnectorRule.getConnector();
 
     AuthenticatorMapper mapper = new AuthenticatorMapper(
         ImmutableMap.of(
-            BASIC_AUTHENTICATOR_NAME, new BasicHTTPAuthenticator(connector, "druid", "druid", "druid"),
-            BASIC_AUTHENTICATOR_NAME2, new BasicHTTPAuthenticator(connector2, "druid", "druid", "druid"),
+            BASIC_AUTHENTICATOR_NAME, new BasicHTTPAuthenticator(connector, BASIC_AUTHENTICATOR_NAME, "druid", "druid", "druid"),
+            BASIC_AUTHENTICATOR_NAME2, new BasicHTTPAuthenticator(connector, BASIC_AUTHENTICATOR_NAME2,"druid", "druid", "druid"),
             "allowAll", new AllowAllAuthenticator()
         ),
         "basic"
     );
 
     createAllTables();
-    resource = new BasicAuthenticatorResource(mapper);
+    resource = new BasicAuthenticatorResource(connector, mapper);
   }
 
   @After
@@ -231,25 +224,25 @@ public class BasicAuthenticatorResourceTest
 
   private void createAllTables()
   {
-    connector.createUserTable();
-    connector.createUserCredentialsTable();
+    connector.createUserTable(BASIC_AUTHENTICATOR_NAME);
+    connector.createUserCredentialsTable(BASIC_AUTHENTICATOR_NAME);
 
-    connector2.createUserTable();
-    connector2.createUserCredentialsTable();
+    connector.createUserTable(BASIC_AUTHENTICATOR_NAME2);
+    connector.createUserCredentialsTable(BASIC_AUTHENTICATOR_NAME2);
   }
 
   private void dropAllTables()
   {
-    for (String table : connector.getTableNames()) {
-      dropTable(table, connector);
+    for (String table : connector.getTableNamesForPrefix(BASIC_AUTHENTICATOR_NAME)) {
+      dropTable(table);
     }
 
-    for (String table : connector2.getTableNames()) {
-      dropTable(table, connector2);
+    for (String table : connector.getTableNamesForPrefix(BASIC_AUTHENTICATOR_NAME2)) {
+      dropTable(table);
     }
   }
 
-  private void dropTable(final String tableName, SQLBasicAuthenticatorStorageConnector connector)
+  private void dropTable(final String tableName)
   {
     connector.getDBI().withHandle(
         new HandleCallback<Void>()

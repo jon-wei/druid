@@ -113,6 +113,7 @@ public class BasicHTTPAuthenticator implements Authenticator
    */
   public BasicHTTPAuthenticator(
       BasicAuthenticatorStorageConnector dbConnector,
+      String dbPrefix,
       String internalClientUsername,
       String internalClientPassword,
       String authorizerName
@@ -122,7 +123,7 @@ public class BasicHTTPAuthenticator implements Authenticator
     this.internalClientUsername = internalClientUsername;
     this.internalClientPassword = internalClientPassword;
     this.authorizerName = authorizerName;
-    this.dbConfig = new BasicAuthDBConfig(null, null, null);
+    this.dbConfig = new BasicAuthDBConfig(dbPrefix, null, null);
   }
 
   @Override

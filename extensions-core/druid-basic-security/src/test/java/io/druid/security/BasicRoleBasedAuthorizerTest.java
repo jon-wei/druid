@@ -38,9 +38,11 @@ import org.skife.jdbi.v2.tweak.HandleCallback;
 
 public class BasicRoleBasedAuthorizerTest
 {
+  private static final String TEST_DB_PREFIX = "test";
+
   @Rule
   public final TestDerbyAuthorizerStorageConnector.DerbyConnectorRule derbyConnectorRule =
-      new TestDerbyAuthorizerStorageConnector.DerbyConnectorRule("test");
+      new TestDerbyAuthorizerStorageConnector.DerbyConnectorRule(TEST_DB_PREFIX);
 
   private BasicRoleBasedAuthorizer authorizer;
   private TestDerbyAuthorizerStorageConnector connector;
@@ -50,21 +52,21 @@ public class BasicRoleBasedAuthorizerTest
   {
     connector = derbyConnectorRule.getConnector();
     createAllTables();
-    authorizer = new BasicRoleBasedAuthorizer(connector, 5000);
+    authorizer = new BasicRoleBasedAuthorizer(connector, TEST_DB_PREFIX, 5000);
   }
 
   @Test
   public void testAuth()
   {
-    connector.createUser("druid");
-    connector.createRole("druidRole");
-    connector.assignRole("druid", "druidRole");
+    connector.createUser(TEST_DB_PREFIX, "druid");
+    connector.createRole(TEST_DB_PREFIX, "druidRole");
+    connector.assignRole(TEST_DB_PREFIX, "druid", "druidRole");
 
     ResourceAction permission = new ResourceAction(
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.WRITE
     );
-    connector.addPermission("druidRole", permission);
+    connector.addPermission(TEST_DB_PREFIX, "druidRole", permission);
 
     AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null);
 
@@ -86,16 +88,16 @@ public class BasicRoleBasedAuthorizerTest
   @Test
   public void testMorePermissionsThanCacheSize()
   {
-    connector.createUser("druid");
-    connector.createRole("druidRole");
-    connector.assignRole("druid", "druidRole");
+    connector.createUser(TEST_DB_PREFIX, "druid");
+    connector.createRole(TEST_DB_PREFIX, "druidRole");
+    connector.assignRole(TEST_DB_PREFIX, "druid", "druidRole");
 
     for (int i = 0; i < authorizer.getPermissionCacheSize() + 50; i++) {
       ResourceAction permission = new ResourceAction(
           new Resource("testResource-" + i, ResourceType.DATASOURCE),
           Action.WRITE
       );
-      connector.addPermission("druidRole", permission);
+      connector.addPermission(TEST_DB_PREFIX, "druidRole", permission);
     }
 
     AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null);
@@ -123,15 +125,15 @@ public class BasicRoleBasedAuthorizerTest
 
   private void createAllTables()
   {
-    connector.createUserTable();
-    connector.createRoleTable();
-    connector.createPermissionTable();
-    connector.createUserRoleTable();
+    connector.createUserTable(TEST_DB_PREFIX);
+    connector.createRoleTable(TEST_DB_PREFIX);
+    connector.createPermissionTable(TEST_DB_PREFIX);
+    connector.createUserRoleTable(TEST_DB_PREFIX);
   }
 
   private void dropAllTables()
   {
-    for (String table : connector.getTableNames()) {
+    for (String table : connector.getTableNames(TEST_DB_PREFIX)) {
       dropTable(table);
     }
   }

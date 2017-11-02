@@ -56,7 +56,7 @@ public class TestDerbyAuthorizerStorageConnector extends DerbySQLBasicAuthorizer
     super(
         new NoopMetadataStorageProvider().get(),
         config,
-        dbConfigSupplier,
+        null,
         new ObjectMapper(),
         new DBI(jdbcUri + ";create=true")
     );

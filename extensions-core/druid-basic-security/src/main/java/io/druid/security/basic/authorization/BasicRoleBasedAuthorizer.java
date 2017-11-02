@@ -91,6 +91,7 @@ public class BasicRoleBasedAuthorizer implements Authorizer
    */
   public BasicRoleBasedAuthorizer(
       BasicAuthorizerStorageConnector dbConnector,
+      String dbPrefix,
       int permissionCacheSize
   )
   {
@@ -99,7 +100,7 @@ public class BasicRoleBasedAuthorizer implements Authorizer
     this.permissionPatternCache = Caffeine.newBuilder()
                                           .maximumSize(this.permissionCacheSize)
                                           .build(regexStr -> Pattern.compile(regexStr));
-    this.dbConfig = new BasicAuthDBConfig(null, null, null);
+    this.dbConfig = new BasicAuthDBConfig(dbPrefix, null, null);
   }
 
   @Override

@@ -54,15 +54,10 @@ public class BasicAuthorizerResourceTest
   private BasicAuthorizerResource resource;
   private HttpServletRequest req;
   private TestDerbyAuthorizerStorageConnector connector;
-  private TestDerbyAuthorizerStorageConnector connector2;
 
   @Rule
-  public final TestDerbyAuthorizerStorageConnector.DerbyConnectorRule authorizerRule =
+  public final TestDerbyAuthorizerStorageConnector.DerbyConnectorRule derbyConnectorRule =
       new TestDerbyAuthorizerStorageConnector.DerbyConnectorRule("test");
-
-  @Rule
-  public final TestDerbyAuthorizerStorageConnector.DerbyConnectorRule authorizer2Rule =
-      new TestDerbyAuthorizerStorageConnector.DerbyConnectorRule("test2");
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -72,19 +67,18 @@ public class BasicAuthorizerResourceTest
   public void setUp() throws Exception
   {
     req = EasyMock.createStrictMock(HttpServletRequest.class);
-    connector = authorizerRule.getConnector();
-    connector2 = authorizer2Rule.getConnector();
+    connector = derbyConnectorRule.getConnector();
 
     AuthorizerMapper mapper = new AuthorizerMapper(
         ImmutableMap.of(
-            BASIC_AUTHORIZER_NAME, new BasicRoleBasedAuthorizer(connector, 5000),
-            BASIC_AUTHORIZER_NAME2, new BasicRoleBasedAuthorizer(connector2, 5000),
+            BASIC_AUTHORIZER_NAME, new BasicRoleBasedAuthorizer(connector, BASIC_AUTHORIZER_NAME, 5000),
+            BASIC_AUTHORIZER_NAME2, new BasicRoleBasedAuthorizer(connector, BASIC_AUTHORIZER_NAME2, 5000),
             "allowAll", new AllowAllAuthorizer()
         )
     );
 
     createAllTables();
-    resource = new BasicAuthorizerResource(mapper);
+    resource = new BasicAuthorizerResource(connector, mapper);
   }
 
   @After
@@ -579,29 +573,29 @@ public class BasicAuthorizerResourceTest
   
   private void createAllTables()
   {
-    connector.createUserTable();
-    connector.createRoleTable();
-    connector.createPermissionTable();
-    connector.createUserRoleTable();
+    connector.createUserTable(BASIC_AUTHORIZER_NAME);
+    connector.createRoleTable(BASIC_AUTHORIZER_NAME);
+    connector.createPermissionTable(BASIC_AUTHORIZER_NAME);
+    connector.createUserRoleTable(BASIC_AUTHORIZER_NAME);
 
-    connector2.createUserTable();
-    connector2.createRoleTable();
-    connector2.createPermissionTable();
-    connector2.createUserRoleTable();
+    connector.createUserTable(BASIC_AUTHORIZER_NAME2);
+    connector.createRoleTable(BASIC_AUTHORIZER_NAME2);
+    connector.createPermissionTable(BASIC_AUTHORIZER_NAME2);
+    connector.createUserRoleTable(BASIC_AUTHORIZER_NAME2);
   }
 
   private void dropAllTables()
   {
-    for (String table : connector.getTableNames()) {
-      dropTable(table, connector);
+    for (String table : connector.getTableNames(BASIC_AUTHORIZER_NAME)) {
+      dropTable(table);
     }
 
-    for (String table : connector2.getTableNames()) {
-      dropTable(table, connector2);
+    for (String table : connector.getTableNames(BASIC_AUTHORIZER_NAME2)) {
+      dropTable(table);
     }
   }
 
-  private void dropTable(final String tableName, SQLBasicAuthorizerStorageConnector connector)
+  private void dropTable(final String tableName)
   {
     connector.getDBI().withHandle(
         new HandleCallback<Void>()
