@@ -25,7 +25,6 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.BasicAuthenticatorResource;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
-import io.druid.security.basic.db.SQLBasicAuthenticatorStorageConnector;
 import io.druid.server.security.AllowAllAuthenticator;
 import io.druid.server.security.AuthenticatorMapper;
 import org.easymock.EasyMock;
@@ -69,7 +68,7 @@ public class BasicAuthenticatorResourceTest
     AuthenticatorMapper mapper = new AuthenticatorMapper(
         ImmutableMap.of(
             BASIC_AUTHENTICATOR_NAME, new BasicHTTPAuthenticator(connector, BASIC_AUTHENTICATOR_NAME, "druid", "druid", "druid"),
-            BASIC_AUTHENTICATOR_NAME2, new BasicHTTPAuthenticator(connector, BASIC_AUTHENTICATOR_NAME2,"druid", "druid", "druid"),
+            BASIC_AUTHENTICATOR_NAME2, new BasicHTTPAuthenticator(connector, BASIC_AUTHENTICATOR_NAME2, "druid", "druid", "druid"),
             "allowAll", new AllowAllAuthenticator()
         ),
         "basic"

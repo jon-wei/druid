@@ -45,7 +45,6 @@ import org.eclipse.jetty.client.api.Authentication;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.util.Attributes;
-
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import javax.annotation.Nullable;

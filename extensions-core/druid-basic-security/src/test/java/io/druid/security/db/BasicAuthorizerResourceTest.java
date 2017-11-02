@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.java.util.common.StringUtils;
 import io.druid.security.basic.BasicAuthorizerResource;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
-import io.druid.security.basic.db.SQLBasicAuthorizerStorageConnector;
 import io.druid.server.security.Action;
 import io.druid.server.security.AllowAllAuthorizer;
 import io.druid.server.security.AuthorizerMapper;

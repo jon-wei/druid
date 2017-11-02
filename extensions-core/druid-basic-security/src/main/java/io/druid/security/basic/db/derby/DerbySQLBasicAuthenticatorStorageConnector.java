@@ -28,7 +28,6 @@ import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorage;
 import io.druid.metadata.MetadataStorageConnectorConfig;
-import io.druid.security.basic.db.BasicAuthDBConfig;
 import io.druid.security.basic.db.SQLBasicAuthenticatorStorageConnector;
 import io.druid.server.security.AuthenticatorMapper;
 import org.apache.commons.dbcp2.BasicDataSource;

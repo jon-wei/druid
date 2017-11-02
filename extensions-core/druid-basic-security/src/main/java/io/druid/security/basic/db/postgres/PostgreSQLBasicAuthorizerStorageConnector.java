@@ -26,7 +26,6 @@ import com.google.inject.Inject;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
-import io.druid.security.basic.db.BasicAuthDBConfig;
 import io.druid.security.basic.db.SQLBasicAuthorizerStorageConnector;
 import io.druid.server.security.AuthorizerMapper;
 import org.apache.commons.dbcp2.BasicDataSource;
