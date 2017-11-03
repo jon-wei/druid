@@ -26,7 +26,6 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.metadata.MetadataStorageConnector;
@@ -41,7 +40,6 @@ import io.druid.server.security.AuthenticatorMapper;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class BasicAuthenticatorMetadataStorageUpdater
 {

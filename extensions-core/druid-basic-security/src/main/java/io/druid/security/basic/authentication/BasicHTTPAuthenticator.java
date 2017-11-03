@@ -30,7 +30,10 @@ import com.metamx.http.client.auth.BasicCredentials;
 import io.druid.java.util.common.StringUtils;
 import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.db.BasicAuthDBConfig;
+import io.druid.security.basic.db.BasicAuthenticatorMetadataStorageUpdater;
 import io.druid.security.basic.db.BasicAuthenticatorStorageConnector;
+import io.druid.security.basic.db.entity.BasicAuthenticatorCredentials;
+import io.druid.security.basic.db.entity.BasicAuthenticatorUser;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Authenticator;
@@ -52,13 +55,14 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Map;
 
 @JsonTypeName("basic")
 public class BasicHTTPAuthenticator implements Authenticator
 {
-  private final BasicAuthenticatorStorageConnector dbConnector;
+  private final BasicAuthenticatorMetadataStorageUpdater storageUpdater;
   private final String internalClientUsername;
   private final String internalClientPassword;
   private final String authorizerName;
@@ -66,7 +70,7 @@ public class BasicHTTPAuthenticator implements Authenticator
 
   @JsonCreator
   public BasicHTTPAuthenticator(
-      @JacksonInject BasicAuthenticatorStorageConnector dbConnector,
+      @JacksonInject BasicAuthenticatorMetadataStorageUpdater storageUpdater,
       @JsonProperty("dbPrefix") String dbPrefix,
       @JsonProperty("initialAdminPassword") String initialAdminPassword,
       @JsonProperty("initialInternalClientPassword") String initialInternalClientPassword,
@@ -79,25 +83,7 @@ public class BasicHTTPAuthenticator implements Authenticator
     this.internalClientPassword = internalClientPassword;
     this.authorizerName = authorizerName;
     this.dbConfig = new BasicAuthDBConfig(dbPrefix, initialAdminPassword, initialInternalClientPassword);
-    this.dbConnector = dbConnector;
-  }
-
-  /**
-   * constructor for unit tests
-   */
-  public BasicHTTPAuthenticator(
-      BasicAuthenticatorStorageConnector dbConnector,
-      String dbPrefix,
-      String internalClientUsername,
-      String internalClientPassword,
-      String authorizerName
-  )
-  {
-    this.dbConnector = dbConnector;
-    this.internalClientUsername = internalClientUsername;
-    this.internalClientPassword = internalClientPassword;
-    this.authorizerName = authorizerName;
-    this.dbConfig = new BasicAuthDBConfig(dbPrefix, null, null);
+    this.storageUpdater = storageUpdater;
   }
 
   @Override
@@ -123,7 +109,7 @@ public class BasicHTTPAuthenticator implements Authenticator
       return null;
     }
 
-    if (dbConnector.checkCredentials(dbConfig.getDbPrefix(), user, password.toCharArray())) {
+    if (checkCredentials(user, password.toCharArray())) {
       return new AuthenticationResult(user, authorizerName, null);
     } else {
       return null;
@@ -211,11 +197,6 @@ public class BasicHTTPAuthenticator implements Authenticator
     return null;
   }
 
-  public BasicAuthenticatorStorageConnector getDbConnector()
-  {
-    return dbConnector;
-  }
-
   public BasicAuthDBConfig getDbConfig()
   {
     return dbConfig;
@@ -256,7 +237,7 @@ public class BasicHTTPAuthenticator implements Authenticator
       String user = splits[0];
       char[] password = splits[1].toCharArray();
 
-      if (dbConnector.checkCredentials(dbConfig.getDbPrefix(), user, password)) {
+      if (checkCredentials(user, password)) {
         AuthenticationResult authenticationResult = new AuthenticationResult(user, authorizerName, null);
         servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
         filterChain.doFilter(servletRequest, servletResponse);
@@ -270,5 +251,26 @@ public class BasicHTTPAuthenticator implements Authenticator
     {
 
     }
+  }
+
+  private boolean checkCredentials(String username, char[] password)
+  {
+    Map<String, BasicAuthenticatorUser> userMap = storageUpdater.getCachedUserMap(dbConfig.getDbPrefix());
+    BasicAuthenticatorUser user = userMap.get(username);
+    if (user == null) {
+      return false;
+    }
+    BasicAuthenticatorCredentials credentials = user.getCredentials();
+    if (credentials == null) {
+      return false;
+    }
+
+    byte[] recalculatedHash = BasicAuthUtils.hashPassword(
+        password,
+        credentials.getSalt(),
+        credentials.getIterations()
+    );
+
+    return Arrays.equals(recalculatedHash, credentials.getHash());
   }
 }

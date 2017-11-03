@@ -44,6 +44,7 @@ import java.util.Map;
 
 public class BasicAuthenticatorResourceTest
 {
+  /*
   private static final String BASIC_AUTHENTICATOR_NAME = "basic";
   private static final String BASIC_AUTHENTICATOR_NAME2 = "basic2";
 
@@ -261,4 +262,5 @@ public class BasicAuthenticatorResourceTest
   {
     return ImmutableMap.of("error", errorMsg);
   }
+  */
 }

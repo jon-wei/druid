@@ -25,7 +25,8 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.java.util.common.StringUtils;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
-import io.druid.security.basic.db.BasicAuthenticatorStorageConnector;
+import io.druid.security.basic.db.BasicAuthenticatorMetadataStorageUpdater;
+import io.druid.security.basic.db.entity.BasicAuthenticatorUser;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
@@ -41,7 +42,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -50,16 +50,16 @@ import java.util.Map;
 @Path("/druid/coordinator/v1/security/authentication")
 public class BasicAuthenticatorResource
 {
-  private final BasicAuthenticatorStorageConnector dbConnector;
+  private final BasicAuthenticatorMetadataStorageUpdater storageUpdater;
   private final Map<String, BasicHTTPAuthenticator> authenticatorMap;
 
   @Inject
   public BasicAuthenticatorResource(
-      BasicAuthenticatorStorageConnector dbConnector,
+      BasicAuthenticatorMetadataStorageUpdater storageUpdater,
       AuthenticatorMapper authenticatorMapper
   )
   {
-    this.dbConnector = dbConnector;
+    this.storageUpdater = storageUpdater;
 
     this.authenticatorMap = Maps.newHashMap();
     for (Map.Entry<String, Authenticator> authenticatorEntry : authenticatorMapper.getAuthenticatorMap().entrySet()) {
@@ -91,8 +91,11 @@ public class BasicAuthenticatorResource
       return makeResponseForAuthenticatorNotFound(authenticatorName);
     }
 
-    List<Map<String, Object>> users = dbConnector.getAllUsers(authenticator.getDBPrefix());
-    return Response.ok(users).build();
+    Map<String, BasicAuthenticatorUser> userMap = storageUpdater.deserializeUserMap(
+        storageUpdater.getCurrentUserMapBytes(authenticator.getDBPrefix())
+    );
+
+    return Response.ok(userMap.keySet()).build();
   }
 
   /**
@@ -117,16 +120,13 @@ public class BasicAuthenticatorResource
       return makeResponseForAuthenticatorNotFound(authenticatorName);
     }
 
-    try {
-      Map<String, Object> user = dbConnector.getUser(authenticator.getDBPrefix(), userName);
-      Map<String, Object> credentials = dbConnector.getUserCredentials(authenticator.getDBPrefix(), userName);
+    Map<String, BasicAuthenticatorUser> userMap = storageUpdater.deserializeUserMap(
+        storageUpdater.getCurrentUserMapBytes(authenticator.getDBPrefix())
+    );
 
-      Map<String, Object> userInfo = Maps.newHashMap();
-      userInfo.put("user", user);
-      if (credentials != null) {
-        userInfo.put("credentials", credentials);
-      }
-      return Response.ok(userInfo).build();
+    try {
+      BasicAuthenticatorUser user = userMap.get(userName);
+      return Response.ok(user).build();
     }
     catch (CallbackFailedException cfe) {
       return makeResponseForCallbackFailedException(cfe);
@@ -158,7 +158,7 @@ public class BasicAuthenticatorResource
     }
 
     try {
-      dbConnector.createUser(authenticator.getDBPrefix(), userName);
+      storageUpdater.createUser(authenticator.getDBPrefix(), userName);
       return Response.ok().build();
     }
     catch (CallbackFailedException cfe) {
@@ -191,7 +191,7 @@ public class BasicAuthenticatorResource
     }
 
     try {
-      dbConnector.deleteUser(authenticator.getDBPrefix(), userName);
+      storageUpdater.deleteUser(authenticator.getDBPrefix(), userName);
       return Response.ok().build();
     }
     catch (CallbackFailedException cfe) {
@@ -226,12 +226,35 @@ public class BasicAuthenticatorResource
     }
 
     try {
-      dbConnector.setUserCredentials(authenticator.getDBPrefix(), userName, password.toCharArray());
+      storageUpdater.setUserCredentials(authenticator.getDBPrefix(), userName, password.toCharArray());
       return Response.ok().build();
     }
     catch (CallbackFailedException cfe) {
       return makeResponseForCallbackFailedException(cfe);
     }
+  }
+
+  /**
+   * @param req HTTP request
+   *
+   * @return serialized user map
+   */
+  @GET
+  @Path("/{authenticatorName}/cachedSerializedUserMap")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response getCachedSerializedUserMap(
+      @Context HttpServletRequest req,
+      @PathParam("authenticatorName") final String authenticatorName
+  )
+  {
+    final BasicHTTPAuthenticator authenticator = authenticatorMap.get(authenticatorName);
+    if (authenticator == null) {
+      return makeResponseForAuthenticatorNotFound(authenticatorName);
+    }
+
+    return Response.ok(storageUpdater.getCachedSerializedUserMap(authenticatorName)).build();
   }
 
   private static Response makeResponseForAuthenticatorNotFound(String authenticatorName)
