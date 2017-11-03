@@ -29,9 +29,6 @@ import io.druid.security.basic.db.BasicAuthDBConfig;
 import io.druid.security.basic.db.entity.BasicAuthenticatorUser;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
-import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.TransactionCallback;
-import org.skife.jdbi.v2.TransactionStatus;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -40,6 +37,7 @@ public class BasicAuthenticatorCacheManager
 {
   private final DruidLeaderClient druidLeaderClient;
   private final ConcurrentHashMap<String, Map<String, BasicAuthenticatorUser>> userMaps;
+  private final Injector injector;
 
   @Inject
   public BasicAuthenticatorCacheManager(
@@ -48,54 +46,27 @@ public class BasicAuthenticatorCacheManager
   )
   {
     this.druidLeaderClient = druidLeaderClient;
+    this.injector = injector;
     this.userMaps = new ConcurrentHashMap<>();
   }
 
-  @LifecycleStart
-  public void start()
+  private void initUserMaps()
   {
     AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
-
     for (Map.Entry<String, Authenticator> entry : authenticatorMapper.getAuthenticatorMap().entrySet()) {
       Authenticator authenticator = entry.getValue();
       if (authenticator instanceof BasicHTTPAuthenticator) {
         String authenticatorName = entry.getKey();
         BasicHTTPAuthenticator basicHTTPAuthenticator = (BasicHTTPAuthenticator) authenticator;
         BasicAuthDBConfig dbConfig = basicHTTPAuthenticator.getDbConfig();
-
-        retryTransaction(
-            new TransactionCallback<Void>()
-            {
-              @Override
-              public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
-              {
-                if (tableExists(handle, getPrefixedTableName(dbConfig.getDbPrefix(), USERS))) {
-                  return null;
-                }
-
-                createUserTable(dbConfig.getDbPrefix());
-                createUserCredentialsTable(dbConfig.getDbPrefix());
-
-                makeDefaultSuperuser(
-                    dbConfig.getDbPrefix(),
-                    DEFAULT_ADMIN_NAME,
-                    dbConfig.getInitialAdminPassword()
-                );
-
-                makeDefaultSuperuser(
-                    dbConfig.getDbPrefix(),
-                    DEFAULT_SYSTEM_USER_NAME,
-                    dbConfig.getInitialInternalClientPassword()
-                );
-
-                return null;
-              }
-            },
-            3,
-            10
-        );
       }
     }
+
+  }
+
+  @LifecycleStart
+  public void start()
+  {
   }
 
 }
