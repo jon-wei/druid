@@ -31,7 +31,6 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.db.BasicAuthDBConfig;
 import io.druid.security.basic.db.BasicAuthenticatorMetadataStorageUpdater;
-import io.druid.security.basic.db.BasicAuthenticatorStorageConnector;
 import io.druid.security.basic.db.entity.BasicAuthenticatorCredentials;
 import io.druid.security.basic.db.entity.BasicAuthenticatorUser;
 import io.druid.server.security.AuthConfig;

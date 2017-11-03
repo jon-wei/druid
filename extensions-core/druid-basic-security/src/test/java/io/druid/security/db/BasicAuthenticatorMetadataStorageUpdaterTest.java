@@ -27,12 +27,8 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import com.google.inject.multibindings.Multibinder;
 import io.druid.guice.GuiceInjectors;
-import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
-import io.druid.guice.LazySingleton;
-import io.druid.guice.LifecycleModule;
 import io.druid.guice.annotations.Self;
 import io.druid.initialization.Initialization;
 import io.druid.metadata.MetadataStorageTablesConfig;
@@ -44,22 +40,13 @@ import io.druid.security.basic.db.BasicAuthenticatorMetadataStorageUpdater;
 import io.druid.security.basic.db.entity.BasicAuthenticatorCredentials;
 import io.druid.security.basic.db.entity.BasicAuthenticatorUser;
 import io.druid.server.DruidNode;
-import io.druid.server.initialization.BaseJettyTest;
-import io.druid.server.initialization.jetty.JettyServerInitializer;
-import io.druid.server.initialization.jetty.ServletFilterHolder;
-import io.druid.server.security.AuthTestUtils;
 import io.druid.server.security.AuthenticatorMapper;
-import io.druid.server.security.AuthorizerMapper;
-import org.eclipse.jetty.server.Server;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import javax.servlet.DispatcherType;
-import javax.servlet.Filter;
-import java.util.EnumSet;
 import java.util.Map;
 
 public class BasicAuthenticatorMetadataStorageUpdaterTest
@@ -158,7 +145,7 @@ public class BasicAuthenticatorMetadataStorageUpdaterTest
                     Key.get(DruidNode.class, Self.class),
                     new DruidNode("test", "localhost", null, null, true, false)
                 );
-                
+
                 binder.bind(AuthenticatorMapper.class).toInstance(
                     new AuthenticatorMapper(
                         ImmutableMap.of(

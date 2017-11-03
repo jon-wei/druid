@@ -19,29 +19,6 @@
 
 package io.druid.security.db;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import io.druid.java.util.common.StringUtils;
-import io.druid.security.basic.BasicAuthUtils;
-import io.druid.security.basic.BasicAuthenticatorResource;
-import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
-import io.druid.server.security.AllowAllAuthenticator;
-import io.druid.server.security.AuthenticatorMapper;
-import org.easymock.EasyMock;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.tweak.HandleCallback;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.Response;
-import java.util.List;
-import java.util.Map;
-
 public class BasicAuthenticatorResourceTest
 {
   /*

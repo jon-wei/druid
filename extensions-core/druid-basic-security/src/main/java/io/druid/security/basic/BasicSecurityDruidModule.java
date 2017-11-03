@@ -23,23 +23,10 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import com.google.inject.Key;
 import io.druid.guice.Jerseys;
-import io.druid.guice.ManageLifecycle;
-import io.druid.guice.PolyBind;
 import io.druid.initialization.DruidModule;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
-import io.druid.security.basic.db.BasicAuthenticatorStorageConnector;
-import io.druid.security.basic.db.BasicAuthorizerStorageConnector;
-import io.druid.security.basic.db.SQLBasicAuthenticatorStorageConnector;
-import io.druid.security.basic.db.SQLBasicAuthorizerStorageConnector;
-import io.druid.security.basic.db.derby.DerbySQLBasicAuthenticatorStorageConnector;
-import io.druid.security.basic.db.derby.DerbySQLBasicAuthorizerStorageConnector;
-import io.druid.security.basic.db.mysql.MySQLBasicAuthenticatorStorageConnector;
-import io.druid.security.basic.db.mysql.MySQLBasicAuthorizerStorageConnector;
-import io.druid.security.basic.db.postgres.PostgreSQLBasicAuthenticatorStorageConnector;
-import io.druid.security.basic.db.postgres.PostgreSQLBasicAuthorizerStorageConnector;
 
 import java.util.List;
 
@@ -50,6 +37,8 @@ public class BasicSecurityDruidModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
+    Jerseys.addResource(binder, BasicAuthenticatorResource.class);
+    /*
     // authentication
     PolyBind.createChoiceWithDefault(
         binder, STORAGE_CONNECTOR_TYPE_PROPERTY, Key.get(BasicAuthenticatorStorageConnector.class), null, "derby"
@@ -130,6 +119,7 @@ public class BasicSecurityDruidModule implements DruidModule
             .in(ManageLifecycle.class);
 
     Jerseys.addResource(binder, BasicAuthorizerResource.class);
+    */
   }
 
   @Override
