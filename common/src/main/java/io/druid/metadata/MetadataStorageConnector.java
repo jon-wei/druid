@@ -23,8 +23,8 @@ package io.druid.metadata;
  */
 public interface MetadataStorageConnector
 {
-  public static final String CONFIG_TABLE_KEY_COLUMN = "name";
-  public static final String CONFIG_TABLE_VALUE_COLUMN = "payload";
+  String CONFIG_TABLE_KEY_COLUMN = "name";
+  String CONFIG_TABLE_VALUE_COLUMN = "payload";
 
   Void insertOrUpdate(
       String tableName,
