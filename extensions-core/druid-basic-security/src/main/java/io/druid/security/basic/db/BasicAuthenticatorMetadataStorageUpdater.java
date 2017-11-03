@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
@@ -42,9 +43,6 @@ public class BasicAuthenticatorMetadataStorageUpdater
   {
   };
 
-  public static final String CONFIG_TABLE_KEY_COLUMN = "name";
-  public static final String CONFIG_TABLE_VALUE_COLUMN = "payload";
-
   private final String authenticatorPrefix;
   private final MetadataStorageConnector connector;
   private final MetadataStorageTablesConfig connectorConfig;
@@ -56,7 +54,7 @@ public class BasicAuthenticatorMetadataStorageUpdater
       String authenticatorPrefix,
       MetadataStorageConnector connector,
       MetadataStorageTablesConfig connectorConfig,
-      ObjectMapper objectMapper
+      @Smile ObjectMapper objectMapper
   )
   {
     this.authenticatorPrefix = authenticatorPrefix;
@@ -105,22 +103,17 @@ public class BasicAuthenticatorMetadataStorageUpdater
     throw new ISE("Could not set credentials for user[%s] due to concurrent update contention.", userName);
   }
 
-  private static String getPrefixedKeyColumn(String keyPrefix, String keyName)
-  {
-    return StringUtils.format("basic_authentication_%s_%s", keyPrefix, keyName);
-  }
-
-  private byte[] getCurrentUserMapBytes()
+  public byte[] getCurrentUserMapBytes()
   {
     return connector.lookup(
         connectorConfig.getConfigTable(),
-        CONFIG_TABLE_KEY_COLUMN,
-        CONFIG_TABLE_VALUE_COLUMN,
+        MetadataStorageConnector.CONFIG_TABLE_KEY_COLUMN,
+        MetadataStorageConnector.CONFIG_TABLE_VALUE_COLUMN,
         getPrefixedKeyColumn(authenticatorPrefix, USERS)
     );
   }
 
-  private Map<String, BasicAuthenticatorUser> deserializeUserMap(byte[] userMapBytes)
+  public Map<String, BasicAuthenticatorUser> deserializeUserMap(byte[] userMapBytes)
   {
     Map<String, BasicAuthenticatorUser> userMap;
     if (userMapBytes == null) {
@@ -135,7 +128,7 @@ public class BasicAuthenticatorMetadataStorageUpdater
     return userMap;
   }
 
-  private byte[] serializeUserMap(Map<String, BasicAuthenticatorUser> userMap)
+  public byte[] serializeUserMap(Map<String, BasicAuthenticatorUser> userMap)
   {
     try {
       return objectMapper.writeValueAsBytes(userMap);
@@ -145,12 +138,17 @@ public class BasicAuthenticatorMetadataStorageUpdater
     }
   }
 
+  private static String getPrefixedKeyColumn(String keyPrefix, String keyName)
+  {
+    return StringUtils.format("basic_authentication_%s_%s", keyPrefix, keyName);
+  }
+
   private boolean tryUpdateUserMap(byte[] oldValue, byte[] newValue) {
     try {
       return connector.compareAndSwap(
           connectorConfig.getConfigTable(),
-          CONFIG_TABLE_KEY_COLUMN,
-          CONFIG_TABLE_VALUE_COLUMN,
+          MetadataStorageConnector.CONFIG_TABLE_KEY_COLUMN,
+          MetadataStorageConnector.CONFIG_TABLE_VALUE_COLUMN,
           getPrefixedKeyColumn(authenticatorPrefix, USERS),
           oldValue,
           newValue
