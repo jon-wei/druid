@@ -36,7 +36,6 @@ import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import io.druid.security.basic.db.BasicAuthDBConfig;
-import io.druid.security.basic.old.BasicAuthorizerStorageConnector;
 import io.druid.server.security.Action;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;

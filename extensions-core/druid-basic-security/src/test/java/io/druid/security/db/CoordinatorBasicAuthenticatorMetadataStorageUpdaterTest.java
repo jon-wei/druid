@@ -77,7 +77,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
         connector,
         tablesConfig,
         new ObjectMapper(new SmileFactory()),
-        new CoordinatorBasicAuthenticatorCacheNotifier(null, null, null)
+        new CoordinatorBasicAuthenticatorCacheNotifier(null, null)
     );
 
     updater.start();

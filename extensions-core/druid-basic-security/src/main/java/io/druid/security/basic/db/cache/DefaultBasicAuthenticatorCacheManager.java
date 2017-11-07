@@ -32,6 +32,7 @@ import io.druid.discovery.DruidLeaderClient;
 import io.druid.guice.ManageLifecycleLast;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
@@ -162,22 +163,34 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
   private Map<String, BasicAuthenticatorUser> fetchUserMapFromCoordinator(String prefix)
   {
     try {
-      Request req = druidLeaderClient.get().makeRequest(
-          HttpMethod.GET,
-          StringUtils.format("/druid/coordinator/v1/security/authentication/%s/cachedSerializedUserMap", prefix)
+      return RetryUtils.retry(
+          () -> {
+            return tryFetchUserMapFromCoordinator(prefix);
+          },
+          e -> true,
+          10
       );
-      FullResponseHolder responseHolder = druidLeaderClient.get().go(req);
-      ChannelBuffer buf = responseHolder.getResponse().getContent();
-      byte[] userMapBytes = buf.array();
-      Map<String, BasicAuthenticatorUser> userMap = objectMapper.readValue(
-          userMapBytes,
-          CoordinatorBasicAuthenticatorMetadataStorageUpdater.USER_MAP_TYPE_REFERENCE
-      );
-      return userMap;
     }
-    catch (Exception ioe) {
-      throw new RuntimeException(ioe);
+    catch (Exception e) {
+      log.error(e, "Encountered exception while fetching user map for authenticator [%s]", prefix);
+      throw new RuntimeException(e);
     }
+  }
+
+  private Map<String, BasicAuthenticatorUser> tryFetchUserMapFromCoordinator(String prefix) throws Exception
+  {
+    Request req = druidLeaderClient.get().makeRequest(
+        HttpMethod.GET,
+        StringUtils.format("/druid/coordinator/v1/security/authentication/%s/cachedSerializedUserMap", prefix)
+    );
+    FullResponseHolder responseHolder = druidLeaderClient.get().go(req);
+    ChannelBuffer buf = responseHolder.getResponse().getContent();
+    byte[] userMapBytes = buf.array();
+    Map<String, BasicAuthenticatorUser> userMap = objectMapper.readValue(
+        userMapBytes,
+        CoordinatorBasicAuthenticatorMetadataStorageUpdater.USER_MAP_TYPE_REFERENCE
+    );
+    return userMap;
   }
 
   private void initUserMaps()

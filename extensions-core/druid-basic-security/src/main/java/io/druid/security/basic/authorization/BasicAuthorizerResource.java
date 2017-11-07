@@ -26,7 +26,6 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.java.util.common.StringUtils;
 import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.BasicSecurityResourceFilter;
-import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import io.druid.security.basic.old.BasicAuthorizerStorageConnector;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
