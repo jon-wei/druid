@@ -63,7 +63,7 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
   private static final Logger log = new Logger(DefaultBasicAuthenticatorCacheManager.class);
 
   private final ConcurrentHashMap<String, Map<String, BasicAuthenticatorUser>> cachedUserMaps;
-  private final List<String> authenticatorPrefixes;
+  private final Set<String> authenticatorPrefixes;
   private final Set<String> authenticatorsToUpdate;
   private final Injector injector;
   private final ObjectMapper objectMapper;
@@ -83,7 +83,7 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
     this.injector = injector;
     this.objectMapper = objectMapper;
     this.cachedUserMaps = new ConcurrentHashMap<>();
-    this.authenticatorPrefixes = new ArrayList<>();
+    this.authenticatorPrefixes = new HashSet<>();
     this.authenticatorsToUpdate = new HashSet<>();
     this.druidLeaderClient = druidLeaderClient;
 

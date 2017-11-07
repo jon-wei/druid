@@ -28,6 +28,7 @@ import com.google.inject.Provider;
 import com.metamx.http.client.CredentialedHttpClient;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.auth.BasicCredentials;
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.db.BasicAuthDBConfig;
@@ -256,6 +257,10 @@ public class BasicHTTPAuthenticator implements Authenticator
   private boolean checkCredentials(String username, char[] password)
   {
     Map<String, BasicAuthenticatorUser> userMap = cacheManager.get().getUserMap(dbConfig.getDbPrefix());
+    if (userMap == null) {
+      throw new IAE("No authenticator found with prefix: [%s]", dbConfig.getDbPrefix());
+    }
+
     BasicAuthenticatorUser user = userMap.get(username);
     if (user == null) {
       return false;

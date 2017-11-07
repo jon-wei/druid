@@ -153,12 +153,16 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
 
   public Map<String, BasicAuthenticatorUser> getCachedUserMap(String prefix)
   {
-    return cachedUserMaps.get(prefix);
+    synchronized (cachedUserMaps) {
+      return cachedUserMaps.get(prefix);
+    }
   }
 
   public byte[] getCachedSerializedUserMap(String prefix)
   {
-    return cachedSerializedUserMaps.get(prefix);
+    synchronized (cachedUserMaps) {
+      return cachedSerializedUserMaps.get(prefix);
+    }
   }
 
   public byte[] getCurrentUserMapBytes(String prefix)
@@ -210,7 +214,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
   )
   {
     try {
-      synchronized (connector) {
+      synchronized (cachedUserMaps) {
         boolean succeeded = connector.compareAndSwap(
             connectorConfig.getConfigTable(),
             MetadataStorageConnector.CONFIG_TABLE_KEY_COLUMN,

@@ -98,7 +98,7 @@ public class CoordinatorBasicAuthenticatorCacheNotifier
                   authenticatorsToUpdate.wait();
                 }
                 log.info("Sending cache update notifications");
-                authenticatorsToUpdateSnapshot = new HashSet<String>(authenticatorsToUpdate);
+                authenticatorsToUpdateSnapshot = new HashSet<>(authenticatorsToUpdate);
                 authenticatorsToUpdate.clear();
               }
               for (String authenticator : authenticatorsToUpdateSnapshot) {

@@ -210,7 +210,6 @@ public class CoordinatorBasicAuthenticatorResourceTest
 
     response = resource.getUser(req, AUTHENTICATOR_NAME, "druid");
     Assert.assertEquals(200, response.getStatus());
-    BasicAuthenticatorUser expectedUser = new BasicAuthenticatorUser("druid", null);
     BasicAuthenticatorUser actualUser = (BasicAuthenticatorUser) response.getEntity();
     Assert.assertEquals("druid", actualUser.getName());
     BasicAuthenticatorCredentials credentials = actualUser.getCredentials();
