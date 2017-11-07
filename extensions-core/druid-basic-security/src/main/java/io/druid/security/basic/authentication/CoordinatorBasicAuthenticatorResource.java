@@ -50,7 +50,7 @@ import java.util.Map;
  * Configuration resource for authenticator users and credentials.
  */
 @Path("/druid/coordinator/v1/security/authentication")
-public class CoordinatorBasicAuthenticatorResource implements BasicAuthenticatorResource
+public class CoordinatorBasicAuthenticatorResource
 {
   private static final Logger log = new Logger(CoordinatorBasicAuthenticatorResource.class);
 

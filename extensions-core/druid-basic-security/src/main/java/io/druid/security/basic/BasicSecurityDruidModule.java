@@ -26,7 +26,6 @@ import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import io.druid.guice.Jerseys;
@@ -34,7 +33,6 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.initialization.DruidModule;
 import io.druid.java.util.common.StringUtils;
-import io.druid.security.basic.authentication.BasicAuthenticatorResource;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import io.druid.security.basic.authentication.CoordinatorBasicAuthenticatorResource;
 import io.druid.security.basic.authentication.DefaultBasicAuthenticatorResource;
@@ -116,34 +114,6 @@ public class BasicSecurityDruidModule implements DruidModule
       return injector.getInstance(DefaultBasicAuthenticatorCacheManager.class);
     }
   }
-
-  //@Provides @LazySingleton
-  public static BasicAuthenticatorResource createAuthenticatorResource(final Injector injector)
-  {
-    if (isCoordinator(injector)) {
-      return injector.getInstance(CoordinatorBasicAuthenticatorResource.class);
-    } else {
-      return injector.getInstance(DefaultBasicAuthenticatorResource.class);
-    }
-  }
-
-  private static class BasicAuthenticatorResourceProvider implements Provider<BasicAuthenticatorResource>
-  {
-    private BasicAuthenticatorResource resource;
-
-    @Inject
-    public void inject(Injector injector)
-    {
-      resource = createAuthenticatorResource(injector);
-    }
-
-    @Override
-    public BasicAuthenticatorResource get()
-    {
-      return resource;
-    }
-  }
-
 
   @Override
   public List<? extends Module> getJacksonModules()

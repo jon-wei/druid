@@ -42,7 +42,7 @@ import javax.ws.rs.core.Response;
 import java.util.Map;
 
 @Path("/druid/security/internal/authentication")
-public class DefaultBasicAuthenticatorResource implements BasicAuthenticatorResource
+public class DefaultBasicAuthenticatorResource
 {
   private static final Logger log = new Logger(DefaultBasicAuthenticatorResource.class);
 

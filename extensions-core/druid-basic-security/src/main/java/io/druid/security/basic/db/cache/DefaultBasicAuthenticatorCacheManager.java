@@ -152,7 +152,6 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
       authenticatorsToUpdate.add(authenticatorPrefix);
       authenticatorsToUpdate.notify();
     }
-    //cacheUpdateHandlerThread.notify();
   }
 
   public Map<String, BasicAuthenticatorUser> getUserMap(String authenticatorPrefix)
@@ -177,7 +176,6 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
       return userMap;
     }
     catch (Exception ioe) {
-      //log.info("exception: " + ioe);
       throw new RuntimeException(ioe);
     }
   }
