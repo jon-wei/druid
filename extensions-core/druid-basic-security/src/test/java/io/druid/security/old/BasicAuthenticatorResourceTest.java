@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.security.db;
+package io.druid.security.old;
 
 public class BasicAuthenticatorResourceTest
 {

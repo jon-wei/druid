@@ -31,7 +31,6 @@ import io.druid.security.basic.db.BasicAuthenticatorMetadataStorageUpdater;
 import io.druid.security.basic.db.entity.BasicAuthenticatorUser;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
-import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -135,10 +134,13 @@ public class CoordinatorBasicAuthenticatorResource
 
     try {
       BasicAuthenticatorUser user = userMap.get(userName);
+      if (user == null) {
+        throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
+      }
       return Response.ok(user).build();
     }
-    catch (CallbackFailedException cfe) {
-      return makeResponseForCallbackFailedException(cfe);
+    catch (BasicSecurityDBResourceException cfe) {
+      return makeResponseForBasicSecurityDBResourceException(cfe);
     }
   }
 
@@ -170,8 +172,8 @@ public class CoordinatorBasicAuthenticatorResource
       storageUpdater.createUser(authenticator.getDBPrefix(), userName);
       return Response.ok().build();
     }
-    catch (CallbackFailedException cfe) {
-      return makeResponseForCallbackFailedException(cfe);
+    catch (BasicSecurityDBResourceException cfe) {
+      return makeResponseForBasicSecurityDBResourceException(cfe);
     }
   }
 
@@ -203,8 +205,8 @@ public class CoordinatorBasicAuthenticatorResource
       storageUpdater.deleteUser(authenticator.getDBPrefix(), userName);
       return Response.ok().build();
     }
-    catch (CallbackFailedException cfe) {
-      return makeResponseForCallbackFailedException(cfe);
+    catch (BasicSecurityDBResourceException cfe) {
+      return makeResponseForBasicSecurityDBResourceException(cfe);
     }
   }
 
@@ -238,8 +240,8 @@ public class CoordinatorBasicAuthenticatorResource
       storageUpdater.setUserCredentials(authenticator.getDBPrefix(), userName, password.toCharArray());
       return Response.ok().build();
     }
-    catch (CallbackFailedException cfe) {
-      return makeResponseForCallbackFailedException(cfe);
+    catch (BasicSecurityDBResourceException cfe) {
+      return makeResponseForBasicSecurityDBResourceException(cfe);
     }
   }
 
@@ -276,17 +278,12 @@ public class CoordinatorBasicAuthenticatorResource
                    .build();
   }
 
-  private static Response makeResponseForCallbackFailedException(CallbackFailedException cfe)
+  private static Response makeResponseForBasicSecurityDBResourceException(BasicSecurityDBResourceException bsre)
   {
-    Throwable cause = cfe.getCause();
-    if (cause instanceof BasicSecurityDBResourceException) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.<String, Object>of(
-                         "error", cause.getMessage()
-                     ))
-                     .build();
-    } else {
-      throw cfe;
-    }
+    return Response.status(Response.Status.BAD_REQUEST)
+                   .entity(ImmutableMap.<String, Object>of(
+                       "error", bsre.getMessage()
+                   ))
+                   .build();
   }
 }

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.security.db;
+package io.druid.security.old;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;

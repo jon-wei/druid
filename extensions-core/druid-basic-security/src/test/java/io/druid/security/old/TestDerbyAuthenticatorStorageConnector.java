@@ -17,16 +17,15 @@
  * under the License.
  */
 
-package io.druid.security.db;
+package io.druid.security.old;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import io.druid.java.util.common.StringUtils;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.metadata.NoopMetadataStorageProvider;
 import io.druid.security.basic.db.BasicAuthDBConfig;
-import io.druid.security.basic.old.DerbySQLBasicAuthorizerStorageConnector;
+import io.druid.security.basic.old.DerbySQLBasicAuthenticatorStorageConnector;
 import org.junit.Assert;
 import org.junit.rules.ExternalResource;
 import org.skife.jdbi.v2.DBI;
@@ -35,11 +34,11 @@ import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 import java.sql.SQLException;
 import java.util.UUID;
 
-public class TestDerbyAuthorizerStorageConnector extends DerbySQLBasicAuthorizerStorageConnector
+public class TestDerbyAuthenticatorStorageConnector extends DerbySQLBasicAuthenticatorStorageConnector
 {
   private final String jdbcUri;
 
-  public TestDerbyAuthorizerStorageConnector(
+  public TestDerbyAuthenticatorStorageConnector(
       Supplier<MetadataStorageConnectorConfig> config,
       Supplier<BasicAuthDBConfig> dbConfigSupplier
   )
@@ -47,7 +46,7 @@ public class TestDerbyAuthorizerStorageConnector extends DerbySQLBasicAuthorizer
     this(config, dbConfigSupplier, "jdbc:derby:memory:druidTest" + dbSafeUUID());
   }
 
-  protected TestDerbyAuthorizerStorageConnector(
+  protected TestDerbyAuthenticatorStorageConnector(
       Supplier<MetadataStorageConnectorConfig> config,
       Supplier<BasicAuthDBConfig> dbConfigSupplier,
       String jdbcUri
@@ -57,7 +56,6 @@ public class TestDerbyAuthorizerStorageConnector extends DerbySQLBasicAuthorizer
         new NoopMetadataStorageProvider().get(),
         config,
         null,
-        new ObjectMapper(),
         new DBI(jdbcUri + ";create=true")
     );
     this.jdbcUri = jdbcUri;
@@ -87,13 +85,13 @@ public class TestDerbyAuthorizerStorageConnector extends DerbySQLBasicAuthorizer
 
   public static class DerbyConnectorRule extends ExternalResource
   {
-    private TestDerbyAuthorizerStorageConnector connector;
+    private TestDerbyAuthenticatorStorageConnector connector;
     private final Supplier<BasicAuthDBConfig> dbConfigSupplier;
     private final MetadataStorageConnectorConfig connectorConfig;
 
     public DerbyConnectorRule(String dbPrefix)
     {
-      this(Suppliers.ofInstance(new BasicAuthDBConfig("test", "druid", "druid")));
+      this(Suppliers.ofInstance(new BasicAuthDBConfig(dbPrefix, "druid", "druid")));
     }
 
     public DerbyConnectorRule(
@@ -114,7 +112,7 @@ public class TestDerbyAuthorizerStorageConnector extends DerbySQLBasicAuthorizer
     @Override
     protected void before() throws Throwable
     {
-      connector = new TestDerbyAuthorizerStorageConnector(Suppliers.ofInstance(connectorConfig), dbConfigSupplier);
+      connector = new TestDerbyAuthenticatorStorageConnector(Suppliers.ofInstance(connectorConfig), dbConfigSupplier);
       connector.getDBI().open().close(); // create db
     }
 
@@ -124,7 +122,7 @@ public class TestDerbyAuthorizerStorageConnector extends DerbySQLBasicAuthorizer
       connector.tearDown();
     }
 
-    public TestDerbyAuthorizerStorageConnector getConnector()
+    public TestDerbyAuthenticatorStorageConnector getConnector()
     {
       return connector;
     }
