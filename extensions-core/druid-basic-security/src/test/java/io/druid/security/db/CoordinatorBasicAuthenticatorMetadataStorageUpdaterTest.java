@@ -37,6 +37,7 @@ import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import io.druid.security.basic.db.CoordinatorBasicAuthenticatorMetadataStorageUpdater;
+import io.druid.security.basic.db.cache.CoordinatorBasicAuthenticatorCacheNotifier;
 import io.druid.security.basic.db.entity.BasicAuthenticatorCredentials;
 import io.druid.security.basic.db.entity.BasicAuthenticatorUser;
 import io.druid.server.DruidNode;
@@ -75,7 +76,8 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
         injector,
         connector,
         tablesConfig,
-        new ObjectMapper(new SmileFactory())
+        new ObjectMapper(new SmileFactory()),
+        new CoordinatorBasicAuthenticatorCacheNotifier(null, null, null)
     );
 
     updater.start();

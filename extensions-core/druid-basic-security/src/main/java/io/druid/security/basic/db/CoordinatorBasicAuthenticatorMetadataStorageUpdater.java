@@ -34,6 +34,7 @@ import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
+import io.druid.security.basic.db.cache.CoordinatorBasicAuthenticatorCacheNotifier;
 import io.druid.security.basic.db.entity.BasicAuthenticatorCredentials;
 import io.druid.security.basic.db.entity.BasicAuthenticatorUser;
 import io.druid.server.security.Authenticator;
@@ -57,6 +58,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
   private final MetadataStorageConnector connector;
   private final MetadataStorageTablesConfig connectorConfig;
   private final ObjectMapper objectMapper;
+  private final CoordinatorBasicAuthenticatorCacheNotifier cacheNotifier;
   private final int numRetries = 5;
 
   private final Map<String, Map<String, BasicAuthenticatorUser>> cachedUserMaps;
@@ -67,13 +69,15 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
       Injector injector,
       MetadataStorageConnector connector,
       MetadataStorageTablesConfig connectorConfig,
-      @Smile ObjectMapper objectMapper
+      @Smile ObjectMapper objectMapper,
+      CoordinatorBasicAuthenticatorCacheNotifier cacheNotifier
   )
   {
     this.injector = injector;
     this.connector = connector;
     this.connectorConfig = connectorConfig;
     this.objectMapper = objectMapper;
+    this.cacheNotifier = cacheNotifier;
     this.cachedUserMaps = new HashMap<>();
     this.cachedSerializedUserMaps = new HashMap<>();
   }
@@ -218,6 +222,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
         if (succeeded) {
           cachedUserMaps.put(prefix, userMap);
           cachedSerializedUserMaps.put(prefix, newValue);
+          cacheNotifier.addUpdate(prefix);
           return true;
         } else {
           return false;
