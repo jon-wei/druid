@@ -48,9 +48,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -109,8 +107,10 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
           try {
             log.info("Scheduled cache poll is running");
             for (String authenticatorPrefix : authenticatorPrefixes) {
-              Map<String, BasicAuthenticatorUser> userMap = fetchUserMapFromCoordinator(authenticatorPrefix);
-              cachedUserMaps.put(authenticatorPrefix, userMap);
+              Map<String, BasicAuthenticatorUser> userMap = fetchUserMapFromCoordinator(authenticatorPrefix, false);
+              if (userMap != null) {
+                cachedUserMaps.put(authenticatorPrefix, userMap);
+              }
             }
             log.info("Scheduled cache poll is done");
           }
@@ -129,8 +129,10 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
               synchronized (authenticatorsToUpdate) {
                 log.info("Handling cache update");
                 for (String authenticatorPrefix : authenticatorsToUpdate) {
-                  Map<String, BasicAuthenticatorUser> userMap = fetchUserMapFromCoordinator(authenticatorPrefix);
-                  cachedUserMaps.put(authenticatorPrefix, userMap);
+                  Map<String, BasicAuthenticatorUser> userMap = fetchUserMapFromCoordinator(authenticatorPrefix, false);
+                  if (userMap != null) {
+                    cachedUserMaps.put(authenticatorPrefix, userMap);
+                  }
                 }
                 authenticatorsToUpdate.clear();
                 log.info("Handled cache update");
@@ -160,7 +162,7 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
     return cachedUserMaps.get(authenticatorPrefix);
   }
 
-  private Map<String, BasicAuthenticatorUser> fetchUserMapFromCoordinator(String prefix)
+  private Map<String, BasicAuthenticatorUser> fetchUserMapFromCoordinator(String prefix, boolean throwOnFailure)
   {
     try {
       return RetryUtils.retry(
@@ -173,7 +175,11 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
     }
     catch (Exception e) {
       log.error(e, "Encountered exception while fetching user map for authenticator [%s]", prefix);
-      throw new RuntimeException(e);
+      if (throwOnFailure) {
+        throw new RuntimeException(e);
+      } else {
+        return null;
+      }
     }
   }
 
@@ -202,9 +208,9 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
         String authenticatorName = entry.getKey();
         BasicHTTPAuthenticator basicHTTPAuthenticator = (BasicHTTPAuthenticator) authenticator;
         BasicAuthDBConfig dbConfig = basicHTTPAuthenticator.getDbConfig();
-        Map<String, BasicAuthenticatorUser> userMap = fetchUserMapFromCoordinator(dbConfig.getDbPrefix());
-        cachedUserMaps.put(dbConfig.getDbPrefix(), userMap);
-        authenticatorPrefixes.add(dbConfig.getDbPrefix());
+        Map<String, BasicAuthenticatorUser> userMap = fetchUserMapFromCoordinator(authenticatorName, true);
+        cachedUserMaps.put(authenticatorName, userMap);
+        authenticatorPrefixes.add(authenticatorName);
       }
     }
   }

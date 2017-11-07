@@ -245,7 +245,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
     return ImmutableMap.of("error", errorMsg);
   }
 
-  private static Injector setupInjector()
+  private Injector setupInjector()
   {
     return Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
@@ -267,6 +267,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
                             AUTHENTICATOR_NAME,
                             new BasicHTTPAuthenticator(
                                 null,
+                                injector,
                                 AUTHENTICATOR_NAME,
                                 "druid",
                                 "druid",
@@ -277,6 +278,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
                             AUTHENTICATOR_NAME2,
                             new BasicHTTPAuthenticator(
                                 null,
+                                injector,
                                 AUTHENTICATOR_NAME2,
                                 "druid",
                                 "druid",

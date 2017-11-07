@@ -91,16 +91,16 @@ public class CoordinatorBasicAuthenticatorCacheNotifier
         () -> {
           while (!Thread.interrupted()) {
             try {
-              log.info("About to send cache update notification");
+              log.info("Waiting for cache update notification");
               Set<String> authenticatorsToUpdateSnapshot;
               synchronized (authenticatorsToUpdate) {
                 if (authenticatorsToUpdate.isEmpty()) {
                   authenticatorsToUpdate.wait();
                 }
-                log.info("Sending cache update notifications");
                 authenticatorsToUpdateSnapshot = new HashSet<>(authenticatorsToUpdate);
                 authenticatorsToUpdate.clear();
               }
+              log.info("Sending cache update notifications");
               for (String authenticator : authenticatorsToUpdateSnapshot) {
                 sendUpdate(authenticator);
               }

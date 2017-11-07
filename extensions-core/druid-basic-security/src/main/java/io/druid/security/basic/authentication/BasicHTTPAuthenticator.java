@@ -24,11 +24,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Throwables;
+import com.google.inject.Injector;
 import com.google.inject.Provider;
 import com.metamx.http.client.CredentialedHttpClient;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.auth.BasicCredentials;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.db.BasicAuthDBConfig;
@@ -38,6 +40,7 @@ import io.druid.security.basic.db.entity.BasicAuthenticatorUser;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
 import org.eclipse.jetty.client.api.Authentication;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.api.Request;
@@ -68,10 +71,14 @@ public class BasicHTTPAuthenticator implements Authenticator
   private final String internalClientPassword;
   private final String authorizerName;
   private final BasicAuthDBConfig dbConfig;
+  private final Injector injector;
+
+  private String name;
 
   @JsonCreator
   public BasicHTTPAuthenticator(
       @JacksonInject Provider<BasicAuthenticatorCacheManager> cacheManager,
+      @JacksonInject Injector injector,
       @JsonProperty("dbPrefix") String dbPrefix,
       @JsonProperty("initialAdminPassword") String initialAdminPassword,
       @JsonProperty("initialInternalClientPassword") String initialInternalClientPassword,
@@ -80,6 +87,7 @@ public class BasicHTTPAuthenticator implements Authenticator
       @JsonProperty("authorizerName") String authorizerName
   )
   {
+    this.injector = injector;
     this.internalClientUsername = internalClientUsername;
     this.internalClientPassword = internalClientPassword;
     this.authorizerName = authorizerName;
@@ -203,11 +211,6 @@ public class BasicHTTPAuthenticator implements Authenticator
     return dbConfig;
   }
 
-  public String getDBPrefix()
-  {
-    return dbConfig.getDbPrefix();
-  }
-
   public class BasicHTTPAuthenticationFilter implements Filter
   {
     @Override
@@ -254,11 +257,27 @@ public class BasicHTTPAuthenticator implements Authenticator
     }
   }
 
+  private String getThisAuthenticatorName()
+  {
+    AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
+    for (Map.Entry<String, Authenticator> entry : authenticatorMapper.getAuthenticatorMap().entrySet()) {
+      // find itself in the map
+      if (this == entry.getValue()) {
+        return entry.getKey();
+      }
+    }
+    throw new ISE("WTF? Authenticator could not find itself in the authenticator map");
+  }
+
   private boolean checkCredentials(String username, char[] password)
   {
-    Map<String, BasicAuthenticatorUser> userMap = cacheManager.get().getUserMap(dbConfig.getDbPrefix());
+    if (name == null) {
+      name = getThisAuthenticatorName();
+    }
+
+    Map<String, BasicAuthenticatorUser> userMap = cacheManager.get().getUserMap(name);
     if (userMap == null) {
-      throw new IAE("No authenticator found with prefix: [%s]", dbConfig.getDbPrefix());
+      throw new IAE("No authenticator found with prefix: [%s]", name);
     }
 
     BasicAuthenticatorUser user = userMap.get(username);

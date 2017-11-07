@@ -154,11 +154,12 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
                             "test",
                             new BasicHTTPAuthenticator(
                                 null,
+                                injector,
                                 "test",
-                                "druid",
-                                "druid",
-                                "druid",
-                                "druid",
+                                null,
+                                null,
+                                null,
+                                null,
                                 "druid"
                             )
                         ),

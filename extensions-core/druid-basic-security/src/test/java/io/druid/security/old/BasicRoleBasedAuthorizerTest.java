@@ -21,7 +21,6 @@ package io.druid.security.old;
 
 import io.druid.java.util.common.StringUtils;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
-import io.druid.security.old.TestDerbyAuthorizerStorageConnector;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthenticationResult;

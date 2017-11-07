@@ -93,19 +93,19 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
         String authenticatorName = entry.getKey();
         BasicHTTPAuthenticator basicHTTPAuthenticator = (BasicHTTPAuthenticator) authenticator;
         BasicAuthDBConfig dbConfig = basicHTTPAuthenticator.getDbConfig();
-        byte[] userMapBytes = getCurrentUserMapBytes(dbConfig.getDbPrefix());
+        byte[] userMapBytes = getCurrentUserMapBytes(authenticatorName);
         Map<String, BasicAuthenticatorUser> userMap = deserializeUserMap(userMapBytes);
-        cachedUserMaps.put(dbConfig.getDbPrefix(), userMap);
-        cachedSerializedUserMaps.put(dbConfig.getDbPrefix(), userMapBytes);
+        cachedUserMaps.put(authenticatorName, userMap);
+        cachedSerializedUserMaps.put(authenticatorName, userMapBytes);
 
         if (dbConfig.getInitialAdminPassword() != null && !userMap.containsKey("admin")) {
-          createUser(dbConfig.getDbPrefix(), "admin");
-          setUserCredentials(dbConfig.getDbPrefix(), "admin", dbConfig.getInitialAdminPassword().toCharArray());
+          createUser(authenticatorName, "admin");
+          setUserCredentials(authenticatorName, "admin", dbConfig.getInitialAdminPassword().toCharArray());
         }
 
         if (dbConfig.getInitialInternalClientPassword() != null && !userMap.containsKey("druid_system")) {
-          createUser(dbConfig.getDbPrefix(), "druid_system");
-          setUserCredentials(dbConfig.getDbPrefix(), "druid_system", dbConfig.getInitialInternalClientPassword().toCharArray());
+          createUser(authenticatorName, "druid_system");
+          setUserCredentials(authenticatorName, "druid_system", dbConfig.getInitialInternalClientPassword().toCharArray());
         }
       }
     }

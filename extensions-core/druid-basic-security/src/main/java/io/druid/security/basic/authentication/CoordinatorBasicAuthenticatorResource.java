@@ -70,7 +70,7 @@ public class CoordinatorBasicAuthenticatorResource
       final Authenticator authenticator = authenticatorEntry.getValue();
       if (authenticator instanceof BasicHTTPAuthenticator) {
         authenticatorMap.put(
-            ((BasicHTTPAuthenticator) authenticator).getDBPrefix(),
+            authenticatorName,
             (BasicHTTPAuthenticator) authenticator
         );
       }
@@ -100,7 +100,7 @@ public class CoordinatorBasicAuthenticatorResource
     }
 
     Map<String, BasicAuthenticatorUser> userMap = storageUpdater.deserializeUserMap(
-        storageUpdater.getCurrentUserMapBytes(authenticator.getDBPrefix())
+        storageUpdater.getCurrentUserMapBytes(authenticatorName)
     );
 
     return Response.ok(userMap.keySet()).build();
@@ -129,7 +129,7 @@ public class CoordinatorBasicAuthenticatorResource
     }
 
     Map<String, BasicAuthenticatorUser> userMap = storageUpdater.deserializeUserMap(
-        storageUpdater.getCurrentUserMapBytes(authenticator.getDBPrefix())
+        storageUpdater.getCurrentUserMapBytes(authenticatorName)
     );
 
     try {
@@ -169,7 +169,7 @@ public class CoordinatorBasicAuthenticatorResource
     }
 
     try {
-      storageUpdater.createUser(authenticator.getDBPrefix(), userName);
+      storageUpdater.createUser(authenticatorName, userName);
       return Response.ok().build();
     }
     catch (BasicSecurityDBResourceException cfe) {
@@ -202,7 +202,7 @@ public class CoordinatorBasicAuthenticatorResource
     }
 
     try {
-      storageUpdater.deleteUser(authenticator.getDBPrefix(), userName);
+      storageUpdater.deleteUser(authenticatorName, userName);
       return Response.ok().build();
     }
     catch (BasicSecurityDBResourceException cfe) {
@@ -237,7 +237,7 @@ public class CoordinatorBasicAuthenticatorResource
     }
 
     try {
-      storageUpdater.setUserCredentials(authenticator.getDBPrefix(), userName, password.toCharArray());
+      storageUpdater.setUserCredentials(authenticatorName, userName, password.toCharArray());
       return Response.ok().build();
     }
     catch (BasicSecurityDBResourceException cfe) {

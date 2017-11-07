@@ -63,7 +63,7 @@ public class DefaultBasicAuthenticatorResource
       final Authenticator authenticator = authenticatorEntry.getValue();
       if (authenticator instanceof BasicHTTPAuthenticator) {
         authenticatorMap.put(
-            ((BasicHTTPAuthenticator) authenticator).getDBPrefix(),
+            authenticatorName,
             (BasicHTTPAuthenticator) authenticator
         );
       }
