@@ -24,13 +24,14 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Throwables;
+import com.google.inject.Provider;
 import com.metamx.http.client.CredentialedHttpClient;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.auth.BasicCredentials;
 import io.druid.java.util.common.StringUtils;
 import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.db.BasicAuthDBConfig;
-import io.druid.security.basic.db.BasicAuthenticatorMetadataStorageUpdater;
+import io.druid.security.basic.db.cache.BasicAuthenticatorCacheManager;
 import io.druid.security.basic.db.entity.BasicAuthenticatorCredentials;
 import io.druid.security.basic.db.entity.BasicAuthenticatorUser;
 import io.druid.server.security.AuthConfig;
@@ -61,7 +62,7 @@ import java.util.Map;
 @JsonTypeName("basic")
 public class BasicHTTPAuthenticator implements Authenticator
 {
-  private final BasicAuthenticatorMetadataStorageUpdater storageUpdater;
+  private final Provider<BasicAuthenticatorCacheManager> cacheManager;
   private final String internalClientUsername;
   private final String internalClientPassword;
   private final String authorizerName;
@@ -69,7 +70,7 @@ public class BasicHTTPAuthenticator implements Authenticator
 
   @JsonCreator
   public BasicHTTPAuthenticator(
-      @JacksonInject BasicAuthenticatorMetadataStorageUpdater storageUpdater,
+      @JacksonInject Provider<BasicAuthenticatorCacheManager> cacheManager,
       @JsonProperty("dbPrefix") String dbPrefix,
       @JsonProperty("initialAdminPassword") String initialAdminPassword,
       @JsonProperty("initialInternalClientPassword") String initialInternalClientPassword,
@@ -82,7 +83,7 @@ public class BasicHTTPAuthenticator implements Authenticator
     this.internalClientPassword = internalClientPassword;
     this.authorizerName = authorizerName;
     this.dbConfig = new BasicAuthDBConfig(dbPrefix, initialAdminPassword, initialInternalClientPassword);
-    this.storageUpdater = storageUpdater;
+    this.cacheManager = cacheManager;
   }
 
   @Override
@@ -254,7 +255,7 @@ public class BasicHTTPAuthenticator implements Authenticator
 
   private boolean checkCredentials(String username, char[] password)
   {
-    Map<String, BasicAuthenticatorUser> userMap = storageUpdater.getCachedUserMap(dbConfig.getDbPrefix());
+    Map<String, BasicAuthenticatorUser> userMap = cacheManager.get().getUserMap(dbConfig.getDbPrefix());
     BasicAuthenticatorUser user = userMap.get(username);
     if (user == null) {
       return false;

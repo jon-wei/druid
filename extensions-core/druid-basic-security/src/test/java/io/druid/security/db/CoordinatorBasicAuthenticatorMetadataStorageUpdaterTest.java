@@ -36,7 +36,7 @@ import io.druid.metadata.TestDerbyConnector;
 import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
-import io.druid.security.basic.db.BasicAuthenticatorMetadataStorageUpdater;
+import io.druid.security.basic.db.CoordinatorBasicAuthenticatorMetadataStorageUpdater;
 import io.druid.security.basic.db.entity.BasicAuthenticatorCredentials;
 import io.druid.security.basic.db.entity.BasicAuthenticatorUser;
 import io.druid.server.DruidNode;
@@ -49,7 +49,7 @@ import org.junit.rules.ExpectedException;
 
 import java.util.Map;
 
-public class BasicAuthenticatorMetadataStorageUpdaterTest
+public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
 {
   private final static String AUTHENTICATOR_NAME = "test";
   @Rule
@@ -61,7 +61,7 @@ public class BasicAuthenticatorMetadataStorageUpdaterTest
   private Injector injector;
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig;
-  private BasicAuthenticatorMetadataStorageUpdater updater;
+  private CoordinatorBasicAuthenticatorMetadataStorageUpdater updater;
 
   @Before
   public void setUp() throws Exception
@@ -71,7 +71,7 @@ public class BasicAuthenticatorMetadataStorageUpdaterTest
     connector.createConfigTable();
     injector = setupInjector();
 
-    updater = new BasicAuthenticatorMetadataStorageUpdater(
+    updater = new CoordinatorBasicAuthenticatorMetadataStorageUpdater(
         injector,
         connector,
         tablesConfig,
@@ -151,7 +151,7 @@ public class BasicAuthenticatorMetadataStorageUpdaterTest
                         ImmutableMap.of(
                             "test",
                             new BasicHTTPAuthenticator(
-                                updater,
+                                null,
                                 "test",
                                 "druid",
                                 "druid",

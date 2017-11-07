@@ -19,13 +19,37 @@
 
 package io.druid.security.basic.db.cache;
 
+import com.google.inject.Inject;
+import io.druid.java.util.common.logger.Logger;
+import io.druid.security.basic.db.BasicAuthenticatorMetadataStorageUpdater;
 import io.druid.security.basic.db.entity.BasicAuthenticatorUser;
 
 import java.util.Map;
 
-public interface BasicAuthenticatorCacheManager
+public class CoordinatorBasicAuthenticatorCacheManager implements BasicAuthenticatorCacheManager
 {
-  void addAuthenticatorToUpdate(String authenticatorPrefix);
+  private static final Logger log = new Logger(CoordinatorBasicAuthenticatorCacheManager.class);
 
-  Map<String, BasicAuthenticatorUser> getUserMap(String authenticatorPrefix);
+  private final BasicAuthenticatorMetadataStorageUpdater storageUpdater;
+
+  @Inject
+  public CoordinatorBasicAuthenticatorCacheManager(
+      BasicAuthenticatorMetadataStorageUpdater storageUpdater
+  )
+  {
+    this.storageUpdater = storageUpdater;
+
+    log.info("Starting COORDINATOR basic auth cache manager.");
+  }
+
+  @Override
+  public void addAuthenticatorToUpdate(String authenticatorPrefix)
+  {
+  }
+
+  @Override
+  public Map<String, BasicAuthenticatorUser> getUserMap(String authenticatorPrefix)
+  {
+    return storageUpdater.getCachedUserMap(authenticatorPrefix);
+  }
 }
