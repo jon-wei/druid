@@ -17,29 +17,29 @@
  * under the License.
  */
 
-package io.druid.security.basic.db.postgres;
+package io.druid.security.basic.old;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
-import io.druid.security.basic.db.SQLBasicAuthenticatorStorageConnector;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.util.StringMapper;
+import org.skife.jdbi.v2.util.BooleanMapper;
 
-public class PostgreSQLBasicAuthenticatorStorageConnector extends SQLBasicAuthenticatorStorageConnector
+public class MySQLBasicAuthenticatorStorageConnector extends SQLBasicAuthenticatorStorageConnector
 {
-  private static final Logger log = new Logger(PostgreSQLBasicAuthenticatorStorageConnector.class);
+  private static final Logger log = new Logger(MySQLBasicAuthenticatorStorageConnector.class);
 
   private final DBI dbi;
 
   @Inject
-  public PostgreSQLBasicAuthenticatorStorageConnector(
+  public MySQLBasicAuthenticatorStorageConnector(
       Supplier<MetadataStorageConnectorConfig> config,
       Injector injector
   )
@@ -47,32 +47,34 @@ public class PostgreSQLBasicAuthenticatorStorageConnector extends SQLBasicAuthen
     super(config, injector);
 
     final BasicDataSource datasource = getDatasource();
-    // PostgreSQL driver is classloader isolated as part of the extension
-    // so we need to help JDBC find the driver
     datasource.setDriverClassLoader(getClass().getClassLoader());
-    datasource.setDriverClassName("org.postgresql.Driver");
+    datasource.setDriverClassName("com.mysql.jdbc.Driver");
+
+    // use double-quotes for quoting columns, so we can write SQL that works with most databases
+    datasource.setConnectionInitSqls(ImmutableList.of("SET sql_mode='ANSI_QUOTES'"));
 
     this.dbi = new DBI(datasource);
-
-    log.info("Configured PostgreSQL as security storage");
+    log.info("Configured MySQL as security storage");
   }
 
   @Override
-  public boolean tableExists(final Handle handle, final String tableName)
+  public void createUserTable(String dbPrefix)
   {
-    return !handle.createQuery(
-        "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename ILIKE :tableName"
-    )
-                  .bind("tableName", tableName)
-                  .map(StringMapper.FIRST)
-                  .list()
-                  .isEmpty();
-  }
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
 
-  @Override
-  public DBI getDBI()
-  {
-    return dbi;
+    createTable(
+        userTableName,
+        ImmutableList.of(
+            StringUtils.format(
+                "CREATE TABLE %1$s (\n"
+                + "  name VARCHAR(255) NOT NULL,\n"
+                + "  PRIMARY KEY (name),\n"
+                + "  UNIQUE (name)\n"
+                + ")",
+                userTableName
+            )
+        )
+    );
   }
 
   @Override
@@ -87,10 +89,10 @@ public class PostgreSQLBasicAuthenticatorStorageConnector extends SQLBasicAuthen
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
                 + "  user_name VARCHAR(255) NOT NULL, \n"
-                + "  salt BYTEA NOT NULL, \n"
-                + "  hash BYTEA NOT NULL, \n"
+                + "  salt BLOB(32) NOT NULL, \n"
+                + "  hash BLOB(64) NOT NULL, \n"
                 + "  iterations INTEGER NOT NULL, \n"
-                + "  PRIMARY KEY (user_name),\n"
+                + "  PRIMARY KEY (user_name), \n"
                 + "  FOREIGN KEY (user_name) REFERENCES %2$s(name) ON DELETE CASCADE\n"
                 + ")",
                 credentialsTableName,
@@ -98,5 +100,34 @@ public class PostgreSQLBasicAuthenticatorStorageConnector extends SQLBasicAuthen
             )
         )
     );
+  }
+
+
+  @Override
+  public boolean tableExists(Handle handle, String tableName)
+  {
+    // ensure database defaults to utf8, otherwise bail
+    boolean isUtf8 = handle
+        .createQuery("SELECT @@character_set_database = 'utf8'")
+        .map(BooleanMapper.FIRST)
+        .first();
+
+    if (!isUtf8) {
+      throw new ISE(
+          "Database default character set is not UTF-8." + System.lineSeparator()
+          + "  Druid requires its MySQL database to be created using UTF-8 as default character set."
+      );
+    }
+
+    return !handle.createQuery("SHOW tables LIKE :tableName")
+                  .bind("tableName", tableName)
+                  .list()
+                  .isEmpty();
+  }
+
+  @Override
+  public DBI getDBI()
+  {
+    return dbi;
   }
 }

@@ -17,30 +17,33 @@
  * under the License.
  */
 
-package io.druid.security.basic.db.mysql;
+package io.druid.security.basic.old;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import io.druid.java.util.common.ISE;
+import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.metadata.MetadataStorage;
 import io.druid.metadata.MetadataStorageConnectorConfig;
-import io.druid.security.basic.db.SQLBasicAuthenticatorStorageConnector;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.util.BooleanMapper;
 
-public class MySQLBasicAuthenticatorStorageConnector extends SQLBasicAuthenticatorStorageConnector
+@ManageLifecycle
+public class DerbySQLBasicAuthenticatorStorageConnector extends SQLBasicAuthenticatorStorageConnector
 {
-  private static final Logger log = new Logger(MySQLBasicAuthenticatorStorageConnector.class);
+  private static final Logger log = new Logger(DerbySQLBasicAuthenticatorStorageConnector.class);
 
   private final DBI dbi;
+  private final MetadataStorage storage;
 
   @Inject
-  public MySQLBasicAuthenticatorStorageConnector(
+  public DerbySQLBasicAuthenticatorStorageConnector(
+      MetadataStorage storage,
       Supplier<MetadataStorageConnectorConfig> config,
       Injector injector
   )
@@ -49,13 +52,31 @@ public class MySQLBasicAuthenticatorStorageConnector extends SQLBasicAuthenticat
 
     final BasicDataSource datasource = getDatasource();
     datasource.setDriverClassLoader(getClass().getClassLoader());
-    datasource.setDriverClassName("com.mysql.jdbc.Driver");
-
-    // use double-quotes for quoting columns, so we can write SQL that works with most databases
-    datasource.setConnectionInitSqls(ImmutableList.of("SET sql_mode='ANSI_QUOTES'"));
+    datasource.setDriverClassName("org.apache.derby.jdbc.ClientDriver");
 
     this.dbi = new DBI(datasource);
-    log.info("Configured MySQL as security storage");
+    this.storage = storage;
+    log.info("Derby connector instantiated with metadata storage [%s].", this.storage.getClass().getName());
+  }
+
+  public DerbySQLBasicAuthenticatorStorageConnector(
+      MetadataStorage storage,
+      Supplier<MetadataStorageConnectorConfig> config,
+      Injector injector,
+      DBI dbi
+  )
+  {
+    super(config, injector);
+    this.dbi = dbi;
+    this.storage = storage;
+  }
+
+  @Override
+  @LifecycleStart
+  public void start()
+  {
+    storage.start();
+    super.start();
   }
 
   @Override
@@ -69,8 +90,7 @@ public class MySQLBasicAuthenticatorStorageConnector extends SQLBasicAuthenticat
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
                 + "  name VARCHAR(255) NOT NULL,\n"
-                + "  PRIMARY KEY (name),\n"
-                + "  UNIQUE (name)\n"
+                + "  PRIMARY KEY (name)\n"
                 + ")",
                 userTableName
             )
@@ -103,27 +123,19 @@ public class MySQLBasicAuthenticatorStorageConnector extends SQLBasicAuthenticat
     );
   }
 
-
   @Override
   public boolean tableExists(Handle handle, String tableName)
   {
-    // ensure database defaults to utf8, otherwise bail
-    boolean isUtf8 = handle
-        .createQuery("SELECT @@character_set_database = 'utf8'")
-        .map(BooleanMapper.FIRST)
-        .first();
-
-    if (!isUtf8) {
-      throw new ISE(
-          "Database default character set is not UTF-8." + System.lineSeparator()
-          + "  Druid requires its MySQL database to be created using UTF-8 as default character set."
-      );
-    }
-
-    return !handle.createQuery("SHOW tables LIKE :tableName")
-                  .bind("tableName", tableName)
+    return !handle.createQuery("select * from SYS.SYSTABLES where tablename = :tableName")
+                  .bind("tableName", StringUtils.toUpperCase(tableName))
                   .list()
                   .isEmpty();
+  }
+
+  @Override
+  public String getValidationQuery()
+  {
+    return "VALUES 1";
   }
 
   @Override

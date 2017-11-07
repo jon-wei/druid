@@ -17,15 +17,17 @@
  * under the License.
  */
 
-package io.druid.security.basic;
+package io.druid.security.basic.authorization;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.java.util.common.StringUtils;
+import io.druid.security.basic.BasicSecurityDBResourceException;
+import io.druid.security.basic.BasicSecurityResourceFilter;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
-import io.druid.security.basic.db.BasicAuthorizerStorageConnector;
+import io.druid.security.basic.old.BasicAuthorizerStorageConnector;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.ResourceAction;

@@ -22,7 +22,7 @@ package io.druid.security.db;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.java.util.common.StringUtils;
-import io.druid.security.basic.BasicAuthorizerResource;
+import io.druid.security.basic.authorization.BasicAuthorizerResource;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import io.druid.server.security.Action;
 import io.druid.server.security.AllowAllAuthorizer;

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.security.basic;
+package io.druid.security.basic.authentication;
 
 public interface BasicAuthenticatorResource
 {

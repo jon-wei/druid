@@ -25,7 +25,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.metadata.NoopMetadataStorageProvider;
 import io.druid.security.basic.db.BasicAuthDBConfig;
-import io.druid.security.basic.db.derby.DerbySQLBasicAuthenticatorStorageConnector;
+import io.druid.security.basic.old.DerbySQLBasicAuthenticatorStorageConnector;
 import org.junit.Assert;
 import org.junit.rules.ExternalResource;
 import org.skife.jdbi.v2.DBI;

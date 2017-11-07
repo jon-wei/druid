@@ -17,34 +17,28 @@
  * under the License.
  */
 
-package io.druid.security.basic.db.derby;
+package io.druid.security.basic.old;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.metadata.MetadataStorage;
 import io.druid.metadata.MetadataStorageConnectorConfig;
-import io.druid.security.basic.db.SQLBasicAuthenticatorStorageConnector;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.util.StringMapper;
 
-@ManageLifecycle
-public class DerbySQLBasicAuthenticatorStorageConnector extends SQLBasicAuthenticatorStorageConnector
+public class PostgreSQLBasicAuthenticatorStorageConnector extends SQLBasicAuthenticatorStorageConnector
 {
-  private static final Logger log = new Logger(DerbySQLBasicAuthenticatorStorageConnector.class);
+  private static final Logger log = new Logger(PostgreSQLBasicAuthenticatorStorageConnector.class);
 
   private final DBI dbi;
-  private final MetadataStorage storage;
 
   @Inject
-  public DerbySQLBasicAuthenticatorStorageConnector(
-      MetadataStorage storage,
+  public PostgreSQLBasicAuthenticatorStorageConnector(
       Supplier<MetadataStorageConnectorConfig> config,
       Injector injector
   )
@@ -52,51 +46,32 @@ public class DerbySQLBasicAuthenticatorStorageConnector extends SQLBasicAuthenti
     super(config, injector);
 
     final BasicDataSource datasource = getDatasource();
+    // PostgreSQL driver is classloader isolated as part of the extension
+    // so we need to help JDBC find the driver
     datasource.setDriverClassLoader(getClass().getClassLoader());
-    datasource.setDriverClassName("org.apache.derby.jdbc.ClientDriver");
+    datasource.setDriverClassName("org.postgresql.Driver");
 
     this.dbi = new DBI(datasource);
-    this.storage = storage;
-    log.info("Derby connector instantiated with metadata storage [%s].", this.storage.getClass().getName());
-  }
 
-  public DerbySQLBasicAuthenticatorStorageConnector(
-      MetadataStorage storage,
-      Supplier<MetadataStorageConnectorConfig> config,
-      Injector injector,
-      DBI dbi
-  )
-  {
-    super(config, injector);
-    this.dbi = dbi;
-    this.storage = storage;
+    log.info("Configured PostgreSQL as security storage");
   }
 
   @Override
-  @LifecycleStart
-  public void start()
+  public boolean tableExists(final Handle handle, final String tableName)
   {
-    storage.start();
-    super.start();
+    return !handle.createQuery(
+        "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename ILIKE :tableName"
+    )
+                  .bind("tableName", tableName)
+                  .map(StringMapper.FIRST)
+                  .list()
+                  .isEmpty();
   }
 
   @Override
-  public void createUserTable(String dbPrefix)
+  public DBI getDBI()
   {
-    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
-
-    createTable(
-        userTableName,
-        ImmutableList.of(
-            StringUtils.format(
-                "CREATE TABLE %1$s (\n"
-                + "  name VARCHAR(255) NOT NULL,\n"
-                + "  PRIMARY KEY (name)\n"
-                + ")",
-                userTableName
-            )
-        )
-    );
+    return dbi;
   }
 
   @Override
@@ -111,10 +86,10 @@ public class DerbySQLBasicAuthenticatorStorageConnector extends SQLBasicAuthenti
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
                 + "  user_name VARCHAR(255) NOT NULL, \n"
-                + "  salt BLOB(32) NOT NULL, \n"
-                + "  hash BLOB(64) NOT NULL, \n"
+                + "  salt BYTEA NOT NULL, \n"
+                + "  hash BYTEA NOT NULL, \n"
                 + "  iterations INTEGER NOT NULL, \n"
-                + "  PRIMARY KEY (user_name), \n"
+                + "  PRIMARY KEY (user_name),\n"
                 + "  FOREIGN KEY (user_name) REFERENCES %2$s(name) ON DELETE CASCADE\n"
                 + ")",
                 credentialsTableName,
@@ -122,26 +97,5 @@ public class DerbySQLBasicAuthenticatorStorageConnector extends SQLBasicAuthenti
             )
         )
     );
-  }
-
-  @Override
-  public boolean tableExists(Handle handle, String tableName)
-  {
-    return !handle.createQuery("select * from SYS.SYSTABLES where tablename = :tableName")
-                  .bind("tableName", StringUtils.toUpperCase(tableName))
-                  .list()
-                  .isEmpty();
-  }
-
-  @Override
-  public String getValidationQuery()
-  {
-    return "VALUES 1";
-  }
-
-  @Override
-  public DBI getDBI()
-  {
-    return dbi;
   }
 }

@@ -19,7 +19,6 @@
 
 package io.druid.security.basic.db.cache;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.http.client.HttpClient;
@@ -32,7 +31,6 @@ import io.druid.discovery.DruidNodeDiscovery;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.ManageLifecycleLast;
 import io.druid.guice.annotations.EscalatedClient;
-import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
@@ -50,7 +48,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -71,29 +68,24 @@ public class CoordinatorBasicAuthenticatorCacheNotifier
 
   private final DruidNodeDiscoveryProvider discoveryProvider;
   private final HttpClient httpClient;
-  private final ObjectMapper smileMapper;
   private final Set<String> authenticatorsToUpdate;
 
-  private volatile ScheduledExecutorService exec;
   private Thread notifierThread;
 
   @Inject
   public CoordinatorBasicAuthenticatorCacheNotifier(
       DruidNodeDiscoveryProvider discoveryProvider,
-      @EscalatedClient HttpClient httpClient,
-      final @Smile ObjectMapper smileMapper
+      @EscalatedClient HttpClient httpClient
   )
   {
     this.discoveryProvider = discoveryProvider;
     this.httpClient = httpClient;
-    this.smileMapper = smileMapper;
     this.authenticatorsToUpdate = new HashSet<>();
   }
 
   @LifecycleStart
   public void start()
   {
-    this.exec = Execs.scheduledSingleThreaded("CoordinatorBasicAuthenticatorCacheNotifier-Exec--%d");
     notifierThread = Execs.makeThread(
         "CoordinatorBasicAuthenticatorCacheNotifier-notifierThread",
         () -> {

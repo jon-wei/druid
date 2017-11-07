@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.security.basic.db;
+package io.druid.security.basic.old;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -35,6 +35,8 @@ import io.druid.metadata.BaseSQLMetadataConnector;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
+import io.druid.security.basic.db.BasicAuthDBConfig;
+import io.druid.security.basic.old.BasicAuthorizerStorageConnector;
 import io.druid.server.security.Action;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;

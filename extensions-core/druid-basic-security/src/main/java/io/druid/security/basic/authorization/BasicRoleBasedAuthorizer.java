@@ -27,7 +27,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import io.druid.java.util.common.IAE;
 import io.druid.security.basic.db.BasicAuthDBConfig;
-import io.druid.security.basic.db.BasicAuthorizerStorageConnector;
+import io.druid.security.basic.old.BasicAuthorizerStorageConnector;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthenticationResult;

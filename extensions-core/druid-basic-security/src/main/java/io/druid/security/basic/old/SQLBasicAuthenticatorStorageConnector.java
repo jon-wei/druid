@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.security.basic.db;
+package io.druid.security.basic.old;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
@@ -33,6 +33,8 @@ import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
+import io.druid.security.basic.db.BasicAuthDBConfig;
+import io.druid.security.basic.old.BasicAuthenticatorStorageConnector;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
 import org.apache.commons.dbcp2.BasicDataSource;

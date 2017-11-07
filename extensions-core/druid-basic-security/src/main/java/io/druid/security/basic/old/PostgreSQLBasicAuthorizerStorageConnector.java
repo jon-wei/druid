@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.security.basic.db.postgres;
+package io.druid.security.basic.old;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
@@ -27,7 +27,6 @@ import com.google.inject.Injector;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
-import io.druid.security.basic.db.SQLBasicAuthorizerStorageConnector;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
