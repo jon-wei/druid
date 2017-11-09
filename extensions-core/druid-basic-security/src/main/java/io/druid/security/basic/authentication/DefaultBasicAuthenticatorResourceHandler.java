@@ -22,35 +22,25 @@ package io.druid.security.basic.authentication;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.security.basic.BasicSecurityResourceFilter;
 import io.druid.security.basic.db.cache.BasicAuthenticatorCacheManager;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Map;
 
-@Path("/druid/security/internal/authentication")
-public class DefaultBasicAuthenticatorResource
+public class DefaultBasicAuthenticatorResourceHandler implements BasicAuthenticatorResourceHandler
 {
-  private static final Logger log = new Logger(DefaultBasicAuthenticatorResource.class);
+  private static final String UNSUPPORTED_MSG = "This operation is only valid on coordinator nodes.";
+  private static final Logger log = new Logger(DefaultBasicAuthenticatorResourceHandler.class);
 
   private final BasicAuthenticatorCacheManager cacheManager;
   private final Map<String, BasicHTTPAuthenticator> authenticatorMap;
 
   @Inject
-  public DefaultBasicAuthenticatorResource(
+  public DefaultBasicAuthenticatorResourceHandler(
       BasicAuthenticatorCacheManager cacheManager,
       AuthenticatorMapper authenticatorMapper
   )
@@ -70,23 +60,44 @@ public class DefaultBasicAuthenticatorResource
     }
   }
 
-  /**
-   * Listen for update notifications for the auth storage
-   *
-   * @param req      HTTP request
-   * @param userName Name to assign the new user
-   *
-   * @return OK response, or 400 error response if user already exists
-   */
-  @POST
-  @Path("/listen/{authenticatorName}")
-  @Produces(MediaType.APPLICATION_JSON)
-  @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
-  public Response createUser(
-      @Context HttpServletRequest req,
-      @PathParam("authenticatorName") final String authenticatorName
-  )
+  @Override
+  public Response getAllUsers(String authenticatorName)
+  {
+    throw new UnsupportedOperationException(UNSUPPORTED_MSG);
+  }
+
+  @Override
+  public Response getUser(String authenticatorName, String userName)
+  {
+    throw new UnsupportedOperationException(UNSUPPORTED_MSG);
+  }
+
+  @Override
+  public Response createUser(String authenticatorName, String userName)
+  {
+    throw new UnsupportedOperationException(UNSUPPORTED_MSG);
+  }
+
+  @Override
+  public Response deleteUser(String authenticatorName, String userName)
+  {
+    throw new UnsupportedOperationException(UNSUPPORTED_MSG);
+  }
+
+  @Override
+  public Response updateUserCredentials(String authenticatorName, String userName, String password)
+  {
+    throw new UnsupportedOperationException(UNSUPPORTED_MSG);
+  }
+
+  @Override
+  public Response getCachedSerializedUserMap(String authenticatorName)
+  {
+    throw new UnsupportedOperationException(UNSUPPORTED_MSG);
+  }
+
+  @Override
+  public Response authenticatorUpdateListener(String authenticatorName)
   {
     final BasicHTTPAuthenticator authenticator = authenticatorMap.get(authenticatorName);
     if (authenticator == null) {

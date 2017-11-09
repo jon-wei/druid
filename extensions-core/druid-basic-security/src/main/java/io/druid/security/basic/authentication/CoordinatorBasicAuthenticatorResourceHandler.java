@@ -22,42 +22,26 @@ package io.druid.security.basic.authentication;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.security.basic.BasicSecurityDBResourceException;
-import io.druid.security.basic.BasicSecurityResourceFilter;
 import io.druid.security.basic.db.BasicAuthenticatorMetadataStorageUpdater;
 import io.druid.security.basic.db.entity.BasicAuthenticatorUser;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Map;
 
-/**
- * Configuration resource for authenticator users and credentials.
- */
-@Path("/druid/coordinator/v1/security/authentication")
-public class CoordinatorBasicAuthenticatorResource
+public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthenticatorResourceHandler
 {
-  private static final Logger log = new Logger(CoordinatorBasicAuthenticatorResource.class);
+  private static final Logger log = new Logger(CoordinatorBasicAuthenticatorResourceHandler.class);
 
   private final BasicAuthenticatorMetadataStorageUpdater storageUpdater;
   private final Map<String, BasicHTTPAuthenticator> authenticatorMap;
 
   @Inject
-  public CoordinatorBasicAuthenticatorResource(
+  public CoordinatorBasicAuthenticatorResourceHandler(
       BasicAuthenticatorMetadataStorageUpdater storageUpdater,
       AuthenticatorMapper authenticatorMapper
   )
@@ -79,19 +63,9 @@ public class CoordinatorBasicAuthenticatorResource
     log.info("Created COORDINATOR basic auth resource");
   }
 
-  /**
-   * @param req HTTP request
-   *
-   * @return List of all users
-   */
-  @GET
-  @Path("/{authenticatorName}/users")
-  @Produces(MediaType.APPLICATION_JSON)
-  @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @Override
   public Response getAllUsers(
-      @Context HttpServletRequest req,
-      @PathParam("authenticatorName") final String authenticatorName
+      final String authenticatorName
   )
   {
     final BasicHTTPAuthenticator authenticator = authenticatorMap.get(authenticatorName);
@@ -106,22 +80,8 @@ public class CoordinatorBasicAuthenticatorResource
     return Response.ok(userMap.keySet()).build();
   }
 
-  /**
-   * @param req      HTTP request
-   * @param userName Name of user to retrieve information about
-   *
-   * @return Name and credentials of the user with userName, 400 error response if user doesn't exist
-   */
-  @GET
-  @Path("/{authenticatorName}/users/{userName}")
-  @Produces(MediaType.APPLICATION_JSON)
-  @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
-  public Response getUser(
-      @Context HttpServletRequest req,
-      @PathParam("authenticatorName") final String authenticatorName,
-      @PathParam("userName") final String userName
-  )
+  @Override
+  public Response getUser(String authenticatorName, String userName)
   {
     final BasicHTTPAuthenticator authenticator = authenticatorMap.get(authenticatorName);
     if (authenticator == null) {
@@ -144,24 +104,8 @@ public class CoordinatorBasicAuthenticatorResource
     }
   }
 
-  /**
-   * Create a new user with name userName
-   *
-   * @param req      HTTP request
-   * @param userName Name to assign the new user
-   *
-   * @return OK response, or 400 error response if user already exists
-   */
-  @POST
-  @Path("/{authenticatorName}/users/{userName}")
-  @Produces(MediaType.APPLICATION_JSON)
-  @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
-  public Response createUser(
-      @Context HttpServletRequest req,
-      @PathParam("authenticatorName") final String authenticatorName,
-      @PathParam("userName") String userName
-  )
+  @Override
+  public Response createUser(String authenticatorName, String userName)
   {
     final BasicHTTPAuthenticator authenticator = authenticatorMap.get(authenticatorName);
     if (authenticator == null) {
@@ -177,24 +121,8 @@ public class CoordinatorBasicAuthenticatorResource
     }
   }
 
-  /**
-   * Delete a user
-   *
-   * @param req      HTTP request
-   * @param userName Name of user to delete
-   *
-   * @return OK response, or 400 error response if user doesn't exist
-   */
-  @DELETE
-  @Path("/{authenticatorName}/users/{userName}")
-  @Produces(MediaType.APPLICATION_JSON)
-  @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
-  public Response deleteUser(
-      @Context HttpServletRequest req,
-      @PathParam("authenticatorName") final String authenticatorName,
-      @PathParam("userName") String userName
-  )
+  @Override
+  public Response deleteUser(String authenticatorName, String userName)
   {
     final BasicHTTPAuthenticator authenticator = authenticatorMap.get(authenticatorName);
     if (authenticator == null) {
@@ -210,26 +138,8 @@ public class CoordinatorBasicAuthenticatorResource
     }
   }
 
-  /**
-   * Assign credentials for a user
-   *
-   * @param req      HTTP request
-   * @param userName Name of user
-   * @param password Password to assign
-   *
-   * @return OK response, 400 error if user doesn't exist
-   */
-  @POST
-  @Path("/{authenticatorName}/users/{userName}/credentials")
-  @Produces(MediaType.APPLICATION_JSON)
-  @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
-  public Response updateUserCredentials(
-      @Context HttpServletRequest req,
-      @PathParam("authenticatorName") final String authenticatorName,
-      @PathParam("userName") String userName,
-      String password
-  )
+  @Override
+  public Response updateUserCredentials(String authenticatorName, String userName, String password)
   {
     final BasicHTTPAuthenticator authenticator = authenticatorMap.get(authenticatorName);
     if (authenticator == null) {
@@ -245,20 +155,8 @@ public class CoordinatorBasicAuthenticatorResource
     }
   }
 
-  /**
-   * @param req HTTP request
-   *
-   * @return serialized user map
-   */
-  @GET
-  @Path("/{authenticatorName}/cachedSerializedUserMap")
-  @Produces(MediaType.APPLICATION_JSON)
-  @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
-  public Response getCachedSerializedUserMap(
-      @Context HttpServletRequest req,
-      @PathParam("authenticatorName") final String authenticatorName
-  )
+  @Override
+  public Response getCachedSerializedUserMap(String authenticatorName)
   {
     final BasicHTTPAuthenticator authenticator = authenticatorMap.get(authenticatorName);
     if (authenticator == null) {
@@ -266,6 +164,12 @@ public class CoordinatorBasicAuthenticatorResource
     }
 
     return Response.ok(storageUpdater.getCachedSerializedUserMap(authenticatorName)).build();
+  }
+
+  @Override
+  public Response authenticatorUpdateListener(String authenticatorName)
+  {
+    throw new UnsupportedOperationException("Listener update is not applicable to coordinator nodes.");
   }
 
   private static Response makeResponseForAuthenticatorNotFound(String authenticatorName)

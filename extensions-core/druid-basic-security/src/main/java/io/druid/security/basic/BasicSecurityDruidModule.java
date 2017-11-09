@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Provides;
@@ -32,44 +31,32 @@ import io.druid.guice.Jerseys;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.initialization.DruidModule;
-import io.druid.java.util.common.StringUtils;
+import io.druid.security.basic.authentication.BasicAuthenticatorResource;
+import io.druid.security.basic.authentication.BasicAuthenticatorResourceHandler;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
-import io.druid.security.basic.authentication.CoordinatorBasicAuthenticatorResource;
-import io.druid.security.basic.authentication.DefaultBasicAuthenticatorResource;
-import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
+import io.druid.security.basic.authentication.CoordinatorBasicAuthenticatorResourceHandler;
+import io.druid.security.basic.authentication.DefaultBasicAuthenticatorResourceHandler;
 import io.druid.security.basic.db.BasicAuthenticatorMetadataStorageUpdater;
 import io.druid.security.basic.db.CoordinatorBasicAuthenticatorMetadataStorageUpdater;
 import io.druid.security.basic.db.NoopBasicAuthenticatorMetadataStorageUpdater;
 import io.druid.security.basic.db.cache.BasicAuthenticatorCacheManager;
+import io.druid.security.basic.db.cache.BasicAuthenticatorCacheNotifier;
 import io.druid.security.basic.db.cache.CoordinatorBasicAuthenticatorCacheManager;
+import io.druid.security.basic.db.cache.CoordinatorBasicAuthenticatorCacheNotifier;
 import io.druid.security.basic.db.cache.DefaultBasicAuthenticatorCacheManager;
+import io.druid.security.basic.db.cache.NoopBasicAuthenticatorCacheNotifier;
 
 import java.util.List;
-import java.util.Properties;
 
 public class BasicSecurityDruidModule implements DruidModule
 {
-  //@Inject
-  //@Named("serviceName")
-  //private String serviceName;
-
-  @Inject
-  private Properties props;
-
-  public final String STORAGE_CONNECTOR_TYPE_PROPERTY = "druid.metadata.storage.type";
-
   @Override
   public void configure(Binder binder)
   {
     LifecycleModule.register(binder, BasicAuthenticatorMetadataStorageUpdater.class);
     LifecycleModule.register(binder, BasicAuthenticatorCacheManager.class);
 
-    if (isCoordinatorBinderHack()) {
-      Jerseys.addResource(binder, CoordinatorBasicAuthenticatorResource.class);
-    } else {
-      Jerseys.addResource(binder, DefaultBasicAuthenticatorResource.class);
-    }
-
+    Jerseys.addResource(binder, BasicAuthenticatorResource.class);
     /*
     binder.bind(BasicAuthenticatorResource.class)
           .toProvider(new BasicAuthenticatorResourceProvider())
@@ -115,13 +102,32 @@ public class BasicSecurityDruidModule implements DruidModule
     }
   }
 
+  @Provides @LazySingleton
+  public static BasicAuthenticatorResourceHandler createAuthenticatorResourceHandler(final Injector injector)
+  {
+    if (isCoordinator(injector)) {
+      return injector.getInstance(CoordinatorBasicAuthenticatorResourceHandler.class);
+    } else {
+      return injector.getInstance(DefaultBasicAuthenticatorResourceHandler.class);
+    }
+  }
+
+  @Provides @LazySingleton
+  public static BasicAuthenticatorCacheNotifier createAuthenticatorCacheNotifier(final Injector injector)
+  {
+    if (isCoordinator(injector)) {
+      return injector.getInstance(CoordinatorBasicAuthenticatorCacheNotifier.class);
+    } else {
+      return injector.getInstance(NoopBasicAuthenticatorCacheNotifier.class);
+    }
+  }
+
   @Override
   public List<? extends Module> getJacksonModules()
   {
     return ImmutableList.of(
         new SimpleModule("BasicDruidSecurity").registerSubtypes(
-            BasicHTTPAuthenticator.class,
-            BasicRoleBasedAuthorizer.class
+            BasicHTTPAuthenticator.class
         )
     );
   }
@@ -137,16 +143,5 @@ public class BasicSecurityDruidModule implements DruidModule
     }
 
     return "druid/coordinator".equals(serviceName);
-  }
-
-  private boolean isCoordinatorBinderHack()
-  {
-    String javaCmd = props.getProperty("sun.java.command");
-    if (javaCmd == null) {
-      return false;
-    }
-
-    javaCmd = StringUtils.toLowerCase(javaCmd);
-    return javaCmd.contains("coordinator");
   }
 }

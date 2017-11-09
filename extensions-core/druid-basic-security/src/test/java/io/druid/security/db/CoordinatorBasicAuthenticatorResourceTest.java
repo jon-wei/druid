@@ -35,15 +35,18 @@ import io.druid.initialization.Initialization;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.TestDerbyConnector;
 import io.druid.security.basic.BasicAuthUtils;
+import io.druid.security.basic.authentication.BasicAuthenticatorResource;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
-import io.druid.security.basic.authentication.CoordinatorBasicAuthenticatorResource;
+import io.druid.security.basic.authentication.CoordinatorBasicAuthenticatorResourceHandler;
 import io.druid.security.basic.db.CoordinatorBasicAuthenticatorMetadataStorageUpdater;
 import io.druid.security.basic.db.cache.CoordinatorBasicAuthenticatorCacheNotifier;
+import io.druid.security.basic.db.cache.NoopBasicAuthenticatorCacheNotifier;
 import io.druid.security.basic.db.entity.BasicAuthenticatorCredentials;
 import io.druid.security.basic.db.entity.BasicAuthenticatorUser;
 import io.druid.server.DruidNode;
 import io.druid.server.security.AuthenticatorMapper;
 import org.easymock.EasyMock;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -60,7 +63,6 @@ public class CoordinatorBasicAuthenticatorResourceTest
   private final static String AUTHENTICATOR_NAME = "test";
   private final static String AUTHENTICATOR_NAME2 = "test2";
 
-
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
@@ -70,7 +72,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
   private Injector injector;
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig;
-  private CoordinatorBasicAuthenticatorResource resource;
+  private BasicAuthenticatorResource resource;
   private CoordinatorBasicAuthenticatorMetadataStorageUpdater storageUpdater;
   private HttpServletRequest req;
 
@@ -90,15 +92,23 @@ public class CoordinatorBasicAuthenticatorResourceTest
         connector,
         tablesConfig,
         new ObjectMapper(new SmileFactory()),
-        new CoordinatorBasicAuthenticatorCacheNotifier(null, null)
+        new NoopBasicAuthenticatorCacheNotifier()
+    );
+
+    resource = new BasicAuthenticatorResource(
+        new CoordinatorBasicAuthenticatorResourceHandler(
+            storageUpdater,
+            injector.getInstance(AuthenticatorMapper.class)
+        )
     );
 
     storageUpdater.start();
+  }
 
-    resource = new CoordinatorBasicAuthenticatorResource(
-        storageUpdater,
-        injector.getInstance(AuthenticatorMapper.class)
-    );
+  @After
+  public void tearDown() throws Exception
+  {
+    storageUpdater.stop();
   }
 
   @Test
@@ -267,9 +277,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
                             AUTHENTICATOR_NAME,
                             new BasicHTTPAuthenticator(
                                 null,
-                                injector,
                                 AUTHENTICATOR_NAME,
-                                "druid",
                                 "druid",
                                 "druid",
                                 "druid",
@@ -278,9 +286,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
                             AUTHENTICATOR_NAME2,
                             new BasicHTTPAuthenticator(
                                 null,
-                                injector,
                                 AUTHENTICATOR_NAME2,
-                                "druid",
                                 "druid",
                                 "druid",
                                 "druid",
@@ -295,6 +301,4 @@ public class CoordinatorBasicAuthenticatorResourceTest
         )
     );
   }
-
-
 }

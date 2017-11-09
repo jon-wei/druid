@@ -21,24 +21,16 @@ package io.druid.security.basic.db;
 
 public class BasicAuthDBConfig
 {
-  private final String dbPrefix;
   private final String initialAdminPassword;
   private final String initialInternalClientPassword;
 
   public BasicAuthDBConfig(
-      final String dbPrefix,
       final String initialAdminPassword,
       final String initialInternalClientPassword
   )
   {
-    this.dbPrefix = dbPrefix;
     this.initialAdminPassword = initialAdminPassword;
     this.initialInternalClientPassword = initialInternalClientPassword;
-  }
-
-  public String getDbPrefix()
-  {
-    return dbPrefix;
   }
 
   public String getInitialAdminPassword()

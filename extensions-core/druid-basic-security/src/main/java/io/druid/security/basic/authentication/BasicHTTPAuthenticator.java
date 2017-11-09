@@ -24,13 +24,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Throwables;
-import com.google.inject.Injector;
 import com.google.inject.Provider;
 import com.metamx.http.client.CredentialedHttpClient;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.auth.BasicCredentials;
 import io.druid.java.util.common.IAE;
-import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.db.BasicAuthDBConfig;
@@ -40,7 +38,6 @@ import io.druid.security.basic.db.entity.BasicAuthenticatorUser;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Authenticator;
-import io.druid.server.security.AuthenticatorMapper;
 import org.eclipse.jetty.client.api.Authentication;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.api.Request;
@@ -69,29 +66,23 @@ public class BasicHTTPAuthenticator implements Authenticator
   private final Provider<BasicAuthenticatorCacheManager> cacheManager;
   private final String internalClientUsername;
   private final String internalClientPassword;
-  private final String authorizerName;
+  private final String name;
   private final BasicAuthDBConfig dbConfig;
-  private final Injector injector;
-
-  private String name;
 
   @JsonCreator
   public BasicHTTPAuthenticator(
       @JacksonInject Provider<BasicAuthenticatorCacheManager> cacheManager,
-      @JacksonInject Injector injector,
-      @JsonProperty("dbPrefix") String dbPrefix,
+      @JsonProperty("name") String name,
       @JsonProperty("initialAdminPassword") String initialAdminPassword,
       @JsonProperty("initialInternalClientPassword") String initialInternalClientPassword,
       @JsonProperty("internalClientUsername") String internalClientUsername,
-      @JsonProperty("internalClientPassword") String internalClientPassword,
-      @JsonProperty("authorizerName") String authorizerName
+      @JsonProperty("internalClientPassword") String internalClientPassword
   )
   {
-    this.injector = injector;
     this.internalClientUsername = internalClientUsername;
     this.internalClientPassword = internalClientPassword;
-    this.authorizerName = authorizerName;
-    this.dbConfig = new BasicAuthDBConfig(dbPrefix, initialAdminPassword, initialInternalClientPassword);
+    this.name = name;
+    this.dbConfig = new BasicAuthDBConfig(initialAdminPassword, initialInternalClientPassword);
     this.cacheManager = cacheManager;
   }
 
@@ -119,7 +110,7 @@ public class BasicHTTPAuthenticator implements Authenticator
     }
 
     if (checkCredentials(user, password.toCharArray())) {
-      return new AuthenticationResult(user, authorizerName, null);
+      return new AuthenticationResult(user, name, null);
     } else {
       return null;
     }
@@ -179,7 +170,7 @@ public class BasicHTTPAuthenticator implements Authenticator
   @Override
   public AuthenticationResult createEscalatedAuthenticationResult()
   {
-    return new AuthenticationResult(internalClientUsername, authorizerName, null);
+    return new AuthenticationResult(internalClientUsername, name, null);
   }
 
   @Override
@@ -242,7 +233,7 @@ public class BasicHTTPAuthenticator implements Authenticator
       char[] password = splits[1].toCharArray();
 
       if (checkCredentials(user, password)) {
-        AuthenticationResult authenticationResult = new AuthenticationResult(user, authorizerName, null);
+        AuthenticationResult authenticationResult = new AuthenticationResult(user, name, null);
         servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
         filterChain.doFilter(servletRequest, servletResponse);
       } else {
@@ -257,24 +248,8 @@ public class BasicHTTPAuthenticator implements Authenticator
     }
   }
 
-  private String getThisAuthenticatorName()
-  {
-    AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
-    for (Map.Entry<String, Authenticator> entry : authenticatorMapper.getAuthenticatorMap().entrySet()) {
-      // find itself in the map, Authenticators are singletons
-      if (this == entry.getValue()) {
-        return entry.getKey();
-      }
-    }
-    throw new ISE("WTF? Authenticator could not find itself in the authenticator map");
-  }
-
   private boolean checkCredentials(String username, char[] password)
   {
-    if (name == null) {
-      name = getThisAuthenticatorName();
-    }
-
     Map<String, BasicAuthenticatorUser> userMap = cacheManager.get().getUserMap(name);
     if (userMap == null) {
       throw new IAE("No authenticator found with prefix: [%s]", name);

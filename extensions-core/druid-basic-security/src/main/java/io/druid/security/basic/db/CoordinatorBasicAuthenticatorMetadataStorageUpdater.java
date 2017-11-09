@@ -25,32 +25,45 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.metamx.emitter.EmittingLogger;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.guice.ManageLifecycleLast;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
+import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageTablesConfig;
+import io.druid.query.lookup.LookupExtractorFactoryContainer;
 import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
+import io.druid.security.basic.db.cache.BasicAuthenticatorCacheNotifier;
 import io.druid.security.basic.db.cache.CoordinatorBasicAuthenticatorCacheNotifier;
 import io.druid.security.basic.db.entity.BasicAuthenticatorCredentials;
 import io.druid.security.basic.db.entity.BasicAuthenticatorUser;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
+import org.joda.time.Duration;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @ManageLifecycleLast
 public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements BasicAuthenticatorMetadataStorageUpdater
 {
   private static final Logger log = new Logger(CoordinatorBasicAuthenticatorMetadataStorageUpdater.class);
+  private static final EmittingLogger LOG =
+      new EmittingLogger(CoordinatorBasicAuthenticatorMetadataStorageUpdater.class);
 
   public static final String USERS = "users";
   public static final TypeReference USER_MAP_TYPE_REFERENCE = new TypeReference<Map<String, BasicAuthenticatorUser>>()
@@ -61,12 +74,16 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
   private final MetadataStorageConnector connector;
   private final MetadataStorageTablesConfig connectorConfig;
   private final ObjectMapper objectMapper;
-  private final CoordinatorBasicAuthenticatorCacheNotifier cacheNotifier;
+  private final BasicAuthenticatorCacheNotifier cacheNotifier;
   private final int numRetries = 5;
 
   private final Map<String, Map<String, BasicAuthenticatorUser>> cachedUserMaps;
   private final Map<String, byte[]> cachedSerializedUserMaps;
+  private final Set<String> authenticatorPrefixes;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
+
+  private volatile ScheduledExecutorService exec;
+  private volatile boolean stopped = false;
 
   @Inject
   public CoordinatorBasicAuthenticatorMetadataStorageUpdater(
@@ -74,7 +91,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
       MetadataStorageConnector connector,
       MetadataStorageTablesConfig connectorConfig,
       @Smile ObjectMapper objectMapper,
-      CoordinatorBasicAuthenticatorCacheNotifier cacheNotifier
+      BasicAuthenticatorCacheNotifier cacheNotifier
   )
   {
     this.injector = injector;
@@ -84,6 +101,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
     this.cacheNotifier = cacheNotifier;
     this.cachedUserMaps = new HashMap<>();
     this.cachedSerializedUserMaps = new HashMap<>();
+    this.authenticatorPrefixes = new HashSet<>();
   }
 
   @LifecycleStart
@@ -100,6 +118,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
         Authenticator authenticator = entry.getValue();
         if (authenticator instanceof BasicHTTPAuthenticator) {
           String authenticatorName = entry.getKey();
+          authenticatorPrefixes.add(authenticatorName);
           BasicHTTPAuthenticator basicHTTPAuthenticator = (BasicHTTPAuthenticator) authenticator;
           BasicAuthDBConfig dbConfig = basicHTTPAuthenticator.getDbConfig();
           byte[] userMapBytes = getCurrentUserMapBytes(authenticatorName);
@@ -108,13 +127,13 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
           cachedSerializedUserMaps.put(authenticatorName, userMapBytes);
 
           if (dbConfig.getInitialAdminPassword() != null && !userMap.containsKey("admin")) {
-            createUser(authenticatorName, "admin");
-            setUserCredentials(authenticatorName, "admin", dbConfig.getInitialAdminPassword().toCharArray());
+            createUserInternal(authenticatorName, "admin");
+            setUserCredentialsInternal(authenticatorName, "admin", dbConfig.getInitialAdminPassword().toCharArray());
           }
 
           if (dbConfig.getInitialInternalClientPassword() != null && !userMap.containsKey("druid_system")) {
-            createUser(authenticatorName, "druid_system");
-            setUserCredentials(
+            createUserInternal(authenticatorName, "druid_system");
+            setUserCredentialsInternal(
                 authenticatorName,
                 "druid_system",
                 dbConfig.getInitialInternalClientPassword().toCharArray()
@@ -122,12 +141,63 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
           }
         }
       }
+
+      this.exec = Execs.scheduledSingleThreaded("CoordinatorBasicAuthenticatorMetadataStorageUpdater-Exec--%d");
+
+      ScheduledExecutors.scheduleWithFixedDelay(
+          exec,
+          new Duration(0),
+          new Duration(30000),
+          new Callable<ScheduledExecutors.Signal>()
+          {
+            @Override
+            public ScheduledExecutors.Signal call() throws Exception
+            {
+              if (stopped) {
+                return ScheduledExecutors.Signal.STOP;
+              }
+              try {
+                log.info("Scheduled cache poll is running");
+                for (String authenticatorPrefix : authenticatorPrefixes) {
+
+                  byte[] userMapBytes = getCurrentUserMapBytes(authenticatorPrefix);
+                  Map<String, BasicAuthenticatorUser> userMap = deserializeUserMap(userMapBytes);
+                  if (userMapBytes != null) {
+                    synchronized (cachedUserMaps) {
+                      cachedUserMaps.put(authenticatorPrefix, userMap);
+                      cachedSerializedUserMaps.put(authenticatorPrefix, userMapBytes);
+                    }
+                  }
+                }
+                LOG.info("Scheduled cache poll is done");
+              }
+              catch (Throwable t) {
+                LOG.makeAlert(t, "Error occured while polling for cachedUserMaps.").emit();
+              }
+              return ScheduledExecutors.Signal.REPEAT;
+            }
+          }
+      );
+
       lifecycleLock.started();
     }
     finally {
       lifecycleLock.exitStart();
     }
   }
+
+  @LifecycleStop
+  public void stop()
+  {
+    if (!lifecycleLock.canStop()) {
+      throw new ISE("can't stop.");
+    }
+
+    LOG.info("CoordinatorBasicAuthenticatorMetadataStorageUpdater is stopping.");
+    stopped = true;
+    LOG.info("CoordinatorBasicAuthenticatorMetadataStorageUpdater is stopped.");
+  }
+
 
   public void createUser(String prefix, String userName)
   {

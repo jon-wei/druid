@@ -112,7 +112,9 @@ public class AuthenticatorMapperModule implements DruidModule
 
         Properties adjustedProps = new Properties(props);
         if (adjustedProps.contains(nameProperty)) {
-          throw new IAE("Property [%s] is reserved.", nameProperty);
+          throw new IAE("Name property [%s] is reserved.", nameProperty);
+        } else {
+          adjustedProps.put(nameProperty, authenticatorName);
         }
 
         authenticatorProvider.inject(props, configurator);

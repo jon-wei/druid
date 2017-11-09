@@ -16,7 +16,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package io.druid.security.basic.old;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -62,6 +61,8 @@ public abstract class SQLBasicAuthorizerStorageConnector
     extends BaseSQLMetadataConnector
     implements BasicAuthorizerStorageConnector
 {
+/*
+
   public static final String USERS = "users";
   public static final String PERMISSIONS = "permissions";
   public static final String ROLES = "roles";
@@ -913,4 +914,5 @@ public abstract class SQLBasicAuthorizerStorageConnector
       addPermission(dbPrefix, role, resAct);
     }
   }
+  */
 }

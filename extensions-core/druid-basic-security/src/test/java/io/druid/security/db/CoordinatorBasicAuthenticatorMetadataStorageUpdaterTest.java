@@ -38,10 +38,12 @@ import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import io.druid.security.basic.db.CoordinatorBasicAuthenticatorMetadataStorageUpdater;
 import io.druid.security.basic.db.cache.CoordinatorBasicAuthenticatorCacheNotifier;
+import io.druid.security.basic.db.cache.NoopBasicAuthenticatorCacheNotifier;
 import io.druid.security.basic.db.entity.BasicAuthenticatorCredentials;
 import io.druid.security.basic.db.entity.BasicAuthenticatorUser;
 import io.druid.server.DruidNode;
 import io.druid.server.security.AuthenticatorMapper;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -72,17 +74,21 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
     connector.createConfigTable();
     injector = setupInjector();
 
-    CoordinatorBasicAuthenticatorCacheNotifier notifier = new CoordinatorBasicAuthenticatorCacheNotifier(null, null);
     updater = new CoordinatorBasicAuthenticatorMetadataStorageUpdater(
         injector,
         connector,
         tablesConfig,
         new ObjectMapper(new SmileFactory()),
-        notifier
+        new NoopBasicAuthenticatorCacheNotifier()
     );
 
-    notifier.start();
     updater.start();
+  }
+
+  @After
+  public void tearDown() throws Exception
+  {
+    updater.stop();
   }
 
   @Test
@@ -156,13 +162,11 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
                             "test",
                             new BasicHTTPAuthenticator(
                                 null,
-                                injector,
                                 "test",
                                 null,
                                 null,
                                 null,
-                                null,
-                                "druid"
+                                null
                             )
                         ),
                         "test"

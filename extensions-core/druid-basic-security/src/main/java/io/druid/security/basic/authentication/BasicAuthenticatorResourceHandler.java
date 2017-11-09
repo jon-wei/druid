@@ -17,28 +17,23 @@
  * under the License.
  */
 
-package io.druid.security.basic.old;
+package io.druid.security.basic.authentication;
 
-import java.util.List;
-import java.util.Map;
+import javax.ws.rs.core.Response;
 
-public interface BasicAuthenticatorStorageConnector
+public interface BasicAuthenticatorResourceHandler
 {
-  void createUser(String dbPrefix, String userName);
+  Response getAllUsers(String authenticatorName);
 
-  void deleteUser(String dbPrefix, String userName);
+  Response getUser(String authenticatorName, String userName);
 
-  List<Map<String, Object>> getAllUsers(String dbPrefix);
+  Response createUser(String authenticatorName, String userName);
 
-  Map<String, Object> getUser(String dbPrefix, String userName);
+  Response deleteUser(String authenticatorName, String userName);
 
-  void setUserCredentials(String dbPrefix, String userName, char[] password);
+  Response updateUserCredentials(String authenticatorName, String userName, String password);
 
-  boolean checkCredentials(String dbPrefix, String userName, char[] password);
+  Response getCachedSerializedUserMap(String authenticatorName);
 
-  Map<String, Object> getUserCredentials(String dbPrefix, String userName);
-
-  void createUserTable(String dbPrefix);
-
-  void createUserCredentialsTable(String dbPrefix);
+  Response authenticatorUpdateListener(String authenticatorName);
 }
