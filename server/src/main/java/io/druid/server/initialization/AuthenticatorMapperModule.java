@@ -108,7 +108,7 @@ public class AuthenticatorMapperModule implements DruidModule
             Authenticator.class
         );
 
-        String nameProperty = StringUtils.format("druid.auth.authenticator.%s.type", authenticatorName);
+        String nameProperty = StringUtils.format("druid.auth.authenticator.%s.name", authenticatorName);
 
         Properties adjustedProps = new Properties(props);
         if (adjustedProps.containsKey(nameProperty)) {
@@ -117,7 +117,7 @@ public class AuthenticatorMapperModule implements DruidModule
           adjustedProps.put(nameProperty, authenticatorName);
         }
 
-        authenticatorProvider.inject(props, configurator);
+        authenticatorProvider.inject(adjustedProps, configurator);
 
         Supplier<Authenticator> authenticatorSupplier = authenticatorProvider.get();
         if (authenticatorSupplier == null) {

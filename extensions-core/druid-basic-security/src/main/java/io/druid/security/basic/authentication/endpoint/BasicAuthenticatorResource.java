@@ -19,8 +19,10 @@
 
 package io.druid.security.basic.authentication.endpoint;
 
+import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import io.druid.guice.LazySingleton;
 import io.druid.security.basic.BasicSecurityResourceFilter;
 
 import javax.servlet.http.HttpServletRequest;
@@ -35,6 +37,8 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+@Path("/druid/basic-security/authentication")
+@LazySingleton
 public class BasicAuthenticatorResource
 {
   private final BasicAuthenticatorResourceHandler handler;
@@ -160,7 +164,7 @@ public class BasicAuthenticatorResource
    */
   @GET
   @Path("/{authenticatorName}/cachedSerializedUserMap")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(SmileMediaTypes.APPLICATION_JACKSON_SMILE)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
   public Response getCachedSerializedUserMap(

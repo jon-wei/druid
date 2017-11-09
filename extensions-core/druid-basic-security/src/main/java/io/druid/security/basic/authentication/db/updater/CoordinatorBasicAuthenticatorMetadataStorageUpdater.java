@@ -156,7 +156,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
                 return ScheduledExecutors.Signal.STOP;
               }
               try {
-                log.info("Scheduled cache poll is running");
+                log.info("Scheduled db poll is running");
                 for (String authenticatorPrefix : authenticatorPrefixes) {
 
                   byte[] userMapBytes = getCurrentUserMapBytes(authenticatorPrefix);
@@ -168,7 +168,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
                     }
                   }
                 }
-                LOG.info("Scheduled cache poll is done");
+                LOG.info("Scheduled db poll is done");
               }
               catch (Throwable t) {
                 LOG.makeAlert(t, "Error occured while polling for cachedUserMaps.").emit();
@@ -302,7 +302,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
         if (succeeded) {
           cachedUserMaps.put(prefix, userMap);
           cachedSerializedUserMaps.put(prefix, newValue);
-          cacheNotifier.addUpdate(prefix);
+          cacheNotifier.addUpdate(prefix, newValue);
           return true;
         } else {
           return false;

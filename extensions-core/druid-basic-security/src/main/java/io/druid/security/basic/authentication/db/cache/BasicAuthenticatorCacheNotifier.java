@@ -21,5 +21,5 @@ package io.druid.security.basic.authentication.db.cache;
 
 public interface BasicAuthenticatorCacheNotifier
 {
-  void addUpdate(String updatedAuthenticatorPrefix);
+  void addUpdate(String updatedAuthenticatorPrefix, byte[] updatedUserMap);
 }

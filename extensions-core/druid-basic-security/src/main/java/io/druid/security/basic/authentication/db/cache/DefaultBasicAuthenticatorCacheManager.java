@@ -203,7 +203,7 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
   {
     Request req = druidLeaderClient.makeRequest(
         HttpMethod.GET,
-        StringUtils.format("/druid/coordinator/v1/security/authentication/%s/cachedSerializedUserMap", prefix)
+        StringUtils.format("/druid/basic-security/authentication/%s/cachedSerializedUserMap", prefix)
     );
     FullResponseHolder responseHolder = druidLeaderClient.go(req);
     ChannelBuffer buf = responseHolder.getResponse().getContent();

@@ -43,13 +43,16 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.joda.time.Duration;
 
+import javax.ws.rs.core.MediaType;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -73,6 +76,7 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
   private final DruidNodeDiscoveryProvider discoveryProvider;
   private final HttpClient httpClient;
   private final Set<String> authenticatorsToUpdate;
+  private final Map<String, byte[]> serializedMaps;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
 
   private Thread notifierThread;
@@ -86,6 +90,7 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
     this.discoveryProvider = discoveryProvider;
     this.httpClient = httpClient;
     this.authenticatorsToUpdate = new HashSet<>();
+    this.serializedMaps = new HashMap<>();
   }
 
   @LifecycleStart
@@ -103,16 +108,19 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
               try {
                 log.info("Waiting for cache update notification");
                 Set<String> authenticatorsToUpdateSnapshot;
+                HashMap<String, byte[]> serializedUserMapsSnapshot;
                 synchronized (authenticatorsToUpdate) {
                   if (authenticatorsToUpdate.isEmpty()) {
                     authenticatorsToUpdate.wait();
                   }
                   authenticatorsToUpdateSnapshot = new HashSet<>(authenticatorsToUpdate);
+                  serializedUserMapsSnapshot = new HashMap<String, byte[]>(serializedMaps);
                   authenticatorsToUpdate.clear();
+                  serializedMaps.clear();
                 }
                 log.info("Sending cache update notifications");
                 for (String authenticator : authenticatorsToUpdateSnapshot) {
-                  sendUpdate(authenticator);
+                  sendUpdate(authenticator, serializedUserMapsSnapshot.get(authenticator));
                 }
               }
               catch (Throwable t) {
@@ -131,17 +139,18 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
   }
 
   @Override
-  public void addUpdate(String updatedAuthenticatorPrefix)
+  public void addUpdate(String updatedAuthenticatorPrefix, byte[] updatedUserMap)
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
 
     synchronized (authenticatorsToUpdate) {
       authenticatorsToUpdate.add(updatedAuthenticatorPrefix);
+      serializedMaps.put(updatedAuthenticatorPrefix, updatedUserMap);
       authenticatorsToUpdate.notify();
     }
   }
 
-  private void sendUpdate(String updatedAuthenticatorPrefix)
+  private void sendUpdate(String updatedAuthenticatorPrefix, byte[] serializedUserMap)
   {
     for (String nodeType : NODE_TYPES) {
       DruidNodeDiscovery nodeDiscovery = discoveryProvider.getForNodeType(nodeType);
@@ -150,9 +159,12 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
         URL listenerURL = getListenerURL(node.getDruidNode(), updatedAuthenticatorPrefix);
         final AtomicInteger returnCode = new AtomicInteger(0);
         final AtomicReference<String> reasonString = new AtomicReference<>(null);
+
         // best effort, if this fails, remote node will poll and pick up the update eventually
+        Request req = new Request(HttpMethod.POST, listenerURL);
+        req.setContent(MediaType.APPLICATION_JSON, serializedUserMap);
         httpClient.go(
-            new Request(HttpMethod.POST, listenerURL),
+            req,
             makeResponseHandler(returnCode, reasonString),
             Duration.millis(2000)
         );
@@ -167,7 +179,7 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
           druidNode.getServiceScheme(),
           druidNode.getHost(),
           druidNode.getPortToUse(),
-          StringUtils.format("/druid/security/internal/authentication/listen/%s", authPrefix)
+          StringUtils.format("/druid/basic-security/authentication/listen/%s", authPrefix)
       );
     }
     catch (MalformedURLException mue) {

@@ -136,10 +136,8 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     // The coordinator really needs a standarized api path
     // Can't use '/*' here because of Guice and Jetty static content conflicts
     root.addFilter(GuiceFilter.class, "/info/*", null);
-    root.addFilter(GuiceFilter.class, "/druid/coordinator/*", null);
-    if (beOverlord) {
-      root.addFilter(GuiceFilter.class, "/druid/indexer/*", null);
-    }
+    root.addFilter(GuiceFilter.class, "/druid/*", null);
+
     // this will be removed in the next major release
     root.addFilter(GuiceFilter.class, "/coordinator/*", null);
 
