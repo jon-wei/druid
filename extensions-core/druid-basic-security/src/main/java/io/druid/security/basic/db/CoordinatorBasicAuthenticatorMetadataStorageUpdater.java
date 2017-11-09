@@ -21,9 +21,11 @@ package io.druid.security.basic.db;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import io.druid.concurrent.LifecycleLock;
 import io.druid.guice.ManageLifecycleLast;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.ISE;
@@ -43,6 +45,7 @@ import io.druid.server.security.AuthenticatorMapper;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @ManageLifecycleLast
 public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements BasicAuthenticatorMetadataStorageUpdater
@@ -63,6 +66,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
 
   private final Map<String, Map<String, BasicAuthenticatorUser>> cachedUserMaps;
   private final Map<String, byte[]> cachedSerializedUserMaps;
+  private final LifecycleLock lifecycleLock = new LifecycleLock();
 
   @Inject
   public CoordinatorBasicAuthenticatorMetadataStorageUpdater(
@@ -85,74 +89,68 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
   @LifecycleStart
   public void start()
   {
-    log.info("STARTING COORDINATOR BASIC AUTH STORAGE UPDATER");
-    AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
-    for (Map.Entry<String, Authenticator> entry : authenticatorMapper.getAuthenticatorMap().entrySet()) {
-      Authenticator authenticator = entry.getValue();
-      if (authenticator instanceof BasicHTTPAuthenticator) {
-        String authenticatorName = entry.getKey();
-        BasicHTTPAuthenticator basicHTTPAuthenticator = (BasicHTTPAuthenticator) authenticator;
-        BasicAuthDBConfig dbConfig = basicHTTPAuthenticator.getDbConfig();
-        byte[] userMapBytes = getCurrentUserMapBytes(authenticatorName);
-        Map<String, BasicAuthenticatorUser> userMap = deserializeUserMap(userMapBytes);
-        cachedUserMaps.put(authenticatorName, userMap);
-        cachedSerializedUserMaps.put(authenticatorName, userMapBytes);
+    if (!lifecycleLock.canStart()) {
+      throw new ISE("can't start.");
+    }
 
-        if (dbConfig.getInitialAdminPassword() != null && !userMap.containsKey("admin")) {
-          createUser(authenticatorName, "admin");
-          setUserCredentials(authenticatorName, "admin", dbConfig.getInitialAdminPassword().toCharArray());
-        }
+    try {
+      log.info("STARTING COORDINATOR BASIC AUTH STORAGE UPDATER");
+      AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
+      for (Map.Entry<String, Authenticator> entry : authenticatorMapper.getAuthenticatorMap().entrySet()) {
+        Authenticator authenticator = entry.getValue();
+        if (authenticator instanceof BasicHTTPAuthenticator) {
+          String authenticatorName = entry.getKey();
+          BasicHTTPAuthenticator basicHTTPAuthenticator = (BasicHTTPAuthenticator) authenticator;
+          BasicAuthDBConfig dbConfig = basicHTTPAuthenticator.getDbConfig();
+          byte[] userMapBytes = getCurrentUserMapBytes(authenticatorName);
+          Map<String, BasicAuthenticatorUser> userMap = deserializeUserMap(userMapBytes);
+          cachedUserMaps.put(authenticatorName, userMap);
+          cachedSerializedUserMaps.put(authenticatorName, userMapBytes);
 
-        if (dbConfig.getInitialInternalClientPassword() != null && !userMap.containsKey("druid_system")) {
-          createUser(authenticatorName, "druid_system");
-          setUserCredentials(authenticatorName, "druid_system", dbConfig.getInitialInternalClientPassword().toCharArray());
+          if (dbConfig.getInitialAdminPassword() != null && !userMap.containsKey("admin")) {
+            createUser(authenticatorName, "admin");
+            setUserCredentials(authenticatorName, "admin", dbConfig.getInitialAdminPassword().toCharArray());
+          }
+
+          if (dbConfig.getInitialInternalClientPassword() != null && !userMap.containsKey("druid_system")) {
+            createUser(authenticatorName, "druid_system");
+            setUserCredentials(
+                authenticatorName,
+                "druid_system",
+                dbConfig.getInitialInternalClientPassword().toCharArray()
+            );
+          }
         }
       }
+      lifecycleLock.started();
+    }
+    finally {
+      lifecycleLock.exitStart();
     }
   }
 
   public void createUser(String prefix, String userName)
   {
-    int attempts = 0;
-    while (attempts < numRetries) {
-      if (createUserOnce(prefix, userName)) {
-        return;
-      } else {
-        attempts++;
-      }
-    }
-    throw new ISE("Could not create user[%s] due to concurrent update contention.", userName);
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    createUserInternal(prefix, userName);
   }
 
   public void deleteUser(String prefix, String userName)
   {
-    int attempts = 0;
-    while (attempts < numRetries) {
-      if (deleteUserOnce(prefix, userName)) {
-        return;
-      } else {
-        attempts++;
-      }
-    }
-    throw new ISE("Could not delete user[%s] due to concurrent update contention.", userName);
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    deleteUserInternal(prefix, userName);
   }
 
   public void setUserCredentials(String prefix, String userName, char[] password)
   {
-    BasicAuthenticatorCredentials credentials = new BasicAuthenticatorCredentials(password);
-    int attempts = 0;
-    while (attempts < numRetries) {
-      if (setUserCredentialOnce(prefix, userName, credentials)) {
-        return;
-      } else {
-        attempts++;
-      }
-    }
-    throw new ISE("Could not set credentials for user[%s] due to concurrent update contention.", userName);
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    setUserCredentialsInternal(prefix, userName, password);
   }
 
   public Map<String, BasicAuthenticatorUser> getCachedUserMap(String prefix)
   {
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+
     synchronized (cachedUserMaps) {
       return cachedUserMaps.get(prefix);
     }
@@ -160,6 +158,8 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
 
   public byte[] getCachedSerializedUserMap(String prefix)
   {
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+
     synchronized (cachedUserMaps) {
       return cachedSerializedUserMaps.get(prefix);
     }
@@ -236,6 +236,47 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private void createUserInternal(String prefix, String userName)
+  {
+
+    int attempts = 0;
+    while (attempts < numRetries) {
+      if (createUserOnce(prefix, userName)) {
+        return;
+      } else {
+        attempts++;
+      }
+    }
+    throw new ISE("Could not create user[%s] due to concurrent update contention.", userName);
+  }
+
+  private void deleteUserInternal(String prefix, String userName)
+  {
+    int attempts = 0;
+    while (attempts < numRetries) {
+      if (deleteUserOnce(prefix, userName)) {
+        return;
+      } else {
+        attempts++;
+      }
+    }
+    throw new ISE("Could not delete user[%s] due to concurrent update contention.", userName);
+  }
+
+  private void setUserCredentialsInternal(String prefix, String userName, char[] password)
+  {
+    BasicAuthenticatorCredentials credentials = new BasicAuthenticatorCredentials(password);
+    int attempts = 0;
+    while (attempts < numRetries) {
+      if (setUserCredentialOnce(prefix, userName, credentials)) {
+        return;
+      } else {
+        attempts++;
+      }
+    }
+    throw new ISE("Could not set credentials for user[%s] due to concurrent update contention.", userName);
   }
 
   private boolean createUserOnce(String prefix, String userName)

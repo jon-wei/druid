@@ -20,6 +20,7 @@
 package io.druid.security.basic.db.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Provider;
@@ -53,6 +54,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @ManageLifecycleLast
 public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticatorCacheManager
@@ -66,16 +68,16 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
   private final Injector injector;
   private final ObjectMapper objectMapper;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
+  private final DruidLeaderClient druidLeaderClient;
 
   private volatile ScheduledExecutorService exec;
   private Thread cacheUpdateHandlerThread;
-  private Provider<DruidLeaderClient> druidLeaderClient;
 
   @Inject
   public DefaultBasicAuthenticatorCacheManager(
       Injector injector,
       @Smile ObjectMapper objectMapper,
-      @Coordinator Provider<DruidLeaderClient> druidLeaderClient
+      @Coordinator DruidLeaderClient druidLeaderClient
   )
   {
     this.injector = injector;
@@ -95,62 +97,73 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
       throw new ISE("can't start.");
     }
 
-    initUserMaps();
+    try {
+      initUserMaps();
 
-    this.exec = Execs.scheduledSingleThreaded("BasicAuthenticatorCacheManager-Exec--%d");
+      this.exec = Execs.scheduledSingleThreaded("BasicAuthenticatorCacheManager-Exec--%d");
 
-    ScheduledExecutors.scheduleWithFixedDelay(
-        exec,
-        new Duration(0),
-        new Duration(30000),
-        () -> {
-          try {
-            log.info("Scheduled cache poll is running");
-            for (String authenticatorPrefix : authenticatorPrefixes) {
-              Map<String, BasicAuthenticatorUser> userMap = fetchUserMapFromCoordinator(authenticatorPrefix, false);
-              if (userMap != null) {
-                cachedUserMaps.put(authenticatorPrefix, userMap);
-              }
-            }
-            log.info("Scheduled cache poll is done");
-          }
-          catch (Throwable t) {
-            LOG.makeAlert(t, "Error occured while polling for cachedUserMaps.").emit();
-          }
-        }
-    );
-
-    cacheUpdateHandlerThread = Execs.makeThread(
-        "BasicAuthenticatorCacheManager-cacheUpdateHandlerThread",
-        () -> {
-          while (!Thread.interrupted()) {
+      ScheduledExecutors.scheduleWithFixedDelay(
+          exec,
+          new Duration(0),
+          new Duration(30000),
+          () -> {
             try {
-              log.info("About to handle cache update");
-              synchronized (authenticatorsToUpdate) {
-                log.info("Handling cache update");
-                for (String authenticatorPrefix : authenticatorsToUpdate) {
-                  Map<String, BasicAuthenticatorUser> userMap = fetchUserMapFromCoordinator(authenticatorPrefix, false);
-                  if (userMap != null) {
-                    cachedUserMaps.put(authenticatorPrefix, userMap);
-                  }
+              log.info("Scheduled cache poll is running");
+              for (String authenticatorPrefix : authenticatorPrefixes) {
+                Map<String, BasicAuthenticatorUser> userMap = fetchUserMapFromCoordinator(authenticatorPrefix, false);
+                if (userMap != null) {
+                  cachedUserMaps.put(authenticatorPrefix, userMap);
                 }
-                authenticatorsToUpdate.clear();
-                log.info("Handled cache update");
-                authenticatorsToUpdate.wait();
               }
+              log.info("Scheduled cache poll is done");
             }
             catch (Throwable t) {
-              LOG.makeAlert(t, "Error occured while handling updates for cachedUserMaps.").emit();
+              LOG.makeAlert(t, "Error occured while polling for cachedUserMaps.").emit();
             }
           }
-        },
-        true
-    );
-    cacheUpdateHandlerThread.start();
+      );
+
+      cacheUpdateHandlerThread = Execs.makeThread(
+          "BasicAuthenticatorCacheManager-cacheUpdateHandlerThread",
+          () -> {
+            while (!Thread.interrupted()) {
+              try {
+                log.info("About to handle cache update");
+                synchronized (authenticatorsToUpdate) {
+                  log.info("Handling cache update");
+                  for (String authenticatorPrefix : authenticatorsToUpdate) {
+                    Map<String, BasicAuthenticatorUser> userMap = fetchUserMapFromCoordinator(
+                        authenticatorPrefix,
+                        false
+                    );
+                    if (userMap != null) {
+                      cachedUserMaps.put(authenticatorPrefix, userMap);
+                    }
+                  }
+                  authenticatorsToUpdate.clear();
+                  log.info("Handled cache update");
+                  authenticatorsToUpdate.wait();
+                }
+              }
+              catch (Throwable t) {
+                LOG.makeAlert(t, "Error occured while handling updates for cachedUserMaps.").emit();
+              }
+            }
+          },
+          true
+      );
+      cacheUpdateHandlerThread.start();
+      lifecycleLock.started();
+    }
+    finally {
+      lifecycleLock.exitStart();
+    }
   }
 
   public void addAuthenticatorToUpdate(String authenticatorPrefix)
   {
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+
     synchronized (authenticatorsToUpdate) {
       authenticatorsToUpdate.add(authenticatorPrefix);
       authenticatorsToUpdate.notify();
@@ -159,6 +172,8 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
 
   public Map<String, BasicAuthenticatorUser> getUserMap(String authenticatorPrefix)
   {
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+
     return cachedUserMaps.get(authenticatorPrefix);
   }
 
@@ -185,11 +200,11 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
 
   private Map<String, BasicAuthenticatorUser> tryFetchUserMapFromCoordinator(String prefix) throws Exception
   {
-    Request req = druidLeaderClient.get().makeRequest(
+    Request req = druidLeaderClient.makeRequest(
         HttpMethod.GET,
         StringUtils.format("/druid/coordinator/v1/security/authentication/%s/cachedSerializedUserMap", prefix)
     );
-    FullResponseHolder responseHolder = druidLeaderClient.get().go(req);
+    FullResponseHolder responseHolder = druidLeaderClient.go(req);
     ChannelBuffer buf = responseHolder.getResponse().getContent();
     byte[] userMapBytes = buf.array();
     Map<String, BasicAuthenticatorUser> userMap = objectMapper.readValue(

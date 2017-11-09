@@ -261,7 +261,7 @@ public class BasicHTTPAuthenticator implements Authenticator
   {
     AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
     for (Map.Entry<String, Authenticator> entry : authenticatorMapper.getAuthenticatorMap().entrySet()) {
-      // find itself in the map
+      // find itself in the map, Authenticators are singletons
       if (this == entry.getValue()) {
         return entry.getKey();
       }

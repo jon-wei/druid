@@ -19,6 +19,7 @@
 
 package io.druid.security.basic.db.cache;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.http.client.HttpClient;
@@ -26,11 +27,13 @@ import com.metamx.http.client.Request;
 import com.metamx.http.client.response.ClientResponse;
 import com.metamx.http.client.response.HttpResponseHandler;
 import com.metamx.http.client.response.SequenceInputStreamResponseHandler;
+import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscovery;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.ManageLifecycleLast;
 import io.druid.guice.annotations.EscalatedClient;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
@@ -48,11 +51,12 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 @ManageLifecycleLast
-public class CoordinatorBasicAuthenticatorCacheNotifier
+public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenticatorCacheNotifier
 {
   private static final Logger log = new Logger(CoordinatorBasicAuthenticatorCacheNotifier.class);
   private static final EmittingLogger LOG = new EmittingLogger(CoordinatorBasicAuthenticatorCacheNotifier.class);
@@ -69,6 +73,7 @@ public class CoordinatorBasicAuthenticatorCacheNotifier
   private final DruidNodeDiscoveryProvider discoveryProvider;
   private final HttpClient httpClient;
   private final Set<String> authenticatorsToUpdate;
+  private final LifecycleLock lifecycleLock = new LifecycleLock();
 
   private Thread notifierThread;
 
@@ -86,37 +91,49 @@ public class CoordinatorBasicAuthenticatorCacheNotifier
   @LifecycleStart
   public void start()
   {
-    notifierThread = Execs.makeThread(
-        "CoordinatorBasicAuthenticatorCacheNotifier-notifierThread",
-        () -> {
-          while (!Thread.interrupted()) {
-            try {
-              log.info("Waiting for cache update notification");
-              Set<String> authenticatorsToUpdateSnapshot;
-              synchronized (authenticatorsToUpdate) {
-                if (authenticatorsToUpdate.isEmpty()) {
-                  authenticatorsToUpdate.wait();
+    if (!lifecycleLock.canStart()) {
+      throw new ISE("can't start.");
+    }
+
+    try {
+      notifierThread = Execs.makeThread(
+          "CoordinatorBasicAuthenticatorCacheNotifier-notifierThread",
+          () -> {
+            while (!Thread.interrupted()) {
+              try {
+                log.info("Waiting for cache update notification");
+                Set<String> authenticatorsToUpdateSnapshot;
+                synchronized (authenticatorsToUpdate) {
+                  if (authenticatorsToUpdate.isEmpty()) {
+                    authenticatorsToUpdate.wait();
+                  }
+                  authenticatorsToUpdateSnapshot = new HashSet<>(authenticatorsToUpdate);
+                  authenticatorsToUpdate.clear();
                 }
-                authenticatorsToUpdateSnapshot = new HashSet<>(authenticatorsToUpdate);
-                authenticatorsToUpdate.clear();
+                log.info("Sending cache update notifications");
+                for (String authenticator : authenticatorsToUpdateSnapshot) {
+                  sendUpdate(authenticator);
+                }
               }
-              log.info("Sending cache update notifications");
-              for (String authenticator : authenticatorsToUpdateSnapshot) {
-                sendUpdate(authenticator);
+              catch (Throwable t) {
+                LOG.makeAlert(t, "Error occured while handling updates for cachedUserMaps.").emit();
               }
             }
-            catch (Throwable t) {
-              LOG.makeAlert(t, "Error occured while handling updates for cachedUserMaps.").emit();
-            }
-          }
-        },
-        true
-    );
-    notifierThread.start();
+          },
+          true
+      );
+      notifierThread.start();
+      lifecycleLock.started();
+    }
+    finally {
+      lifecycleLock.exitStart();
+    }
   }
 
   public void addUpdate(String updatedAuthenticatorPrefix)
   {
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+
     synchronized (authenticatorsToUpdate) {
       authenticatorsToUpdate.add(updatedAuthenticatorPrefix);
       authenticatorsToUpdate.notify();
@@ -132,6 +149,7 @@ public class CoordinatorBasicAuthenticatorCacheNotifier
         URL listenerURL = getListenerURL(node.getDruidNode(), updatedAuthenticatorPrefix);
         final AtomicInteger returnCode = new AtomicInteger(0);
         final AtomicReference<String> reasonString = new AtomicReference<>(null);
+        // best effort, if this fails, remote node will poll and pick up the update eventually
         httpClient.go(
             new Request(HttpMethod.POST, listenerURL),
             makeResponseHandler(returnCode, reasonString),

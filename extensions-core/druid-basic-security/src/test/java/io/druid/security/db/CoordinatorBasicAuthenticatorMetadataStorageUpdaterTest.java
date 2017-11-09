@@ -72,14 +72,16 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
     connector.createConfigTable();
     injector = setupInjector();
 
+    CoordinatorBasicAuthenticatorCacheNotifier notifier = new CoordinatorBasicAuthenticatorCacheNotifier(null, null);
     updater = new CoordinatorBasicAuthenticatorMetadataStorageUpdater(
         injector,
         connector,
         tablesConfig,
         new ObjectMapper(new SmileFactory()),
-        new CoordinatorBasicAuthenticatorCacheNotifier(null, null)
+        notifier
     );
 
+    notifier.start();
     updater.start();
   }
 
