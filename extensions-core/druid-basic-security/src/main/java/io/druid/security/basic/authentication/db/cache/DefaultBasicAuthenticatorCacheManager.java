@@ -159,6 +159,7 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
     }
   }
 
+  @Override
   public void addAuthenticatorToUpdate(String authenticatorPrefix)
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
@@ -169,6 +170,7 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
     }
   }
 
+  @Override
   public Map<String, BasicAuthenticatorUser> getUserMap(String authenticatorPrefix)
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));

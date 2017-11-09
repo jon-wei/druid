@@ -130,6 +130,7 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
     }
   }
 
+  @Override
   public void addUpdate(String updatedAuthenticatorPrefix)
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));

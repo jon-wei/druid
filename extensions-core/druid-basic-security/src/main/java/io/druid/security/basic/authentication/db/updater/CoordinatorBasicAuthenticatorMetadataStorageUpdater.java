@@ -197,25 +197,28 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
     LOG.info("CoordinatorBasicAuthenticatorMetadataStorageUpdater is stopped.");
   }
 
-
+  @Override
   public void createUser(String prefix, String userName)
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
     createUserInternal(prefix, userName);
   }
 
+  @Override
   public void deleteUser(String prefix, String userName)
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
     deleteUserInternal(prefix, userName);
   }
 
+  @Override
   public void setUserCredentials(String prefix, String userName, char[] password)
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
     setUserCredentialsInternal(prefix, userName, password);
   }
 
+  @Override
   public Map<String, BasicAuthenticatorUser> getCachedUserMap(String prefix)
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
@@ -225,6 +228,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
     }
   }
 
+  @Override
   public byte[] getCachedSerializedUserMap(String prefix)
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
@@ -234,6 +238,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
     }
   }
 
+  @Override
   public byte[] getCurrentUserMapBytes(String prefix)
   {
     return connector.lookup(
@@ -244,6 +249,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
     );
   }
 
+  @Override
   public Map<String, BasicAuthenticatorUser> deserializeUserMap(byte[] userMapBytes)
   {
     Map<String, BasicAuthenticatorUser> userMap;
@@ -260,6 +266,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
     return userMap;
   }
 
+  @Override
   public byte[] serializeUserMap(Map<String, BasicAuthenticatorUser> userMap)
   {
     try {
