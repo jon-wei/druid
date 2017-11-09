@@ -17,15 +17,27 @@
  * under the License.
  */
 
-package io.druid.security.basic.db.cache;
+package io.druid.security.basic.authentication.db.updater;
 
-import io.druid.security.basic.db.entity.BasicAuthenticatorUser;
+import io.druid.security.basic.authentication.db.entity.BasicAuthenticatorUser;
 
 import java.util.Map;
 
-public interface BasicAuthenticatorCacheManager
+public interface BasicAuthenticatorMetadataStorageUpdater
 {
-  void addAuthenticatorToUpdate(String authenticatorPrefix);
+  void createUser(String prefix, String userName);
 
-  Map<String, BasicAuthenticatorUser> getUserMap(String authenticatorPrefix);
+  void deleteUser(String prefix, String userName);
+
+  void setUserCredentials(String prefix, String userName, char[] password);
+
+  Map<String, BasicAuthenticatorUser> getCachedUserMap(String prefix);
+
+  byte[] getCachedSerializedUserMap(String prefix);
+
+  byte[] getCurrentUserMapBytes(String prefix);
+
+  Map<String, BasicAuthenticatorUser> deserializeUserMap(byte[] userMapBytes);
+
+  byte[] serializeUserMap(Map<String, BasicAuthenticatorUser> userMap);
 }

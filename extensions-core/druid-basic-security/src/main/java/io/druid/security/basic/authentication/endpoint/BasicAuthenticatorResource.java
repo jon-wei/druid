@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.security.basic.authentication;
+package io.druid.security.basic.authentication.endpoint;
 
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;

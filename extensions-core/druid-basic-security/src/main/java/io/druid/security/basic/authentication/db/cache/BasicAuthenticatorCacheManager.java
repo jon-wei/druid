@@ -17,9 +17,15 @@
  * under the License.
  */
 
-package io.druid.security.basic.db.cache;
+package io.druid.security.basic.authentication.db.cache;
 
-public interface BasicAuthenticatorCacheNotifier
+import io.druid.security.basic.authentication.db.entity.BasicAuthenticatorUser;
+
+import java.util.Map;
+
+public interface BasicAuthenticatorCacheManager
 {
-  void addUpdate(String updatedAuthenticatorPrefix);
+  void addAuthenticatorToUpdate(String authenticatorPrefix);
+
+  Map<String, BasicAuthenticatorUser> getUserMap(String authenticatorPrefix);
 }

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.security.basic.authentication;
+package io.druid.security.basic.authentication.endpoint;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -25,8 +25,9 @@ import com.google.inject.Inject;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.security.basic.BasicSecurityDBResourceException;
-import io.druid.security.basic.db.BasicAuthenticatorMetadataStorageUpdater;
-import io.druid.security.basic.db.entity.BasicAuthenticatorUser;
+import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
+import io.druid.security.basic.authentication.db.entity.BasicAuthenticatorUser;
+import io.druid.security.basic.authentication.db.updater.BasicAuthenticatorMetadataStorageUpdater;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
 

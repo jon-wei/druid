@@ -17,23 +17,13 @@
  * under the License.
  */
 
-package io.druid.security.basic.authentication;
+package io.druid.security.basic.authentication.db.cache;
 
-import javax.ws.rs.core.Response;
-
-public interface BasicAuthenticatorResourceHandler
+public class NoopBasicAuthenticatorCacheNotifier implements BasicAuthenticatorCacheNotifier
 {
-  Response getAllUsers(String authenticatorName);
+  @Override
+  public void addUpdate(String updatedAuthenticatorPrefix)
+  {
 
-  Response getUser(String authenticatorName, String userName);
-
-  Response createUser(String authenticatorName, String userName);
-
-  Response deleteUser(String authenticatorName, String userName);
-
-  Response updateUserCredentials(String authenticatorName, String userName, String password);
-
-  Response getCachedSerializedUserMap(String authenticatorName);
-
-  Response authenticatorUpdateListener(String authenticatorName);
+  }
 }

@@ -18,44 +18,7 @@
  */
 package io.druid.security.basic.old;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Predicate;
-import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.inject.Inject;
-import com.google.inject.Injector;
-import io.druid.java.util.common.IAE;
-import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.metadata.BaseSQLMetadataConnector;
-import io.druid.metadata.MetadataStorageConnectorConfig;
-import io.druid.security.basic.BasicSecurityDBResourceException;
-import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
-import io.druid.security.basic.db.BasicAuthDBConfig;
-import io.druid.server.security.Action;
-import io.druid.server.security.Authorizer;
-import io.druid.server.security.AuthorizerMapper;
-import io.druid.server.security.Resource;
-import io.druid.server.security.ResourceAction;
-import io.druid.server.security.ResourceType;
-import org.apache.commons.dbcp2.BasicDataSource;
-import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.StatementContext;
-import org.skife.jdbi.v2.TransactionCallback;
-import org.skife.jdbi.v2.TransactionStatus;
-import org.skife.jdbi.v2.tweak.ResultSetMapper;
-import org.skife.jdbi.v2.util.IntegerMapper;
-
-import java.io.IOException;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 
 public abstract class SQLBasicAuthorizerStorageConnector
     extends BaseSQLMetadataConnector

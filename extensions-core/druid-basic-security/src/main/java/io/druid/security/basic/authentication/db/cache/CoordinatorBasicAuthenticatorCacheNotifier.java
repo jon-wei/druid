@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.security.basic.db.cache;
+package io.druid.security.basic.authentication.db.cache;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;

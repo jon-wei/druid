@@ -17,9 +17,9 @@
  * under the License.
  */
 
-package io.druid.security.basic.db;
+package io.druid.security.basic.authentication.db.updater;
 
-import io.druid.security.basic.db.entity.BasicAuthenticatorUser;
+import io.druid.security.basic.authentication.db.entity.BasicAuthenticatorUser;
 
 import java.util.Map;
 

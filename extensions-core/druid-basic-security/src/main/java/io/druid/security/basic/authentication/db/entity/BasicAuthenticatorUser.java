@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.security.basic.db.entity;
+package io.druid.security.basic.authentication.db.entity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

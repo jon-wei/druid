@@ -17,27 +17,23 @@
  * under the License.
  */
 
-package io.druid.security.basic.db;
+package io.druid.security.basic.authentication.endpoint;
 
-import io.druid.security.basic.db.entity.BasicAuthenticatorUser;
+import javax.ws.rs.core.Response;
 
-import java.util.Map;
-
-public interface BasicAuthenticatorMetadataStorageUpdater
+public interface BasicAuthenticatorResourceHandler
 {
-  void createUser(String prefix, String userName);
+  Response getAllUsers(String authenticatorName);
 
-  void deleteUser(String prefix, String userName);
+  Response getUser(String authenticatorName, String userName);
 
-  void setUserCredentials(String prefix, String userName, char[] password);
+  Response createUser(String authenticatorName, String userName);
 
-  Map<String, BasicAuthenticatorUser> getCachedUserMap(String prefix);
+  Response deleteUser(String authenticatorName, String userName);
 
-  byte[] getCachedSerializedUserMap(String prefix);
+  Response updateUserCredentials(String authenticatorName, String userName, String password);
 
-  byte[] getCurrentUserMapBytes(String prefix);
+  Response getCachedSerializedUserMap(String authenticatorName);
 
-  Map<String, BasicAuthenticatorUser> deserializeUserMap(byte[] userMapBytes);
-
-  byte[] serializeUserMap(Map<String, BasicAuthenticatorUser> userMap);
+  Response authenticatorUpdateListener(String authenticatorName);
 }

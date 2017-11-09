@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.security.basic.db;
+package io.druid.security.basic.authentication.db.updater;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,13 +38,12 @@ import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageTablesConfig;
-import io.druid.query.lookup.LookupExtractorFactoryContainer;
 import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
-import io.druid.security.basic.db.cache.BasicAuthenticatorCacheNotifier;
-import io.druid.security.basic.db.cache.CoordinatorBasicAuthenticatorCacheNotifier;
-import io.druid.security.basic.db.entity.BasicAuthenticatorCredentials;
-import io.druid.security.basic.db.entity.BasicAuthenticatorUser;
+import io.druid.security.basic.authentication.db.BasicAuthDBConfig;
+import io.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheNotifier;
+import io.druid.security.basic.authentication.db.entity.BasicAuthenticatorCredentials;
+import io.druid.security.basic.authentication.db.entity.BasicAuthenticatorUser;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
 import org.joda.time.Duration;

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.security.basic.db;
+package io.druid.security.basic.authentication.db;
 
 public class BasicAuthDBConfig
 {

@@ -17,13 +17,12 @@
  * under the License.
  */
 
-package io.druid.security.basic.db.cache;
+package io.druid.security.basic.authentication.db.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.google.inject.Provider;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.FullResponseHolder;
@@ -40,9 +39,9 @@ import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
-import io.druid.security.basic.db.BasicAuthDBConfig;
-import io.druid.security.basic.db.CoordinatorBasicAuthenticatorMetadataStorageUpdater;
-import io.druid.security.basic.db.entity.BasicAuthenticatorUser;
+import io.druid.security.basic.authentication.db.BasicAuthDBConfig;
+import io.druid.security.basic.authentication.db.entity.BasicAuthenticatorUser;
+import io.druid.security.basic.authentication.db.updater.CoordinatorBasicAuthenticatorMetadataStorageUpdater;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
 import org.jboss.netty.buffer.ChannelBuffer;
