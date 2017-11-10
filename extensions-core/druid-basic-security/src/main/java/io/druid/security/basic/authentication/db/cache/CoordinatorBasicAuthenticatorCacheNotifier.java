@@ -135,6 +135,8 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
                     continue;
                   }
 
+                  // Best effort, if a notification fails, the remote node will eventually poll to update its state
+                  // We wait for responses however, to avoid flooding remote nodes with notifications.
                   List<ListenableFuture<StatusResponseHolder>> futures = sendUpdate(
                       authenticator,
                       serializedUserMapsSnapshot.get(authenticator)
@@ -193,10 +195,12 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
         Request req = new Request(HttpMethod.POST, listenerURL);
         req.setContent(MediaType.APPLICATION_JSON, serializedUserMap);
 
+        BasicAuthDBConfig authenticatorConfig = authenticatorConfigMap.get(updatedAuthenticatorPrefix);
+
         ListenableFuture<StatusResponseHolder> future = httpClient.go(
             req,
             new ResponseHandler(),
-            Duration.millis(3000)
+            Duration.millis(authenticatorConfig.getCacheNotificationTimeout())
         );
         futures.add(future);
       }
@@ -233,23 +237,7 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
     }
   }
 
-  private static HttpResponseHandler<InputStream, InputStream> makeResponseHandler(
-      final AtomicInteger returnCode,
-      final AtomicReference<String> reasonString
-  )
-  {
-    return new SequenceInputStreamResponseHandler()
-    {
-      @Override
-      public ClientResponse<InputStream> handleResponse(HttpResponse response)
-      {
-        returnCode.set(response.getStatus().getCode());
-        reasonString.set(response.getStatus().getReasonPhrase());
-        return super.handleResponse(response);
-      }
-    };
-  }
-
+  // Based off StatusResponseHandler, but with response content ignored
   private static class ResponseHandler implements HttpResponseHandler<StatusResponseHolder, StatusResponseHolder>
   {
     @Override

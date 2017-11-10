@@ -42,6 +42,7 @@ import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import io.druid.security.basic.authentication.db.BasicAuthDBConfig;
+import io.druid.security.basic.authentication.db.BasicAuthenticatorCommonCacheConfig;
 import io.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheNotifier;
 import io.druid.security.basic.authentication.db.entity.BasicAuthenticatorCredentials;
 import io.druid.security.basic.authentication.db.entity.BasicAuthenticatorUser;
@@ -73,6 +74,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
   private final Injector injector;
   private final MetadataStorageConnector connector;
   private final MetadataStorageTablesConfig connectorConfig;
+  private final BasicAuthenticatorCommonCacheConfig commonCacheConfig;
   private final ObjectMapper objectMapper;
   private final BasicAuthenticatorCacheNotifier cacheNotifier;
   private final int numRetries = 5;
@@ -90,6 +92,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
       Injector injector,
       MetadataStorageConnector connector,
       MetadataStorageTablesConfig connectorConfig,
+      BasicAuthenticatorCommonCacheConfig commonCacheConfig,
       @Smile ObjectMapper objectMapper,
       BasicAuthenticatorCacheNotifier cacheNotifier,
       ConfigManager configManager // ConfigManager creates the db table we need, set a dependency here
@@ -98,6 +101,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
     this.injector = injector;
     this.connector = connector;
     this.connectorConfig = connectorConfig;
+    this.commonCacheConfig = commonCacheConfig;
     this.objectMapper = objectMapper;
     this.cacheNotifier = cacheNotifier;
     this.cachedUserMaps = new HashMap<>();
@@ -147,8 +151,8 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
 
       ScheduledExecutors.scheduleWithFixedDelay(
           exec,
-          new Duration(0),
-          new Duration(30000),
+          new Duration(commonCacheConfig.getPollingPeriod()),
+          new Duration(commonCacheConfig.getPollingPeriod()),
           new Callable<ScheduledExecutors.Signal>()
           {
             @Override

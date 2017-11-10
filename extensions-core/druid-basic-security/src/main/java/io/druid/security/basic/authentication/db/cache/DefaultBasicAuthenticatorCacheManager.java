@@ -38,6 +38,7 @@ import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
+import io.druid.security.basic.authentication.db.BasicAuthenticatorCommonCacheConfig;
 import io.druid.security.basic.authentication.db.entity.BasicAuthenticatorUser;
 import io.druid.security.basic.authentication.db.updater.CoordinatorBasicAuthenticatorMetadataStorageUpdater;
 import io.druid.server.security.Authenticator;
@@ -49,9 +50,11 @@ import org.joda.time.Duration;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 @ManageLifecycle
@@ -65,17 +68,20 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
   private final ObjectMapper objectMapper;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
   private final DruidLeaderClient druidLeaderClient;
+  private final BasicAuthenticatorCommonCacheConfig commonCacheConfig;
 
   private volatile ScheduledExecutorService exec;
 
   @Inject
   public DefaultBasicAuthenticatorCacheManager(
       Injector injector,
+      BasicAuthenticatorCommonCacheConfig commonCacheConfig,
       @Smile ObjectMapper objectMapper,
       @Coordinator DruidLeaderClient druidLeaderClient
   )
   {
     this.injector = injector;
+    this.commonCacheConfig = commonCacheConfig;
     this.objectMapper = objectMapper;
     this.cachedUserMaps = new ConcurrentHashMap<>();
     this.authenticatorPrefixes = new HashSet<>();
@@ -98,8 +104,8 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
 
       ScheduledExecutors.scheduleWithFixedDelay(
           exec,
-          new Duration(0),
-          new Duration(30000),
+          new Duration(commonCacheConfig.getPollingPeriod()),
+          new Duration(commonCacheConfig.getPollingPeriod()),
           () -> {
             try {
               LOG.info("Scheduled cache poll is running");
@@ -110,6 +116,10 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
                 }
               }
               LOG.info("Scheduled cache poll is done");
+
+              long randomDelay = ThreadLocalRandom.current().nextLong(0, commonCacheConfig.getMaxRandomDelay());
+              LOG.info("Inserting random polling delay of [%s] ms", randomDelay);
+              Thread.sleep(randomDelay);
             }
             catch (Throwable t) {
               LOG.makeAlert(t, "Error occured while polling for cachedUserMaps.").emit();

@@ -28,11 +28,13 @@ import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import io.druid.guice.Jerseys;
+import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.initialization.DruidModule;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import io.druid.security.basic.authentication.BasicHTTPEscalator;
+import io.druid.security.basic.authentication.db.BasicAuthenticatorCommonCacheConfig;
 import io.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheManager;
 import io.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheNotifier;
 import io.druid.security.basic.authentication.db.cache.CoordinatorBasicAuthenticatorCacheManager;
@@ -54,6 +56,9 @@ public class BasicSecurityDruidModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
+
+    JsonConfigProvider.bind(binder, "druid.auth.basic.common", BasicAuthenticatorCommonCacheConfig.class);
+
     LifecycleModule.register(binder, BasicAuthenticatorMetadataStorageUpdater.class);
     LifecycleModule.register(binder, BasicAuthenticatorCacheManager.class);
 
