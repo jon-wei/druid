@@ -21,6 +21,7 @@ package io.druid.security.basic.authentication;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Throwables;
 import com.metamx.http.client.CredentialedHttpClient;
 import com.metamx.http.client.HttpClient;
@@ -37,6 +38,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import java.net.URI;
 
+@JsonTypeName("basic")
 public class BasicHTTPEscalator implements Escalator
 {
   private final String internalClientUsername;
