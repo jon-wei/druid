@@ -109,14 +109,12 @@ public class AuthenticatorMapperModule implements DruidModule
         );
 
         String nameProperty = StringUtils.format("druid.auth.authenticator.%s.name", authenticatorName);
-
         Properties adjustedProps = new Properties(props);
         if (adjustedProps.containsKey(nameProperty)) {
           throw new IAE("Name property [%s] is reserved.", nameProperty);
         } else {
           adjustedProps.put(nameProperty, authenticatorName);
         }
-
         authenticatorProvider.inject(adjustedProps, configurator);
 
         Supplier<Authenticator> authenticatorSupplier = authenticatorProvider.get();
