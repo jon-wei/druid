@@ -33,7 +33,7 @@ import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscovery;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
-import io.druid.guice.ManageLifecycleLast;
+import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.EscalatedClient;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
@@ -65,7 +65,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-@ManageLifecycleLast
+@ManageLifecycle
 public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenticatorCacheNotifier
 {
   private static final EmittingLogger LOG = new EmittingLogger(CoordinatorBasicAuthenticatorCacheNotifier.class);

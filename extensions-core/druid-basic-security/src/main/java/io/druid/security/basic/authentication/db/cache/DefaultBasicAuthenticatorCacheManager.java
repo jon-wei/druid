@@ -29,7 +29,7 @@ import com.metamx.http.client.response.FullResponseHolder;
 import io.druid.client.coordinator.Coordinator;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DruidLeaderClient;
-import io.druid.guice.ManageLifecycleLast;
+import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RetryUtils;
@@ -54,7 +54,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-@ManageLifecycleLast
+@ManageLifecycle
 public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticatorCacheManager
 {
   private static final EmittingLogger LOG = new EmittingLogger(DefaultBasicAuthenticatorCacheManager.class);

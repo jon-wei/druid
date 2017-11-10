@@ -80,7 +80,8 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
         connector,
         tablesConfig,
         new ObjectMapper(new SmileFactory()),
-        new NoopBasicAuthenticatorCacheNotifier()
+        new NoopBasicAuthenticatorCacheNotifier(),
+        null
     );
 
     updater.start();

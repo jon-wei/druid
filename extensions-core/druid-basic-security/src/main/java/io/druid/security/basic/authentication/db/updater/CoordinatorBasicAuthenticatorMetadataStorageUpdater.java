@@ -26,8 +26,9 @@ import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.common.config.ConfigManager;
 import io.druid.concurrent.LifecycleLock;
-import io.druid.guice.ManageLifecycleLast;
+import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
@@ -57,7 +58,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-@ManageLifecycleLast
+@ManageLifecycle
 public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements BasicAuthenticatorMetadataStorageUpdater
 {
   private static final Logger log = new Logger(CoordinatorBasicAuthenticatorMetadataStorageUpdater.class);
@@ -90,7 +91,8 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
       MetadataStorageConnector connector,
       MetadataStorageTablesConfig connectorConfig,
       @Smile ObjectMapper objectMapper,
-      BasicAuthenticatorCacheNotifier cacheNotifier
+      BasicAuthenticatorCacheNotifier cacheNotifier,
+      ConfigManager configManager // ConfigManager creates the db table we need, set a dependency here
   )
   {
     this.injector = injector;

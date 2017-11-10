@@ -93,7 +93,8 @@ public class CoordinatorBasicAuthenticatorResourceTest
         connector,
         tablesConfig,
         new ObjectMapper(new SmileFactory()),
-        new NoopBasicAuthenticatorCacheNotifier()
+        new NoopBasicAuthenticatorCacheNotifier(),
+        null
     );
 
     resource = new BasicAuthenticatorResource(
