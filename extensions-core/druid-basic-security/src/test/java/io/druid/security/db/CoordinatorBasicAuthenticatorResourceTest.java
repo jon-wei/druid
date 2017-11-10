@@ -37,6 +37,7 @@ import io.druid.metadata.TestDerbyConnector;
 import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import io.druid.security.basic.authentication.BasicHTTPEscalator;
+import io.druid.security.basic.authentication.db.BasicAuthenticatorCommonCacheConfig;
 import io.druid.security.basic.authentication.db.cache.NoopBasicAuthenticatorCacheNotifier;
 import io.druid.security.basic.authentication.db.entity.BasicAuthenticatorCredentials;
 import io.druid.security.basic.authentication.db.entity.BasicAuthenticatorUser;
@@ -70,7 +71,6 @@ public class CoordinatorBasicAuthenticatorResourceTest
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
-  private Injector injector;
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig;
   private BasicAuthenticatorResource resource;
@@ -86,12 +86,39 @@ public class CoordinatorBasicAuthenticatorResourceTest
     connector = derbyConnectorRule.getConnector();
     tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createConfigTable();
-    injector = setupInjector();
+
+    AuthenticatorMapper authenticatorMapper = new AuthenticatorMapper(
+        ImmutableMap.of(
+            AUTHENTICATOR_NAME,
+            new BasicHTTPAuthenticator(
+                null,
+                AUTHENTICATOR_NAME,
+                "druid",
+                "druid",
+                "druid",
+                "druid",
+                null,
+                null
+            ),
+            AUTHENTICATOR_NAME2,
+            new BasicHTTPAuthenticator(
+                null,
+                AUTHENTICATOR_NAME2,
+                "druid",
+                "druid",
+                "druid",
+                "druid",
+                null,
+                null
+            )
+        )
+    );
 
     storageUpdater = new CoordinatorBasicAuthenticatorMetadataStorageUpdater(
-        injector,
+        authenticatorMapper,
         connector,
         tablesConfig,
+        new BasicAuthenticatorCommonCacheConfig(null, null),
         new ObjectMapper(new SmileFactory()),
         new NoopBasicAuthenticatorCacheNotifier(),
         null
@@ -100,7 +127,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
     resource = new BasicAuthenticatorResource(
         new CoordinatorBasicAuthenticatorResourceHandler(
             storageUpdater,
-            injector.getInstance(AuthenticatorMapper.class)
+            authenticatorMapper
         )
     );
 
@@ -275,36 +302,6 @@ public class CoordinatorBasicAuthenticatorResourceTest
 
                 binder.bind(Escalator.class).toInstance(
                     new BasicHTTPEscalator(null, null, null)
-                );
-
-                binder.bind(AuthenticatorMapper.class).toInstance(
-                    new AuthenticatorMapper(
-                        ImmutableMap.of(
-                            AUTHENTICATOR_NAME,
-                            new BasicHTTPAuthenticator(
-                                null,
-                                AUTHENTICATOR_NAME,
-                                "druid",
-                                "druid",
-                                "druid",
-                                "druid",
-                                null,
-                                null
-                            ),
-                            AUTHENTICATOR_NAME2,
-                            new BasicHTTPAuthenticator(
-                                null,
-                                AUTHENTICATOR_NAME2,
-                                "druid",
-                                "druid",
-                                "druid",
-                                "druid",
-                                null,
-                                null
-                            )
-                        ),
-                        AUTHENTICATOR_NAME
-                    )
                 );
               }
             }

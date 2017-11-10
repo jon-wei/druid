@@ -158,7 +158,7 @@ public class AuthenticatorMapperModule implements DruidModule
 
     for (String authenticator : authenticators) {
       String typeProperty = StringUtils.format("druid.auth.authenticator.%s.type", authenticator);
-      if (escalatorType.equals(typeProperty)) {
+      if (escalatorType.equals(properties.getProperty(typeProperty))) {
         return;
       }
     }

@@ -37,6 +37,7 @@ import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import io.druid.security.basic.authentication.BasicHTTPEscalator;
+import io.druid.security.basic.authentication.db.BasicAuthenticatorCommonCacheConfig;
 import io.druid.security.basic.authentication.db.cache.NoopBasicAuthenticatorCacheNotifier;
 import io.druid.security.basic.authentication.db.entity.BasicAuthenticatorCredentials;
 import io.druid.security.basic.authentication.db.entity.BasicAuthenticatorUser;
@@ -62,7 +63,6 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
-  private Injector injector;
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig;
   private CoordinatorBasicAuthenticatorMetadataStorageUpdater updater;
@@ -73,12 +73,27 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
     connector = derbyConnectorRule.getConnector();
     tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createConfigTable();
-    injector = setupInjector();
+    //injector = setupInjector();
 
     updater = new CoordinatorBasicAuthenticatorMetadataStorageUpdater(
-        injector,
+        new AuthenticatorMapper(
+            ImmutableMap.of(
+                "test",
+                new BasicHTTPAuthenticator(
+                    null,
+                    "test",
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+                )
+            )
+        ),
         connector,
         tablesConfig,
+        new BasicAuthenticatorCommonCacheConfig(null, null),
         new ObjectMapper(new SmileFactory()),
         new NoopBasicAuthenticatorCacheNotifier(),
         null
@@ -176,8 +191,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
                                 null,
                                 null
                             )
-                        ),
-                        "test"
+                        )
                     )
                 );
               }
