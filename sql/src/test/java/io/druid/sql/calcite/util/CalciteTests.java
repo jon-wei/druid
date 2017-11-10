@@ -57,8 +57,8 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.FloatSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
-import io.druid.query.expression.LookupExprMacro;
 import io.druid.query.expression.LookupEnabledTestExprMacroTable;
+import io.druid.query.expression.LookupExprMacro;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
@@ -93,6 +93,7 @@ import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.server.QueryLifecycleFactory;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.NoopRequestLogger;
+import io.druid.server.security.AllowAllEscalator;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.expression.SqlOperatorConversion;
@@ -415,7 +416,7 @@ public class CalciteTests
         new TestServerInventoryView(walker.getSegments()),
         plannerConfig,
         viewManager,
-        AuthTestUtils.TEST_AUTHENTICATOR_MAPPER
+        new AllowAllEscalator()
     );
 
     schema.start();

@@ -46,11 +46,6 @@ public class AuthenticatorMapper
     );
   }
 
-  public Authenticator getEscalatingAuthenticator()
-  {
-    return escalatingAuthenticator;
-  }
-
   public List<Authenticator> getAuthenticatorChain()
   {
     return Lists.newArrayList(authenticatorMap.values());

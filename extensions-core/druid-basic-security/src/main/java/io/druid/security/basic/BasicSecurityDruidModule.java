@@ -32,6 +32,7 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.initialization.DruidModule;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
+import io.druid.security.basic.authentication.BasicHTTPEscalator;
 import io.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheManager;
 import io.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheNotifier;
 import io.druid.security.basic.authentication.db.cache.CoordinatorBasicAuthenticatorCacheManager;
@@ -57,6 +58,7 @@ public class BasicSecurityDruidModule implements DruidModule
     LifecycleModule.register(binder, BasicAuthenticatorCacheManager.class);
 
     Jerseys.addResource(binder, BasicAuthenticatorResource.class);
+
     /*
     binder.bind(BasicAuthenticatorResource.class)
           .toProvider(new BasicAuthenticatorResourceProvider())
@@ -127,7 +129,8 @@ public class BasicSecurityDruidModule implements DruidModule
   {
     return ImmutableList.of(
         new SimpleModule("BasicDruidSecurity").registerSubtypes(
-            BasicHTTPAuthenticator.class
+            BasicHTTPAuthenticator.class,
+            BasicHTTPEscalator.class
         )
     );
   }

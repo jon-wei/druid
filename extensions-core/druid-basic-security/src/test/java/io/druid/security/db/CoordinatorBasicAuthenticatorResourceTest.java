@@ -36,6 +36,7 @@ import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.TestDerbyConnector;
 import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
+import io.druid.security.basic.authentication.BasicHTTPEscalator;
 import io.druid.security.basic.authentication.db.cache.NoopBasicAuthenticatorCacheNotifier;
 import io.druid.security.basic.authentication.db.entity.BasicAuthenticatorCredentials;
 import io.druid.security.basic.authentication.db.entity.BasicAuthenticatorUser;
@@ -44,6 +45,7 @@ import io.druid.security.basic.authentication.endpoint.BasicAuthenticatorResourc
 import io.druid.security.basic.authentication.endpoint.CoordinatorBasicAuthenticatorResourceHandler;
 import io.druid.server.DruidNode;
 import io.druid.server.security.AuthenticatorMapper;
+import io.druid.server.security.Escalator;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -268,6 +270,10 @@ public class CoordinatorBasicAuthenticatorResourceTest
                     binder,
                     Key.get(DruidNode.class, Self.class),
                     new DruidNode("test", "localhost", null, null, true, false)
+                );
+
+                binder.bind(Escalator.class).toInstance(
+                    new BasicHTTPEscalator(null, null, null)
                 );
 
                 binder.bind(AuthenticatorMapper.class).toInstance(

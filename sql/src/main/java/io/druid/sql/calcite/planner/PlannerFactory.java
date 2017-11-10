@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import io.druid.guice.annotations.Json;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.QueryLifecycleFactory;
+import io.druid.server.security.AllowAllEscalator;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticatorMapper;
 import io.druid.server.security.AuthorizerMapper;
@@ -151,9 +152,8 @@ public class PlannerFactory
     return new DruidPlanner(
         Frameworks.getPlanner(frameworkConfig),
         plannerContext,
-        authConfig,
         authorizerMapper,
-        authenticatorMapper
+        new AllowAllEscalator()
     );
   }
 }
