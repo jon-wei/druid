@@ -43,7 +43,7 @@ public class CoordinatorBasicAuthenticatorCacheManager implements BasicAuthentic
   }
 
   @Override
-  public void addAuthenticatorToUpdate(String authenticatorPrefix)
+  public void handleAuthenticatorUpdate(String authenticatorPrefix, byte[] serializedUserMap)
   {
   }
 

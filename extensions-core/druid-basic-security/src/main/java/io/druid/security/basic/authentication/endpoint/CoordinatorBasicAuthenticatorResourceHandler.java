@@ -31,6 +31,7 @@ import io.druid.security.basic.authentication.db.updater.BasicAuthenticatorMetad
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.util.Map;
 
@@ -168,7 +169,7 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
   }
 
   @Override
-  public Response authenticatorUpdateListener(String authenticatorName)
+  public Response authenticatorUpdateListener(HttpServletRequest req, String authenticatorName)
   {
     throw new UnsupportedOperationException("Listener update is not applicable to coordinator nodes.");
   }

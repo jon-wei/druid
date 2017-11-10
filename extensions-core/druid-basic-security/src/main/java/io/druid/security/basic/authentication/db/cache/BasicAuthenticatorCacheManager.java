@@ -25,7 +25,7 @@ import java.util.Map;
 
 public interface BasicAuthenticatorCacheManager
 {
-  void addAuthenticatorToUpdate(String authenticatorPrefix);
+  void handleAuthenticatorUpdate(String authenticatorPrefix, byte[] serializedUserMap);
 
   Map<String, BasicAuthenticatorUser> getUserMap(String authenticatorPrefix);
 }

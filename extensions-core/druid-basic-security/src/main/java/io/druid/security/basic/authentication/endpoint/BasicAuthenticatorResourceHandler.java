@@ -35,5 +35,5 @@ public interface BasicAuthenticatorResourceHandler
 
   Response getCachedSerializedUserMap(String authenticatorName);
 
-  Response authenticatorUpdateListener(String authenticatorName);
+  Response authenticatorUpdateListener(String authenticatorName, byte[] serializedUserMap);
 }

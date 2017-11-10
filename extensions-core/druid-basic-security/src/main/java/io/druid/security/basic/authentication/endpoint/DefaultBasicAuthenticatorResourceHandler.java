@@ -98,7 +98,7 @@ public class DefaultBasicAuthenticatorResourceHandler implements BasicAuthentica
   }
 
   @Override
-  public Response authenticatorUpdateListener(String authenticatorName)
+  public Response authenticatorUpdateListener(String authenticatorName, byte[] serializedUserMap)
   {
     final BasicHTTPAuthenticator authenticator = authenticatorMap.get(authenticatorName);
     if (authenticator == null) {
@@ -112,7 +112,7 @@ public class DefaultBasicAuthenticatorResourceHandler implements BasicAuthentica
                      .build();
     }
 
-    cacheManager.addAuthenticatorToUpdate(authenticatorName);
+    cacheManager.handleAuthenticatorUpdate(authenticatorName, serializedUserMap);
     return Response.ok().build();
   }
 }

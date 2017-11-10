@@ -190,9 +190,10 @@ public class BasicAuthenticatorResource
   @ResourceFilters(BasicSecurityResourceFilter.class)
   public Response authenticatorUpdateListener(
       @Context HttpServletRequest req,
-      @PathParam("authenticatorName") final String authenticatorName
+      @PathParam("authenticatorName") final String authenticatorName,
+      byte[] serializedUserMap
   )
   {
-    return handler.authenticatorUpdateListener(authenticatorName);
+    return handler.authenticatorUpdateListener(authenticatorName, serializedUserMap);
   }
 }
