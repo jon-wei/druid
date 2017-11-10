@@ -17,18 +17,17 @@
  * under the License.
  */
 
-package io.druid.security.basic.authentication;
+package io.druid.security.kerberos;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Throwables;
-import com.metamx.http.client.CredentialedHttpClient;
 import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.auth.BasicCredentials;
-import io.druid.java.util.common.StringUtils;
-import io.druid.security.basic.BasicAuthUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Escalator;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.eclipse.jetty.client.api.Authentication;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.api.Request;
@@ -36,32 +35,33 @@ import org.eclipse.jetty.util.Attributes;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import java.net.URI;
+import java.security.PrivilegedExceptionAction;
 
-public class BasicHTTPEscalator implements Escalator
+@JsonTypeName("kerberos")
+public class KerberosEscalator implements Escalator
 {
-  private final String internalClientUsername;
-  private final String internalClientPassword;
+  private static final Logger log = new Logger(KerberosAuthenticator.class);
+
+  private final String internalClientPrincipal;
+  private final String internalClientKeytab;
   private final String authorizerName;
 
   @JsonCreator
-  public BasicHTTPEscalator(
+  public KerberosEscalator(
       @JsonProperty("authorizerName") String authorizerName,
-      @JsonProperty("internalClientUsername") String internalClientUsername,
-      @JsonProperty("internalClientPassword") String internalClientPassword
+      @JsonProperty("internalClientPrincipal") String internalClientPrincipal,
+      @JsonProperty("internalClientKeytab") String internalClientKeytab
   )
   {
     this.authorizerName = authorizerName;
-    this.internalClientUsername = internalClientUsername;
-    this.internalClientPassword = internalClientPassword;
-  }
+    this.internalClientPrincipal = internalClientPrincipal;
+    this.internalClientKeytab = internalClientKeytab;
 
+  }
   @Override
   public HttpClient createEscalatedClient(HttpClient baseClient)
   {
-    return new CredentialedHttpClient(
-        new BasicCredentials(internalClientUsername, internalClientPassword),
-        baseClient
-    );
+    return new KerberosHttpClient(baseClient, internalClientPrincipal, internalClientKeytab);
   }
 
   @Override
@@ -92,9 +92,29 @@ public class BasicHTTPEscalator implements Escalator
           public void apply(Request request)
           {
             try {
-              final String unencodedCreds = StringUtils.format("%s:%s", internalClientUsername, internalClientPassword);
-              final String base64Creds = BasicAuthUtils.getEncodedCredentials(unencodedCreds);
-              request.getHeaders().add(HttpHeaders.Names.AUTHORIZATION, "Basic " + base64Creds);
+              // No need to set cookies as they are handled by Jetty Http Client itself.
+              URI uri = request.getURI();
+              if (DruidKerberosUtil.needToSendCredentials(baseClient.getCookieStore(), uri)) {
+                log.debug(
+                    "No Auth Cookie found for URI[%s]. Existing Cookies[%s] Authenticating... ",
+                    uri,
+                    baseClient.getCookieStore().getCookies()
+                );
+                final String host = request.getHost();
+                DruidKerberosUtil.authenticateIfRequired(internalClientPrincipal, internalClientKeytab);
+                UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
+                String challenge = currentUser.doAs(new PrivilegedExceptionAction<String>()
+                {
+                  @Override
+                  public String run() throws Exception
+                  {
+                    return DruidKerberosUtil.kerberosChallenge(host);
+                  }
+                });
+                request.getHeaders().add(HttpHeaders.Names.AUTHORIZATION, "Negotiate " + challenge);
+              } else {
+                log.debug("Found Auth Cookie found for URI[%s].", uri);
+              }
             }
             catch (Throwable e) {
               Throwables.propagate(e);
@@ -109,6 +129,6 @@ public class BasicHTTPEscalator implements Escalator
   @Override
   public AuthenticationResult createEscalatedAuthenticationResult()
   {
-    return new AuthenticationResult(internalClientUsername, authorizerName, null);
+    return new AuthenticationResult(internalClientPrincipal, authorizerName, null);
   }
 }
