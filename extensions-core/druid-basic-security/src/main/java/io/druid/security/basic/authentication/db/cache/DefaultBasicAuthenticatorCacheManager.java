@@ -38,7 +38,6 @@ import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
-import io.druid.security.basic.authentication.db.BasicAuthDBConfig;
 import io.druid.security.basic.authentication.db.entity.BasicAuthenticatorUser;
 import io.druid.security.basic.authentication.db.updater.CoordinatorBasicAuthenticatorMetadataStorageUpdater;
 import io.druid.server.security.Authenticator;
@@ -128,6 +127,7 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
   @Override
   public void handleAuthenticatorUpdate(String authenticatorPrefix, byte[] serializedUserMap)
   {
+    LOG.info("Received cache update for authenticator [%s].", authenticatorPrefix);
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
     try {
       cachedUserMaps.put(
@@ -137,7 +137,8 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
               CoordinatorBasicAuthenticatorMetadataStorageUpdater.USER_MAP_TYPE_REFERENCE
           )
       );
-    } catch (IOException ioe) {
+    }
+    catch (IOException ioe) {
       LOG.makeAlert("WTF? Could not deserialize user map received from coordinator.");
     }
   }
@@ -175,7 +176,7 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
   {
     Request req = druidLeaderClient.makeRequest(
         HttpMethod.GET,
-        StringUtils.format("/druid/basic-security/authentication/%s/cachedSerializedUserMap", prefix)
+        StringUtils.format("/druid-ext/basic-security/authentication/%s/cachedSerializedUserMap", prefix)
     );
     FullResponseHolder responseHolder = druidLeaderClient.go(req);
     ChannelBuffer buf = responseHolder.getResponse().getContent();
@@ -195,7 +196,6 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
       if (authenticator instanceof BasicHTTPAuthenticator) {
         String authenticatorName = entry.getKey();
         BasicHTTPAuthenticator basicHTTPAuthenticator = (BasicHTTPAuthenticator) authenticator;
-        BasicAuthDBConfig dbConfig = basicHTTPAuthenticator.getDbConfig();
         Map<String, BasicAuthenticatorUser> userMap = fetchUserMapFromCoordinator(authenticatorName, true);
         cachedUserMaps.put(authenticatorName, userMap);
         authenticatorPrefixes.add(authenticatorName);

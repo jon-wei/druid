@@ -104,6 +104,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     // Can't use '/*' here because of Guice conflicts with AsyncQueryForwardingServlet path
     root.addFilter(GuiceFilter.class, "/status/*", null);
     root.addFilter(GuiceFilter.class, "/druid/router/*", null);
+    root.addFilter(GuiceFilter.class, "/druid-ext/*", null);
 
     final HandlerList handlerList = new HandlerList();
     handlerList.setHandlers(

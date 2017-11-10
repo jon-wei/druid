@@ -37,7 +37,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-@Path("/druid/basic-security/authentication")
+@Path("/druid-ext/basic-security/authentication")
 @LazySingleton
 public class BasicAuthenticatorResource
 {

@@ -20,6 +20,7 @@
 package io.druid.security.basic.authentication.db.cache;
 
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.http.client.HttpClient;
@@ -27,6 +28,7 @@ import com.metamx.http.client.Request;
 import com.metamx.http.client.response.ClientResponse;
 import com.metamx.http.client.response.HttpResponseHandler;
 import com.metamx.http.client.response.SequenceInputStreamResponseHandler;
+import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscovery;
@@ -37,8 +39,8 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.server.DruidNode;
+import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.joda.time.Duration;
@@ -47,6 +49,7 @@ import javax.ws.rs.core.MediaType;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -61,7 +64,6 @@ import java.util.concurrent.atomic.AtomicReference;
 @ManageLifecycleLast
 public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenticatorCacheNotifier
 {
-  private static final Logger log = new Logger(CoordinatorBasicAuthenticatorCacheNotifier.class);
   private static final EmittingLogger LOG = new EmittingLogger(CoordinatorBasicAuthenticatorCacheNotifier.class);
 
   private static final List<String> NODE_TYPES = Arrays.asList(
@@ -106,7 +108,7 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
           () -> {
             while (!Thread.interrupted()) {
               try {
-                log.info("Waiting for cache update notification");
+                LOG.info("Waiting for cache update notification");
                 Set<String> authenticatorsToUpdateSnapshot;
                 HashMap<String, byte[]> serializedUserMapsSnapshot;
                 synchronized (authenticatorsToUpdate) {
@@ -118,10 +120,18 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
                   authenticatorsToUpdate.clear();
                   serializedMaps.clear();
                 }
-                log.info("Sending cache update notifications");
+                LOG.info("Sending cache update notifications");
                 for (String authenticator : authenticatorsToUpdateSnapshot) {
-                  sendUpdate(authenticator, serializedUserMapsSnapshot.get(authenticator));
+                  List<ListenableFuture<StatusResponseHolder>> futures = sendUpdate(
+                      authenticator,
+                      serializedUserMapsSnapshot.get(authenticator)
+                  );
+                  for (ListenableFuture<StatusResponseHolder> future : futures) {
+                    StatusResponseHolder srh = future.get();
+                    LOG.info("Got status: " + srh.getStatus());
+                  }
                 }
+                LOG.info("Received responses for cache update notifications.");
               }
               catch (Throwable t) {
                 LOG.makeAlert(t, "Error occured while handling updates for cachedUserMaps.").emit();
@@ -150,26 +160,28 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
     }
   }
 
-  private void sendUpdate(String updatedAuthenticatorPrefix, byte[] serializedUserMap)
+  private List<ListenableFuture<StatusResponseHolder>> sendUpdate(String updatedAuthenticatorPrefix, byte[] serializedUserMap)
   {
+    List<ListenableFuture<StatusResponseHolder>> futures = new ArrayList<>();
     for (String nodeType : NODE_TYPES) {
       DruidNodeDiscovery nodeDiscovery = discoveryProvider.getForNodeType(nodeType);
       Collection<DiscoveryDruidNode> nodes = nodeDiscovery.getAllNodes();
       for (DiscoveryDruidNode node : nodes) {
         URL listenerURL = getListenerURL(node.getDruidNode(), updatedAuthenticatorPrefix);
-        final AtomicInteger returnCode = new AtomicInteger(0);
-        final AtomicReference<String> reasonString = new AtomicReference<>(null);
 
         // best effort, if this fails, remote node will poll and pick up the update eventually
         Request req = new Request(HttpMethod.POST, listenerURL);
         req.setContent(MediaType.APPLICATION_JSON, serializedUserMap);
-        httpClient.go(
+
+        ListenableFuture<StatusResponseHolder> future = httpClient.go(
             req,
-            makeResponseHandler(returnCode, reasonString),
+            new ResponseHandler(),
             Duration.millis(2000)
         );
+        futures.add(future);
       }
     }
+    return futures;
   }
 
   private static URL getListenerURL(DruidNode druidNode, String authPrefix)
@@ -179,11 +191,11 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
           druidNode.getServiceScheme(),
           druidNode.getHost(),
           druidNode.getPortToUse(),
-          StringUtils.format("/druid/basic-security/authentication/listen/%s", authPrefix)
+          StringUtils.format("/druid-ext/basic-security/authentication/listen/%s", authPrefix)
       );
     }
     catch (MalformedURLException mue) {
-      log.error("WTF? Malformed url for DruidNode[%s] and authPrefix[%s]", druidNode, authPrefix);
+      LOG.error("WTF? Malformed url for DruidNode[%s] and authPrefix[%s]", druidNode, authPrefix);
       throw new RuntimeException(mue);
     }
   }
@@ -203,5 +215,42 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
         return super.handleResponse(response);
       }
     };
+  }
+
+  private static class ResponseHandler implements HttpResponseHandler<StatusResponseHolder, StatusResponseHolder>
+  {
+    @Override
+    public ClientResponse<StatusResponseHolder> handleResponse(HttpResponse response)
+    {
+      return ClientResponse.unfinished(
+          new StatusResponseHolder(
+              response.getStatus(),
+              null
+          )
+      );
+    }
+
+    @Override
+    public ClientResponse<StatusResponseHolder> handleChunk(
+        ClientResponse<StatusResponseHolder> response,
+        HttpChunk chunk
+    )
+    {
+      return response;
+    }
+
+    @Override
+    public ClientResponse<StatusResponseHolder> done(ClientResponse<StatusResponseHolder> response)
+    {
+      return ClientResponse.finished(response.getObj());
+    }
+
+    @Override
+    public void exceptionCaught(
+        ClientResponse<StatusResponseHolder> clientResponse, Throwable e
+    )
+    {
+      // Its safe to Ignore as the ClientResponse returned in handleChunk were unfinished
+    }
   }
 }
