@@ -39,7 +39,11 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
+import io.druid.security.basic.authentication.db.BasicAuthDBConfig;
 import io.druid.server.DruidNode;
+import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -79,12 +83,14 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
   private final HttpClient httpClient;
   private final Set<String> authenticatorsToUpdate;
   private final Map<String, byte[]> serializedMaps;
+  private final Map<String, BasicAuthDBConfig> authenticatorConfigMap;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
 
   private Thread notifierThread;
 
   @Inject
   public CoordinatorBasicAuthenticatorCacheNotifier(
+      AuthenticatorMapper authenticatorMapper,
       DruidNodeDiscoveryProvider discoveryProvider,
       @EscalatedClient HttpClient httpClient
   )
@@ -93,6 +99,8 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
     this.httpClient = httpClient;
     this.authenticatorsToUpdate = new HashSet<>();
     this.serializedMaps = new HashMap<>();
+    this.authenticatorConfigMap = new HashMap<>();
+    initAuthenticatorConfigMap(authenticatorMapper);
   }
 
   @LifecycleStart
@@ -122,13 +130,25 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
                 }
                 LOG.info("Sending cache update notifications");
                 for (String authenticator : authenticatorsToUpdateSnapshot) {
+                  BasicAuthDBConfig authenticatorConfig = authenticatorConfigMap.get(authenticator);
+                  if (!authenticatorConfig.isEnableCacheNotifications()) {
+                    continue;
+                  }
+
                   List<ListenableFuture<StatusResponseHolder>> futures = sendUpdate(
                       authenticator,
                       serializedUserMapsSnapshot.get(authenticator)
                   );
                   for (ListenableFuture<StatusResponseHolder> future : futures) {
-                    StatusResponseHolder srh = future.get();
-                    LOG.info("Got status: " + srh.getStatus());
+                    try {
+                      StatusResponseHolder srh = future.get(
+                          authenticatorConfig.getCacheNotificationTimeout(), TimeUnit.MILLISECONDS
+                      );
+                      LOG.info("Got status: " + srh.getStatus());
+                    }
+                    catch (Exception e) {
+                      LOG.makeAlert("Failed to get response for cache notification.");
+                    }
                   }
                 }
                 LOG.info("Received responses for cache update notifications.");
@@ -176,12 +196,25 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
         ListenableFuture<StatusResponseHolder> future = httpClient.go(
             req,
             new ResponseHandler(),
-            Duration.millis(2000)
+            Duration.millis(3000)
         );
         futures.add(future);
       }
     }
     return futures;
+  }
+
+  private void initAuthenticatorConfigMap(AuthenticatorMapper mapper)
+  {
+    for (Map.Entry<String, Authenticator> entry : mapper.getAuthenticatorMap().entrySet()) {
+      Authenticator authenticator = entry.getValue();
+      if (authenticator instanceof BasicHTTPAuthenticator) {
+        String authenticatorName = entry.getKey();
+        BasicHTTPAuthenticator basicHTTPAuthenticator = (BasicHTTPAuthenticator) authenticator;
+        BasicAuthDBConfig dbConfig = basicHTTPAuthenticator.getDbConfig();
+        authenticatorConfigMap.put(authenticatorName, dbConfig);
+      }
+    }
   }
 
   private static URL getListenerURL(DruidNode druidNode, String authPrefix)

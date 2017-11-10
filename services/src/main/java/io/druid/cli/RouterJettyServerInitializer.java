@@ -100,7 +100,6 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
         jsonMapper
     );
 
-
     // Can't use '/*' here because of Guice conflicts with AsyncQueryForwardingServlet path
     root.addFilter(GuiceFilter.class, "/status/*", null);
     root.addFilter(GuiceFilter.class, "/druid/router/*", null);

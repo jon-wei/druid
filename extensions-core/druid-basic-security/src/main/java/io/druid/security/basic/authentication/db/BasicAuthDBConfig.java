@@ -21,16 +21,24 @@ package io.druid.security.basic.authentication.db;
 
 public class BasicAuthDBConfig
 {
+  public static final long DEFAULT_CACHE_NOTIFY_TIMEOUT_MS = 5000;
+
   private final String initialAdminPassword;
   private final String initialInternalClientPassword;
+  private final boolean enableCacheNotifications;
+  private final long cacheNotificationTimeout;
 
   public BasicAuthDBConfig(
       final String initialAdminPassword,
-      final String initialInternalClientPassword
+      final String initialInternalClientPassword,
+      final Boolean enableCacheNotifications,
+      final Long cacheNotificationTimeout
   )
   {
     this.initialAdminPassword = initialAdminPassword;
     this.initialInternalClientPassword = initialInternalClientPassword;
+    this.enableCacheNotifications = enableCacheNotifications;
+    this.cacheNotificationTimeout = cacheNotificationTimeout;
   }
 
   public String getInitialAdminPassword()
@@ -41,5 +49,15 @@ public class BasicAuthDBConfig
   public String getInitialInternalClientPassword()
   {
     return initialInternalClientPassword;
+  }
+
+  public boolean isEnableCacheNotifications()
+  {
+    return enableCacheNotifications;
+  }
+
+  public long getCacheNotificationTimeout()
+  {
+    return cacheNotificationTimeout;
   }
 }

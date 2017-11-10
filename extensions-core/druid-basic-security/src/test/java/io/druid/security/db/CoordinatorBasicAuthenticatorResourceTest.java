@@ -280,7 +280,9 @@ public class CoordinatorBasicAuthenticatorResourceTest
                                 "druid",
                                 "druid",
                                 "druid",
-                                "druid"
+                                "druid",
+                                null,
+                                null
                             ),
                             AUTHENTICATOR_NAME2,
                             new BasicHTTPAuthenticator(
@@ -289,7 +291,9 @@ public class CoordinatorBasicAuthenticatorResourceTest
                                 "druid",
                                 "druid",
                                 "druid",
-                                "druid"
+                                "druid",
+                                null,
+                                null
                             )
                         ),
                         AUTHENTICATOR_NAME

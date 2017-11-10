@@ -76,13 +76,20 @@ public class BasicHTTPAuthenticator implements Authenticator
       @JsonProperty("initialAdminPassword") String initialAdminPassword,
       @JsonProperty("initialInternalClientPassword") String initialInternalClientPassword,
       @JsonProperty("internalClientUsername") String internalClientUsername,
-      @JsonProperty("internalClientPassword") String internalClientPassword
+      @JsonProperty("internalClientPassword") String internalClientPassword,
+      @JsonProperty("enableCacheNotifications") Boolean enableCacheNotifications,
+      @JsonProperty("cacheNotificationTimeout") Long cacheNotificationTimeout
   )
   {
     this.internalClientUsername = internalClientUsername;
     this.internalClientPassword = internalClientPassword;
     this.name = name;
-    this.dbConfig = new BasicAuthDBConfig(initialAdminPassword, initialInternalClientPassword);
+    this.dbConfig = new BasicAuthDBConfig(
+        initialAdminPassword,
+        initialInternalClientPassword,
+        enableCacheNotifications == null ? true : enableCacheNotifications,
+        cacheNotificationTimeout == null ? BasicAuthDBConfig.DEFAULT_CACHE_NOTIFY_TIMEOUT_MS : cacheNotificationTimeout
+    );
     this.cacheManager = cacheManager;
   }
 
