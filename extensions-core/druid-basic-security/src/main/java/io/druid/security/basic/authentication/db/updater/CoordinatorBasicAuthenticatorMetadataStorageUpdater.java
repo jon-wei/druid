@@ -71,7 +71,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
   {
   };
 
-  private final Injector injector;
+  private final AuthenticatorMapper authenticatorMapper;
   private final MetadataStorageConnector connector;
   private final MetadataStorageTablesConfig connectorConfig;
   private final BasicAuthenticatorCommonCacheConfig commonCacheConfig;
@@ -89,7 +89,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
 
   @Inject
   public CoordinatorBasicAuthenticatorMetadataStorageUpdater(
-      Injector injector,
+      AuthenticatorMapper authenticatorMapper,
       MetadataStorageConnector connector,
       MetadataStorageTablesConfig connectorConfig,
       BasicAuthenticatorCommonCacheConfig commonCacheConfig,
@@ -98,7 +98,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
       ConfigManager configManager // ConfigManager creates the db table we need, set a dependency here
   )
   {
-    this.injector = injector;
+    this.authenticatorMapper = authenticatorMapper;
     this.connector = connector;
     this.connectorConfig = connectorConfig;
     this.commonCacheConfig = commonCacheConfig;
@@ -118,7 +118,6 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
 
     try {
       log.info("STARTING COORDINATOR BASIC AUTH STORAGE UPDATER");
-      AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
       for (Map.Entry<String, Authenticator> entry : authenticatorMapper.getAuthenticatorMap().entrySet()) {
         Authenticator authenticator = entry.getValue();
         if (authenticator instanceof BasicHTTPAuthenticator) {

@@ -64,7 +64,7 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
 
   private final ConcurrentHashMap<String, Map<String, BasicAuthenticatorUser>> cachedUserMaps;
   private final Set<String> authenticatorPrefixes;
-  private final Injector injector;
+  private final AuthenticatorMapper authenticatorMapper;
   private final ObjectMapper objectMapper;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
   private final DruidLeaderClient druidLeaderClient;
@@ -74,13 +74,13 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
 
   @Inject
   public DefaultBasicAuthenticatorCacheManager(
-      Injector injector,
+      AuthenticatorMapper authenticatorMapper,
       BasicAuthenticatorCommonCacheConfig commonCacheConfig,
       @Smile ObjectMapper objectMapper,
       @Coordinator DruidLeaderClient druidLeaderClient
   )
   {
-    this.injector = injector;
+    this.authenticatorMapper = authenticatorMapper;
     this.commonCacheConfig = commonCacheConfig;
     this.objectMapper = objectMapper;
     this.cachedUserMaps = new ConcurrentHashMap<>();
@@ -200,7 +200,6 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
 
   private void initUserMaps()
   {
-    AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
     for (Map.Entry<String, Authenticator> entry : authenticatorMapper.getAuthenticatorMap().entrySet()) {
       Authenticator authenticator = entry.getValue();
       if (authenticator instanceof BasicHTTPAuthenticator) {

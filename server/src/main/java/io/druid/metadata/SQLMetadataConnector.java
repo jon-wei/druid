@@ -21,31 +21,43 @@ package io.druid.metadata;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.Batch;
+import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
+import org.skife.jdbi.v2.exceptions.DBIException;
+import org.skife.jdbi.v2.exceptions.UnableToExecuteStatementException;
+import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
 import org.skife.jdbi.v2.util.IntegerMapper;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.SQLRecoverableException;
+import java.sql.SQLTransientException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Callable;
 
-public abstract class SQLMetadataConnector extends BaseSQLMetadataConnector implements MetadataStorageConnector
+public abstract class SQLMetadataConnector implements MetadataStorageConnector
 {
   private static final Logger log = new Logger(SQLMetadataConnector.class);
   private static final String PAYLOAD_TYPE = "BLOB";
 
+  static final int DEFAULT_MAX_TRIES = 10;
+
   private final Supplier<MetadataStorageConnectorConfig> config;
   private final Supplier<MetadataStorageTablesConfig> tablesConfigSupplier;
+  private final Predicate<Throwable> shouldRetry;
 
   public SQLMetadataConnector(
       Supplier<MetadataStorageConnectorConfig> config,
@@ -105,6 +117,98 @@ public abstract class SQLMetadataConnector extends BaseSQLMetadataConnector impl
   public String getValidationQuery()
   {
     return "SELECT 1";
+  }
+
+  public abstract boolean tableExists(Handle handle, String tableName);
+
+  public <T> T retryWithHandle(
+      final HandleCallback<T> callback,
+      final Predicate<Throwable> myShouldRetry
+  )
+  {
+    final Callable<T> call = new Callable<T>()
+    {
+      @Override
+      public T call() throws Exception
+      {
+        return getDBI().withHandle(callback);
+      }
+    };
+    try {
+      return RetryUtils.retry(call, myShouldRetry, DEFAULT_MAX_TRIES);
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  public <T> T retryWithHandle(final HandleCallback<T> callback)
+  {
+    return retryWithHandle(callback, shouldRetry);
+  }
+
+  public <T> T retryTransaction(final TransactionCallback<T> callback, final int quietTries, final int maxTries)
+  {
+    final Callable<T> call = new Callable<T>()
+    {
+      @Override
+      public T call() throws Exception
+      {
+        return getDBI().inTransaction(callback);
+      }
+    };
+    try {
+      return RetryUtils.retry(call, shouldRetry, quietTries, maxTries);
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  public final boolean isTransientException(Throwable e)
+  {
+    return e != null && (e instanceof RetryTransactionException
+                         || e instanceof SQLTransientException
+                         || e instanceof SQLRecoverableException
+                         || e instanceof UnableToObtainConnectionException
+                         || e instanceof UnableToExecuteStatementException
+                         || connectorIsTransientException(e)
+                         || (e instanceof SQLException && isTransientException(e.getCause()))
+                         || (e instanceof DBIException && isTransientException(e.getCause())));
+  }
+
+  protected boolean connectorIsTransientException(Throwable e)
+  {
+    return false;
+  }
+
+  public void createTable(final String tableName, final Iterable<String> sql)
+  {
+    try {
+      retryWithHandle(
+          new HandleCallback<Void>()
+          {
+            @Override
+            public Void withHandle(Handle handle) throws Exception
+            {
+              if (!tableExists(handle, tableName)) {
+                log.info("Creating table[%s]", tableName);
+                final Batch batch = handle.createBatch();
+                for (String s : sql) {
+                  batch.add(s);
+                }
+                batch.execute();
+              } else {
+                log.info("Table[%s] already exists", tableName);
+              }
+              return null;
+            }
+          }
+      );
+    }
+    catch (Exception e) {
+      log.warn(e, "Exception creating table");
+    }
   }
 
   public void createPendingSegmentsTable(final String tableName)
@@ -397,6 +501,8 @@ public abstract class SQLMetadataConnector extends BaseSQLMetadataConnector impl
         }
     );
   }
+
+  public abstract DBI getDBI();
 
   @Override
   public void createDataSourceTable()
