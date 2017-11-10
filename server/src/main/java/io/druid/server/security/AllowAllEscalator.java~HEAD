@@ -17,37 +17,27 @@
  * under the License.
  */
 
-package io.druid.segment.data;
+package io.druid.server.security;
 
-import java.util.AbstractList;
+import com.metamx.http.client.HttpClient;
 
-/**
- */
-public class IndexedList<T> extends AbstractList<T>
+public class AllowAllEscalator implements Escalator
 {
-  public static <T> IndexedList<T> from(Indexed<T> indexed)
+  @Override
+  public HttpClient createEscalatedClient(HttpClient baseClient)
   {
-    return new IndexedList<T>(indexed);
-  }
-
-  private final Indexed<T> base;
-
-  public IndexedList(
-      Indexed<T> base
-  )
-  {
-    this.base = base;
+    return baseClient;
   }
 
   @Override
-  public T get(int index)
+  public org.eclipse.jetty.client.HttpClient createEscalatedJettyClient(org.eclipse.jetty.client.HttpClient baseClient)
   {
-    return base.get(index);
+    return baseClient;
   }
 
   @Override
-  public int size()
+  public AuthenticationResult createEscalatedAuthenticationResult()
   {
-    return base.size();
+    return AllowAllAuthenticator.ALLOW_ALL_RESULT;
   }
 }

@@ -23,15 +23,20 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.metamx.http.client.HttpClient;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = AllowAllEscalator.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "allowAll", value = AllowAllEscalator.class),
 })
+/**
+ * This interface provides methods needed for escalating internal system requests with priveleged authentication
+ * credentials. Each Escalator is associated with a specific authentication scheme, like Authenticators.
+ */
 public interface Escalator
 {
   /**
    * Return a client that sends requests with the format/information necessary to authenticate successfully
-   * against this Authenticator's authentication scheme using the identity of the internal system user.
+   * against this Escalator's authentication scheme using the identity of the internal system user.
    * <p>
    * This HTTP client is used for internal communications between Druid nodes, such as when a broker communicates
    * with a historical node during query processing.

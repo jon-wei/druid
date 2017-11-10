@@ -94,19 +94,17 @@ import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.server.QueryLifecycleFactory;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.NoopRequestLogger;
-<<<<<<< HEAD
 import io.druid.server.security.AllowAllEscalator;
-=======
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AllowAllAuthenticator;
->>>>>>> authnames
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.Escalator;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceType;
 import io.druid.sql.calcite.expression.SqlOperatorConversion;
@@ -174,15 +172,20 @@ public class CalciteTests
           {
             return new AuthenticationResult((String) context.get("user"), "allowAll", null);
           }
-
-          @Override
-          public AuthenticationResult createEscalatedAuthenticationResult()
-          {
-            return new AuthenticationResult(TEST_SUPERUSER_NAME, "allowAll", null);
-          }
         }
     );
-    TEST_AUTHENTICATOR_MAPPER = new AuthenticatorMapper(defaultMap, "allowAll");
+    TEST_AUTHENTICATOR_MAPPER = new AuthenticatorMapper(defaultMap);
+  }
+  public static final Escalator TEST_AUTHENTICATOR_ESCALATOR;
+  static {
+    TEST_AUTHENTICATOR_ESCALATOR = new AllowAllEscalator() {
+
+      @Override
+      public AuthenticationResult createEscalatedAuthenticationResult()
+      {
+        return SUPER_USER_AUTH_RESULT;
+      }
+    };
   }
 
   public static final AuthenticationResult REGULAR_USER_AUTH_RESULT = new AuthenticationResult(
@@ -255,7 +258,7 @@ public class CalciteTests
                       QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
                       SELECT_CONFIG_SUPPLIER
                   ),
-                  new SelectQueryEngine(SELECT_CONFIG_SUPPLIER),
+                  new SelectQueryEngine(),
                   QueryRunnerTestHelper.NOOP_QUERYWATCHER
               )
           )
@@ -508,7 +511,7 @@ public class CalciteTests
         new TestServerInventoryView(walker.getSegments()),
         plannerConfig,
         viewManager,
-        new AllowAllEscalator()
+        TEST_AUTHENTICATOR_ESCALATOR
     );
 
     schema.start();

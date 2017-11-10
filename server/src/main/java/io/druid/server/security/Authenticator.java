@@ -36,10 +36,6 @@ import java.util.Map;
  *
  * - A method that returns a WWW-Authenticate challenge header appropriate for the
  *   authentication mechanism, getAuthChallengeHeader().
- * - A method for creating a wrapped HTTP client that can authenticate using the Authenticator's authentication scheme,
- *   used for internal Druid node communications (e.g., broker -> historical messages), createEscalatedClient().
- * - A method for creating a wrapped Jetty HTTP client that can authenticate using the Authenticator's authentication scheme,
- *   used by the Druid router, createEscalatedJettyClient().
  * - A method for authenticating credentials contained in a JDBC connection context, used for authenticating Druid SQL
  *   requests received via JDBC, authenticateJDBCContext().
  */
