@@ -26,8 +26,9 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import io.druid.java.util.common.IAE;
-import io.druid.security.basic.db.BasicAuthDBConfig;
-import io.druid.security.basic.old.BasicAuthorizerStorageConnector;
+import io.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheManager;
+import io.druid.security.basic.authorization.db.entity.BasicAuthorizerRole;
+import io.druid.security.basic.authorization.db.entity.BasicAuthorizerUser;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthenticationResult;
@@ -35,7 +36,6 @@ import io.druid.server.security.Authorizer;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceAction;
 
-import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -44,41 +44,24 @@ import java.util.regex.Pattern;
 public class BasicRoleBasedAuthorizer implements Authorizer
 {
   private static final int DEFAULT_PERMISSION_CACHE_SIZE = 5000;
-  private final BasicAuthorizerStorageConnector dbConnector;
+  private final BasicAuthorizerCacheManager cacheManager;
   private final LoadingCache<String, Pattern> permissionPatternCache;
   private final int permissionCacheSize;
-  private final BasicAuthDBConfig dbConfig;
+  private final String name;
 
   @JsonCreator
   public BasicRoleBasedAuthorizer(
-      @JacksonInject BasicAuthorizerStorageConnector dbConnector,
-      @JsonProperty("dbPrefix") String dbPrefix,
+      @JacksonInject BasicAuthorizerCacheManager cacheManager,
+      @JsonProperty("name") String name,
       @JsonProperty("permissionCacheSize") Integer permissionCacheSize
   )
   {
-    this.dbConfig = new BasicAuthDBConfig(dbPrefix, null, null);
-    this.dbConnector = dbConnector;
+    this.name = name;
+    this.cacheManager = cacheManager;
     this.permissionCacheSize = permissionCacheSize == null ? DEFAULT_PERMISSION_CACHE_SIZE : permissionCacheSize;
     this.permissionPatternCache = Caffeine.newBuilder()
                                           .maximumSize(this.permissionCacheSize)
                                           .build(regexStr -> Pattern.compile(regexStr));
-  }
-
-  /**
-   * constructor for unit tests
-   */
-  public BasicRoleBasedAuthorizer(
-      BasicAuthorizerStorageConnector dbConnector,
-      String dbPrefix,
-      int permissionCacheSize
-  )
-  {
-    this.dbConnector = dbConnector;
-    this.permissionCacheSize = permissionCacheSize;
-    this.permissionPatternCache = Caffeine.newBuilder()
-                                          .maximumSize(this.permissionCacheSize)
-                                          .build(regexStr -> Pattern.compile(regexStr));
-    this.dbConfig = new BasicAuthDBConfig(dbPrefix, null, null);
   }
 
   @Override
@@ -90,25 +73,40 @@ public class BasicRoleBasedAuthorizer implements Authorizer
       throw new IAE("WTF? authenticationResult should never be null.");
     }
 
-    List<Map<String, Object>> permissions = dbConnector.getPermissionsForUser(dbConfig.getDbPrefix(), authenticationResult.getIdentity());
+    Map<String, BasicAuthorizerUser> userMap = cacheManager.getUserMap(name);
+    if (userMap == null) {
+      throw new IAE("Could not load userMap for authorizer [%s]", name);
+    }
 
-    for (Map<String, Object> permission : permissions) {
-      if (permissionCheck(resource, action, permission)) {
-        return new Access(true);
+    Map<String, BasicAuthorizerRole> roleMap = cacheManager.getRoleMap(name);
+    if (roleMap == null) {
+      throw new IAE("Could not load roleMap for authorizer [%s]", name);
+    }
+
+    BasicAuthorizerUser user = userMap.get(authenticationResult.getIdentity());
+    if (user == null) {
+      return new Access(false);
+    }
+
+    for (String roleName : user.getRoles()) {
+      BasicAuthorizerRole role = roleMap.get(roleName);
+      for (ResourceAction permission : role.getPermissions()) {
+        if (permissionCheck(resource, action, permission)) {
+          return new Access(true);
+        }
       }
     }
 
     return new Access(false);
   }
 
-  private boolean permissionCheck(Resource resource, Action action, Map<String, Object> permission)
+  private boolean permissionCheck(Resource resource, Action action, ResourceAction permission)
   {
-    ResourceAction permissionResourceAction = (ResourceAction) permission.get("resourceAction");
-    if (action != permissionResourceAction.getAction()) {
+    if (action != permission.getAction()) {
       return false;
     }
 
-    Resource permissionResource = permissionResourceAction.getResource();
+    Resource permissionResource = permission.getResource();
     if (permissionResource.getType() != resource.getType()) {
       return false;
     }
@@ -123,10 +121,5 @@ public class BasicRoleBasedAuthorizer implements Authorizer
   public int getPermissionCacheSize()
   {
     return permissionCacheSize;
-  }
-
-  public BasicAuthDBConfig getDbConfig()
-  {
-    return dbConfig;
   }
 }

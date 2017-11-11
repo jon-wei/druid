@@ -40,16 +40,12 @@ import io.druid.metadata.MetadataCASUpdate;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.security.basic.BasicSecurityDBResourceException;
-import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
-import io.druid.security.basic.authentication.db.BasicAuthDBConfig;
 import io.druid.security.basic.authentication.db.BasicAuthenticatorCommonCacheConfig;
 import io.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheNotifier;
-import io.druid.security.basic.authentication.db.entity.BasicAuthenticatorUser;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import io.druid.security.basic.authorization.db.entity.BasicAuthorizerRole;
 import io.druid.security.basic.authorization.db.entity.BasicAuthorizerUser;
 import io.druid.server.security.Action;
-import io.druid.server.security.Authenticator;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.Resource;
@@ -156,7 +152,6 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
           cachedRoleMaps.put(authorizerName, roleMap);
           cachedSerializedRoleMaps.put(authorizerName, roleMapBytes);
 
-
           initSuperusers(authorizerName, userMap, roleMap);
         }
       }
@@ -177,14 +172,23 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
               }
               try {
                 LOG.info("Scheduled db poll is running");
-                for (String authorizerPrefix : authorizerPrefixes) {
+                for (String authorizerName : authorizerNames) {
 
-                  byte[] userMapBytes = getCurrentUserMapBytes(authorizerPrefix);
+                  byte[] userMapBytes = getCurrentUserMapBytes(authorizerName);
                   Map<String, BasicAuthorizerUser> userMap = deserializeUserMap(userMapBytes);
                   if (userMapBytes != null) {
                     synchronized (cachedUserMaps) {
-                      cachedUserMaps.put(authorizerPrefix, userMap);
-                      cachedSerializedUserMaps.put(authorizerPrefix, userMapBytes);
+                      cachedUserMaps.put(authorizerName, userMap);
+                      cachedSerializedUserMaps.put(authorizerName, userMapBytes);
+                    }
+                  }
+
+                  byte[] roleMapBytes = getCurrentRoleMapBytes(authorizerName);
+                  Map<String, BasicAuthorizerRole> roleMap = deserializeRoleMap(roleMapBytes);
+                  if (roleMapBytes != null) {
+                    synchronized (cachedUserMaps) {
+                      cachedRoleMaps.put(authorizerName, roleMap);
+                      cachedSerializedRoleMaps.put(authorizerName, roleMapBytes);
                     }
                   }
                 }

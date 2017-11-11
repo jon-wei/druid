@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.server.security.ResourceAction;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class BasicAuthorizerRole
@@ -37,7 +38,7 @@ public class BasicAuthorizerRole
   )
   {
     this.name = name;
-    this.permissions = permissions;
+    this.permissions = permissions == null ? new ArrayList<>() : permissions;
   }
 
   @JsonProperty
