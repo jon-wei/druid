@@ -101,16 +101,6 @@ public class BasicRoleBasedAuthorizer implements Authorizer
     return new Access(false);
   }
 
-  public BasicAuthorizerStorageConnector getDbConnector()
-  {
-    return dbConnector;
-  }
-
-  public String getDBPrefix()
-  {
-    return dbConfig.getDbPrefix();
-  }
-
   private boolean permissionCheck(Resource resource, Action action, Map<String, Object> permission)
   {
     ResourceAction permissionResourceAction = (ResourceAction) permission.get("resourceAction");

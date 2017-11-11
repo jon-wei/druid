@@ -44,6 +44,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
 import java.sql.SQLTransientException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -449,12 +450,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   @Override
   public boolean compareAndSwap(
-      final String tableName,
-      final String keyColumn,
-      final String valueColumn,
-      final String key,
-      final byte[] oldValue,
-      final byte[] newValue
+      List<MetadataCASUpdate> updates
   ) throws Exception
   {
     return getDBI().inTransaction(
@@ -463,39 +459,61 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
           @Override
           public Boolean inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            byte[] currentValue = handle
-                .createQuery(
-                    StringUtils.format("SELECT %1$s FROM %2$s WHERE %3$s = :key", valueColumn, tableName, keyColumn)
+            List<byte[]> currentValues = new ArrayList<byte[]>();
+
+            // Compare
+            for (MetadataCASUpdate update : updates) {
+              byte[] currentValue = handle
+                  .createQuery(
+                      StringUtils.format(
+                          "SELECT %1$s FROM %2$s WHERE %3$s = :key",
+                          update.getValueColumn(),
+                          update.getTableName(),
+                          update.getKeyColumn()
+                      )
+                  )
+                  .bind("key", update.getKey())
+                  .map(ByteArrayMapper.FIRST)
+                  .first();
+
+              if (!Arrays.equals(currentValue, update.getOldValue())) {
+                return false;
+              }
+              currentValues.add(currentValue);
+            }
+
+            // Swap
+            for (int i = 0; i < updates.size(); i++) {
+              MetadataCASUpdate update = updates.get(i);
+              byte[] currentValue = currentValues.get(i);
+
+              if (currentValue == null) {
+                handle.createStatement(
+                    StringUtils.format(
+                        "INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value)",
+                        update.getTableName(),
+                        update.getKeyColumn(),
+                        update.getValueColumn()
+                    )
                 )
-                .bind("key", key)
-                .map(ByteArrayMapper.FIRST)
-                .first();
-
-            if (currentValue != null && !Arrays.equals(currentValue, oldValue)) {
-              return false;
+                      .bind("key", update.getKey())
+                      .bind("value", update.getNewValue())
+                      .execute();
+              } else {
+                handle.createStatement(
+                    StringUtils.format(
+                        "UPDATE %1$s SET %3$s=:value WHERE %2$s=:key",
+                        update.getTableName(),
+                        update.getKeyColumn(),
+                        update.getValueColumn()
+                    )
+                )
+                      .bind("key", update.getKey())
+                      .bind("value", update.getNewValue())
+                      .execute();
+              }
             }
 
-            if (currentValue == null) {
-              handle.createStatement(
-                  StringUtils.format(
-                      "INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value)",
-                      tableName, keyColumn, valueColumn
-                  )
-              )
-                    .bind("key", key)
-                    .bind("value", newValue)
-                    .execute();
-            } else {
-              handle.createStatement(
-                  StringUtils.format(
-                      "UPDATE %1$s SET %3$s=:value WHERE %2$s=:key",
-                      tableName, keyColumn, valueColumn
-                  )
-              )
-                    .bind("key", key)
-                    .bind("value", newValue)
-                    .execute();
-            }
             return true;
           }
         }

@@ -19,6 +19,8 @@
 
 package io.druid.metadata;
 
+import java.util.List;
+
 /**
  */
 public interface MetadataStorageConnector
@@ -42,15 +44,15 @@ public interface MetadataStorageConnector
   );
 
   /**
-   * Atomic compare-and-swap variant of insertOrUpdate()
+   * Atomic compare-and-swap variant of insertOrUpdate().
+   *
+   * @param updates Set of updates to be made. If compare checks succeed for all updates, perform all updates.
+   *                If any compare check fails, reject all updates.
+   * @return true if updates were made, false otherwise
+   * @throws Exception
    */
   default boolean compareAndSwap(
-      String tableName,
-      String keyColumn,
-      String valueColumn,
-      String key,
-      byte[] oldValue,
-      byte[] newValue
+      List<MetadataCASUpdate> updates
   ) throws Exception
   {
     throw new UnsupportedOperationException("compareAndSwap is not implemented.");

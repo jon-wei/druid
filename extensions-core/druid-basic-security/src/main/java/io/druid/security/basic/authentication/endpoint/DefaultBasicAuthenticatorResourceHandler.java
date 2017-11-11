@@ -36,6 +36,7 @@ public class DefaultBasicAuthenticatorResourceHandler implements BasicAuthentica
 {
   private static final String UNSUPPORTED_MSG = "This operation is only valid on coordinator nodes.";
   private static final Logger log = new Logger(DefaultBasicAuthenticatorResourceHandler.class);
+  private static final Response NOT_FOUND_RESPONSE = Response.status(Response.Status.NOT_FOUND).build();
 
   private final BasicAuthenticatorCacheManager cacheManager;
   private final Map<String, BasicHTTPAuthenticator> authenticatorMap;
@@ -64,37 +65,37 @@ public class DefaultBasicAuthenticatorResourceHandler implements BasicAuthentica
   @Override
   public Response getAllUsers(String authenticatorName)
   {
-    throw new UnsupportedOperationException(UNSUPPORTED_MSG);
+    return NOT_FOUND_RESPONSE;
   }
 
   @Override
   public Response getUser(String authenticatorName, String userName)
   {
-    throw new UnsupportedOperationException(UNSUPPORTED_MSG);
+    return NOT_FOUND_RESPONSE;
   }
 
   @Override
   public Response createUser(String authenticatorName, String userName)
   {
-    throw new UnsupportedOperationException(UNSUPPORTED_MSG);
+    return NOT_FOUND_RESPONSE;
   }
 
   @Override
   public Response deleteUser(String authenticatorName, String userName)
   {
-    throw new UnsupportedOperationException(UNSUPPORTED_MSG);
+    return NOT_FOUND_RESPONSE;
   }
 
   @Override
   public Response updateUserCredentials(String authenticatorName, String userName, String password)
   {
-    throw new UnsupportedOperationException(UNSUPPORTED_MSG);
+    return NOT_FOUND_RESPONSE;
   }
 
   @Override
   public Response getCachedSerializedUserMap(String authenticatorName)
   {
-    throw new UnsupportedOperationException(UNSUPPORTED_MSG);
+    return NOT_FOUND_RESPONSE;
   }
 
   @Override

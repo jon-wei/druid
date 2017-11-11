@@ -36,6 +36,7 @@ import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.metadata.MetadataCASUpdate;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.security.basic.BasicSecurityDBResourceException;
@@ -50,6 +51,7 @@ import io.druid.server.security.AuthenticatorMapper;
 import org.joda.time.Duration;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -61,7 +63,6 @@ import java.util.concurrent.TimeUnit;
 @ManageLifecycle
 public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements BasicAuthenticatorMetadataStorageUpdater
 {
-  private static final Logger log = new Logger(CoordinatorBasicAuthenticatorMetadataStorageUpdater.class);
   private static final EmittingLogger LOG =
       new EmittingLogger(CoordinatorBasicAuthenticatorMetadataStorageUpdater.class);
 
@@ -116,7 +117,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
     }
 
     try {
-      log.info("STARTING COORDINATOR BASIC AUTH STORAGE UPDATER");
+      LOG.info("STARTING COORDINATOR BASIC AUTHENTICATOR STORAGE UPDATER");
       for (Map.Entry<String, Authenticator> entry : authenticatorMapper.getAuthenticatorMap().entrySet()) {
         Authenticator authenticator = entry.getValue();
         if (authenticator instanceof BasicHTTPAuthenticator) {
@@ -160,7 +161,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
                 return ScheduledExecutors.Signal.STOP;
               }
               try {
-                log.info("Scheduled db poll is running");
+                LOG.info("Scheduled db poll is running");
                 for (String authenticatorPrefix : authenticatorPrefixes) {
 
                   byte[] userMapBytes = getCurrentUserMapBytes(authenticatorPrefix);
@@ -295,7 +296,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
   {
     try {
       synchronized (cachedUserMaps) {
-        boolean succeeded = connector.compareAndSwap(
+        MetadataCASUpdate update = new MetadataCASUpdate(
             connectorConfig.getConfigTable(),
             MetadataStorageConnector.CONFIG_TABLE_KEY_COLUMN,
             MetadataStorageConnector.CONFIG_TABLE_VALUE_COLUMN,
@@ -303,6 +304,11 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
             oldValue,
             newValue
         );
+
+        boolean succeeded = connector.compareAndSwap(
+            Collections.singletonList(update)
+        );
+
         if (succeeded) {
           cachedUserMaps.put(prefix, userMap);
           cachedSerializedUserMaps.put(prefix, newValue);
@@ -320,7 +326,6 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
 
   private void createUserInternal(String prefix, String userName)
   {
-
     int attempts = 0;
     while (attempts < numRetries) {
       if (createUserOnce(prefix, userName)) {

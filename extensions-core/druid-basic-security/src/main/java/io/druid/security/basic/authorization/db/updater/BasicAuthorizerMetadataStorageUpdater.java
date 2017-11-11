@@ -17,38 +17,25 @@
  * under the License.
  */
 
-package io.druid.security.basic.authorization.db.entity;
+package io.druid.security.basic.authorization.db.updater;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.server.security.ResourceAction;
 
 import java.util.List;
 
-public class BasicAuthorizerRole
+public interface BasicAuthorizerMetadataStorageUpdater
 {
-  private final String name;
-  private final List<ResourceAction> permissions;
+  void createUser(String prefix, String userName);
 
-  @JsonCreator
-  public BasicAuthorizerRole(
-      @JsonProperty("name") String name,
-      @JsonProperty("permissions") List<ResourceAction> permissions
-  )
-  {
-    this.name = name;
-    this.permissions = permissions;
-  }
+  void deleteUser(String prefix, String userName);
 
-  @JsonProperty
-  public String getName()
-  {
-    return name;
-  }
+  void createRole(String prefix, String roleName);
 
-  @JsonProperty
-  public List<ResourceAction> getPermissions()
-  {
-    return permissions;
-  }
+  void deleteRole(String prefix, String roleName);
+
+  void assignRole(String prefix, String userName, String roleName);
+
+  void unassignRole(String prefix, String userName, String roleName);
+
+  void setPermissions(String prefix, String roleName, List<ResourceAction> permissions);
 }

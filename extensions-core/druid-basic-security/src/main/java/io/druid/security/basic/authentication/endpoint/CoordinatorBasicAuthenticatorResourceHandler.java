@@ -170,7 +170,7 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
   @Override
   public Response authenticatorUpdateListener(String authenticatorName, byte[] serializedUserMap)
   {
-    throw new UnsupportedOperationException("Listener update is not applicable to coordinator nodes.");
+    return Response.status(Response.Status.NOT_FOUND).build();
   }
 
   private static Response makeResponseForAuthenticatorNotFound(String authenticatorName)

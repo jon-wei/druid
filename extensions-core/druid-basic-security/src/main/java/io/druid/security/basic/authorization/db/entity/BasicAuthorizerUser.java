@@ -19,6 +19,62 @@
 
 package io.druid.security.basic.authorization.db.entity;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.Set;
+
 public class BasicAuthorizerUser
 {
+  private final String name;
+  private final Set<String> roles;
+
+  @JsonCreator
+  public BasicAuthorizerUser(
+      @JsonProperty("name") String name,
+      @JsonProperty("roles") Set<String> roles
+  )
+  {
+    this.name = name;
+    this.roles = roles;
+  }
+
+  @JsonProperty
+  public String getName()
+  {
+    return name;
+  }
+
+  @JsonProperty
+  public Set<String> getRoles()
+  {
+    return roles;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    BasicAuthorizerUser that = (BasicAuthorizerUser) o;
+
+    if (getName() != null ? !getName().equals(that.getName()) : that.getName() != null) {
+      return false;
+    }
+    return getRoles() != null ? getRoles().equals(that.getRoles()) : that.getRoles() == null;
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = getName() != null ? getName().hashCode() : 0;
+    result = 31 * result + (getRoles() != null ? getRoles().hashCode() : 0);
+    return result;
+  }
 }
