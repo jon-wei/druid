@@ -359,6 +359,18 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     setPermissionsInternal(prefix, roleName, permissions);
   }
 
+  @Override
+  public Map<String, BasicAuthorizerUser> getCachedUserMap(String prefix)
+  {
+    return cachedUserMaps.get(prefix);
+  }
+
+  @Override
+  public Map<String, BasicAuthorizerRole> getCachedRoleMap(String prefix)
+  {
+    return cachedRoleMaps.get(prefix);
+  }
+
   public byte[] getCurrentUserMapBytes(String prefix)
   {
     return connector.lookup(

@@ -17,32 +17,40 @@
  * under the License.
  */
 
-package io.druid.security.basic.authorization.db.updater;
+package io.druid.security.basic.authorization.db.cache;
 
 import io.druid.security.basic.authorization.db.entity.BasicAuthorizerRole;
 import io.druid.security.basic.authorization.db.entity.BasicAuthorizerUser;
-import io.druid.server.security.ResourceAction;
+import io.druid.security.basic.authorization.db.updater.BasicAuthorizerMetadataStorageUpdater;
 
-import java.util.List;
 import java.util.Map;
 
-public interface BasicAuthorizerMetadataStorageUpdater
+public class CoordinatorBasicAuthorizerCacheManager implements BasicAuthorizerCacheManager
 {
-  void createUser(String prefix, String userName);
+  private final BasicAuthorizerMetadataStorageUpdater storageUpdater;
 
-  void deleteUser(String prefix, String userName);
+  public CoordinatorBasicAuthorizerCacheManager(
+      BasicAuthorizerMetadataStorageUpdater storageUpdater
+  )
+  {
+    this.storageUpdater = storageUpdater;
+  }
 
-  void createRole(String prefix, String roleName);
+  @Override
+  public void handleAuthorizerUpdate(String authorizerPrefix, byte[] serializedUserMap, byte[] serializedRoleMap)
+  {
 
-  void deleteRole(String prefix, String roleName);
+  }
 
-  void assignRole(String prefix, String userName, String roleName);
+  @Override
+  public Map<String, BasicAuthorizerUser> getUserMap(String authorizerPrefix)
+  {
+    return storageUpdater.getCachedUserMap(authorizerPrefix);
+  }
 
-  void unassignRole(String prefix, String userName, String roleName);
-
-  void setPermissions(String prefix, String roleName, List<ResourceAction> permissions);
-
-  Map<String, BasicAuthorizerUser> getCachedUserMap(String prefix);
-
-  Map<String, BasicAuthorizerRole> getCachedRoleMap(String prefix);
+  @Override
+  public Map<String, BasicAuthorizerRole> getRoleMap(String authorizerPrefix)
+  {
+    return storageUpdater.getCachedRoleMap(authorizerPrefix);
+  }
 }
