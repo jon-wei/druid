@@ -17,18 +17,8 @@
  * under the License.
  */
 
-package io.druid.security.basic.authorization.db.cache;
+package io.druid.security.basic.authorization.endpoint;
 
-import io.druid.security.basic.authorization.db.entity.BasicAuthorizerRole;
-import io.druid.security.basic.authorization.db.entity.BasicAuthorizerUser;
-
-import java.util.Map;
-
-public interface BasicAuthorizerCacheManager
+public class BasicAuthorizerResource
 {
-  void handleAuthorizerUpdate(String authorizerPrefix, byte[] serializedUserAndRoleMap);
-
-  Map<String, BasicAuthorizerUser> getUserMap(String authorizerPrefix);
-
-  Map<String, BasicAuthorizerRole> getRoleMap(String authorizerPrefix);
 }

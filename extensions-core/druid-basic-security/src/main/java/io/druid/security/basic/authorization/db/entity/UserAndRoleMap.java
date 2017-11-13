@@ -17,18 +17,40 @@
  * under the License.
  */
 
-package io.druid.security.basic.authorization.db.cache;
+package io.druid.security.basic.authorization.db.entity;
 
-import io.druid.security.basic.authorization.db.entity.BasicAuthorizerRole;
-import io.druid.security.basic.authorization.db.entity.BasicAuthorizerUser;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Map;
 
-public interface BasicAuthorizerCacheManager
+public class UserAndRoleMap
 {
-  void handleAuthorizerUpdate(String authorizerPrefix, byte[] serializedUserAndRoleMap);
+  @JsonProperty
+  private Map<String, BasicAuthorizerUser> userMap;
 
-  Map<String, BasicAuthorizerUser> getUserMap(String authorizerPrefix);
+  @JsonProperty
+  private Map<String, BasicAuthorizerRole> roleMap;
 
-  Map<String, BasicAuthorizerRole> getRoleMap(String authorizerPrefix);
+  @JsonCreator
+  public UserAndRoleMap(
+      Map<String, BasicAuthorizerUser> userMap,
+      Map<String, BasicAuthorizerRole> roleMap
+  )
+  {
+    this.userMap = userMap;
+    this.roleMap = roleMap;
+  }
+
+  @JsonProperty
+  public Map<String, BasicAuthorizerUser> getUserMap()
+  {
+    return userMap;
+  }
+
+  @JsonProperty
+  public Map<String, BasicAuthorizerRole> getRoleMap()
+  {
+    return roleMap;
+  }
 }

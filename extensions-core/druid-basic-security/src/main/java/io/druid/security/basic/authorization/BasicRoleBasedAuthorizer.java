@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import io.druid.java.util.common.IAE;
+import io.druid.security.basic.authentication.db.BasicAuthDBConfig;
 import io.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheManager;
 import io.druid.security.basic.authorization.db.entity.BasicAuthorizerRole;
 import io.druid.security.basic.authorization.db.entity.BasicAuthorizerUser;
@@ -48,12 +49,16 @@ public class BasicRoleBasedAuthorizer implements Authorizer
   private final LoadingCache<String, Pattern> permissionPatternCache;
   private final int permissionCacheSize;
   private final String name;
+  private final BasicAuthDBConfig dbConfig;
+
 
   @JsonCreator
   public BasicRoleBasedAuthorizer(
       @JacksonInject BasicAuthorizerCacheManager cacheManager,
       @JsonProperty("name") String name,
-      @JsonProperty("permissionCacheSize") Integer permissionCacheSize
+      @JsonProperty("permissionCacheSize") Integer permissionCacheSize,
+      @JsonProperty("enableCacheNotifications") Boolean enableCacheNotifications,
+      @JsonProperty("cacheNotificationTimeout") Long cacheNotificationTimeout
   )
   {
     this.name = name;
@@ -62,6 +67,12 @@ public class BasicRoleBasedAuthorizer implements Authorizer
     this.permissionPatternCache = Caffeine.newBuilder()
                                           .maximumSize(this.permissionCacheSize)
                                           .build(regexStr -> Pattern.compile(regexStr));
+    this.dbConfig = new BasicAuthDBConfig(
+        null,
+        null,
+        enableCacheNotifications == null ? true : enableCacheNotifications,
+        cacheNotificationTimeout == null ? BasicAuthDBConfig.DEFAULT_CACHE_NOTIFY_TIMEOUT_MS : cacheNotificationTimeout
+    );
   }
 
   @Override
@@ -121,5 +132,10 @@ public class BasicRoleBasedAuthorizer implements Authorizer
   public int getPermissionCacheSize()
   {
     return permissionCacheSize;
+  }
+
+  public BasicAuthDBConfig getDbConfig()
+  {
+    return dbConfig;
   }
 }

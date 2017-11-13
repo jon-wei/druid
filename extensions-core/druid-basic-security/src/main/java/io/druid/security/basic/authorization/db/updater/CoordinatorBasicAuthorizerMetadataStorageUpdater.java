@@ -43,8 +43,10 @@ import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.authentication.db.BasicAuthenticatorCommonCacheConfig;
 import io.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheNotifier;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
+import io.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheNotifier;
 import io.druid.security.basic.authorization.db.entity.BasicAuthorizerRole;
 import io.druid.security.basic.authorization.db.entity.BasicAuthorizerUser;
+import io.druid.security.basic.authorization.db.entity.UserAndRoleMap;
 import io.druid.server.security.Action;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
@@ -80,6 +82,9 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   public static final TypeReference ROLE_MAP_TYPE_REFERENCE = new TypeReference<Map<String, BasicAuthorizerRole>>()
   {
   };
+  public static final TypeReference USER_AND_ROLE_MAP_TYPE_REFERENCE = new TypeReference<UserAndRoleMap>()
+  {
+  };
 
   public static final String DEFAULT_ADMIN_NAME = "admin";
   public static final String DEFAULT_INTERNAL_SYSTEM_NAME = "druid_system";
@@ -87,6 +92,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   private final AuthorizerMapper authorizerMapper;
   private final MetadataStorageConnector connector;
   private final MetadataStorageTablesConfig connectorConfig;
+  private final BasicAuthorizerCacheNotifier cacheNotifier;
   private final BasicAuthenticatorCommonCacheConfig commonCacheConfig;
   private final ObjectMapper objectMapper;
   private final int numRetries = 5;
@@ -110,7 +116,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
       MetadataStorageTablesConfig connectorConfig,
       BasicAuthenticatorCommonCacheConfig commonCacheConfig,
       @Smile ObjectMapper objectMapper,
-      BasicAuthenticatorCacheNotifier cacheNotifier,
+      BasicAuthorizerCacheNotifier cacheNotifier,
       ConfigManager configManager // ConfigManager creates the db table we need, set a dependency here
   )
   {
@@ -119,6 +125,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     this.connectorConfig = connectorConfig;
     this.commonCacheConfig = commonCacheConfig;
     this.objectMapper = objectMapper;
+    this.cacheNotifier = cacheNotifier;
     this.cachedUserMaps = new HashMap<>();
     this.cachedSerializedUserMaps = new HashMap<>();
     this.cachedRoleMaps = new HashMap<>();
@@ -296,7 +303,15 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
             cachedRoleMaps.put(prefix, roleMap);
             cachedSerializedRoleMaps.put(prefix, newRoleMapValue);
           }
-          //cacheNotifier.addUpdate(prefix, newValue);
+
+          UserAndRoleMap userAndRoleMap = new UserAndRoleMap(
+              cachedUserMaps.get(prefix),
+              cachedRoleMaps.get(prefix)
+          );
+
+          byte[] serializedUserAndRoleMap = objectMapper.writeValueAsBytes(userAndRoleMap);
+          cacheNotifier.addUpdate(prefix, serializedUserAndRoleMap);
+
           return true;
         } else {
           return false;

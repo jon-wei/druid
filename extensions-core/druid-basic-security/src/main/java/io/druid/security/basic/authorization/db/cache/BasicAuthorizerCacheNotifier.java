@@ -19,16 +19,7 @@
 
 package io.druid.security.basic.authorization.db.cache;
 
-import io.druid.security.basic.authorization.db.entity.BasicAuthorizerRole;
-import io.druid.security.basic.authorization.db.entity.BasicAuthorizerUser;
-
-import java.util.Map;
-
-public interface BasicAuthorizerCacheManager
+public interface BasicAuthorizerCacheNotifier
 {
-  void handleAuthorizerUpdate(String authorizerPrefix, byte[] serializedUserAndRoleMap);
-
-  Map<String, BasicAuthorizerUser> getUserMap(String authorizerPrefix);
-
-  Map<String, BasicAuthorizerRole> getRoleMap(String authorizerPrefix);
+  void addUpdate(String authorizerPrefix, byte[] userAndRoleMap);
 }

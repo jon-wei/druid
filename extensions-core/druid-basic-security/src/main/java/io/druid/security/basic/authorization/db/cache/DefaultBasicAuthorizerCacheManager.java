@@ -20,6 +20,7 @@
 package io.druid.security.basic.authorization.db.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.http.client.Request;
@@ -36,20 +37,25 @@ import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.security.basic.authentication.db.BasicAuthenticatorCommonCacheConfig;
-import io.druid.security.basic.authentication.db.entity.BasicAuthenticatorUser;
+import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import io.druid.security.basic.authorization.db.entity.BasicAuthorizerRole;
 import io.druid.security.basic.authorization.db.entity.BasicAuthorizerUser;
+import io.druid.security.basic.authorization.db.entity.UserAndRoleMap;
+import io.druid.security.basic.authorization.db.updater.CoordinatorBasicAuthorizerMetadataStorageUpdater;
+import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 @ManageLifecycle
 public class DefaultBasicAuthorizerCacheManager implements BasicAuthorizerCacheManager
@@ -80,12 +86,12 @@ public class DefaultBasicAuthorizerCacheManager implements BasicAuthorizerCacheM
     this.commonCacheConfig = commonCacheConfig;
     this.objectMapper = objectMapper;
     this.cachedUserMaps = new ConcurrentHashMap<>();
+    this.cachedRoleMaps = new ConcurrentHashMap<>();
     this.authorizerPrefixes = new HashSet<>();
     this.druidLeaderClient = druidLeaderClient;
 
     LOG.info("created DEFAULT basic auth cache manager.");
   }
-
 
   @LifecycleStart
   public void start()
@@ -106,10 +112,11 @@ public class DefaultBasicAuthorizerCacheManager implements BasicAuthorizerCacheM
           () -> {
             try {
               LOG.info("Scheduled cache poll is running");
-              for (String authenticatorPrefix : authenticatorPrefixes) {
-                Map<String, BasicAuthenticatorUser> userMap = fetchUserMapFromCoordinator(authenticatorPrefix, false);
-                if (userMap != null) {
-                  cachedUserMaps.put(authenticatorPrefix, userMap);
+              for (String authorizerPrefix : authorizerPrefixes) {
+                UserAndRoleMap userAndRoleMap = fetchUserAndRoleMapFromCoordinator(authorizerPrefix, false);
+                if (userAndRoleMap != null) {
+                  cachedUserMaps.put(authorizerPrefix, userAndRoleMap.getUserMap());
+                  cachedRoleMaps.put(authorizerPrefix, userAndRoleMap.getRoleMap());
                 }
               }
               LOG.info("Scheduled cache poll is done");
@@ -132,30 +139,42 @@ public class DefaultBasicAuthorizerCacheManager implements BasicAuthorizerCacheM
   }
 
   @Override
-  public void handleAuthorizerUpdate(String authorizerPrefix, byte[] serializedUserMap, byte[] serializedRoleMap)
+  public void handleAuthorizerUpdate(String authorizerPrefix, byte[] serializedUserAndRoleMap)
   {
+    LOG.info("Received cache update for authorizer [%s].", authorizerPrefix);
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    try {
+      UserAndRoleMap userAndRoleMap = objectMapper.readValue(
+          serializedUserAndRoleMap,
+          CoordinatorBasicAuthorizerMetadataStorageUpdater.USER_AND_ROLE_MAP_TYPE_REFERENCE
+      );
 
+      cachedUserMaps.put(authorizerPrefix, userAndRoleMap.getUserMap());
+      cachedRoleMaps.put(authorizerPrefix, userAndRoleMap.getRoleMap());
+    }
+    catch (IOException ioe) {
+      LOG.makeAlert("WTF? Could not deserialize user map received from coordinator.");
+    }
   }
 
   @Override
   public Map<String, BasicAuthorizerUser> getUserMap(String authorizerPrefix)
   {
-    return null;
+    return cachedUserMaps.get(authorizerPrefix);
   }
 
   @Override
   public Map<String, BasicAuthorizerRole> getRoleMap(String authorizerPrefix)
   {
-    return null;
+    return cachedRoleMaps.get(authorizerPrefix);
   }
 
-
-  private Map<String, BasicAuthorizerUser> fetchUserMapFromCoordinator(String prefix, boolean throwOnFailure)
+  private UserAndRoleMap fetchUserAndRoleMapFromCoordinator(String prefix, boolean throwOnFailure)
   {
     try {
       return RetryUtils.retry(
           () -> {
-            return tryFetchUserMapFromCoordinator(prefix);
+            return tryFetchMapsFromCoordinator(prefix);
           },
           e -> true,
           10
@@ -171,31 +190,35 @@ public class DefaultBasicAuthorizerCacheManager implements BasicAuthorizerCacheM
     }
   }
 
-  private Map<String, BasicAuthorizerUser> tryFetchUserMapFromCoordinator(String prefix) throws Exception
+  private UserAndRoleMap tryFetchMapsFromCoordinator(
+      String prefix
+  ) throws Exception
   {
     Request req = druidLeaderClient.makeRequest(
         HttpMethod.GET,
-        StringUtils.format("/druid-ext/basic-security/authentication/%s/cachedSerializedUserMap", prefix)
+        StringUtils.format("/druid-ext/basic-security/authorization/%s/cachedSerializedUserMap", prefix)
     );
     FullResponseHolder responseHolder = druidLeaderClient.go(req);
     ChannelBuffer buf = responseHolder.getResponse().getContent();
     byte[] userMapBytes = buf.array();
-    Map<String, BasicAuthorizerUser> userMap = objectMapper.readValue(
+
+    UserAndRoleMap userAndRoleMap = objectMapper.readValue(
         userMapBytes,
-        CoordinatorBasicAuthorizerMetadataStorageUpdater.USER_MAP_TYPE_REFERENCE
+        CoordinatorBasicAuthorizerMetadataStorageUpdater.USER_AND_ROLE_MAP_TYPE_REFERENCE
     );
-    return userMap;
+    return userAndRoleMap;
   }
 
   private void initUserMaps()
   {
     for (Map.Entry<String, Authorizer> entry : authorizerMapper.getAuthorizerMap().entrySet()) {
       Authorizer authorizer = entry.getValue();
-      if (authorizer instanceof BasicHTTPAuthorizer) {
+      if (authorizer instanceof BasicRoleBasedAuthorizer) {
         String authorizerName = entry.getKey();
-        BasicHTTPAuthorizer basicHTTPAuthorizer = (BasicHTTPAuthorizer) authorizer;
-        Map<String, BasicAuthorizerUser> userMap = fetchUserMapFromCoordinator(authorizerName, true);
-        cachedUserMaps.put(authorizerName, userMap);
+        BasicRoleBasedAuthorizer roleBasedAuthorizer = (BasicRoleBasedAuthorizer) authorizer;
+        UserAndRoleMap userAndRoleMap = fetchUserAndRoleMapFromCoordinator(authorizerName, true);
+        cachedUserMaps.put(authorizerName, userAndRoleMap.getUserMap());
+        cachedRoleMaps.put(authorizerName, userAndRoleMap.getRoleMap());
         authorizerPrefixes.add(authorizerName);
       }
     }

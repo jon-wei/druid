@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.security.basic.authentication.db.cache;
+package io.druid.security.basic.authorization.db.cache;
 
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -38,11 +38,11 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
-import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import io.druid.security.basic.authentication.db.BasicAuthDBConfig;
+import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import io.druid.server.DruidNode;
-import io.druid.server.security.Authenticator;
-import io.druid.server.security.AuthenticatorMapper;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.AuthorizerMapper;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -62,9 +62,9 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 @ManageLifecycle
-public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenticatorCacheNotifier
+public class CoordinatorBasicAuthorizerCacheNotifier implements BasicAuthorizerCacheNotifier
 {
-  private static final EmittingLogger LOG = new EmittingLogger(CoordinatorBasicAuthenticatorCacheNotifier.class);
+  private static final EmittingLogger LOG = new EmittingLogger(CoordinatorBasicAuthorizerCacheNotifier.class);
 
   private static final List<String> NODE_TYPES = Arrays.asList(
       DruidNodeDiscoveryProvider.NODE_TYPE_BROKER,
@@ -77,26 +77,26 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
 
   private final DruidNodeDiscoveryProvider discoveryProvider;
   private final HttpClient httpClient;
-  private final Set<String> authenticatorsToUpdate;
+  private final Set<String> authorizersToUpdate;
   private final Map<String, byte[]> serializedMaps;
-  private final Map<String, BasicAuthDBConfig> authenticatorConfigMap;
+  private final Map<String, BasicAuthDBConfig> authorizerConfigMap;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
 
   private Thread notifierThread;
 
   @Inject
-  public CoordinatorBasicAuthenticatorCacheNotifier(
-      AuthenticatorMapper authenticatorMapper,
+  public CoordinatorBasicAuthorizerCacheNotifier(
+      AuthorizerMapper authorizerMapper,
       DruidNodeDiscoveryProvider discoveryProvider,
       @EscalatedClient HttpClient httpClient
   )
   {
     this.discoveryProvider = discoveryProvider;
     this.httpClient = httpClient;
-    this.authenticatorsToUpdate = new HashSet<>();
+    this.authorizersToUpdate = new HashSet<>();
     this.serializedMaps = new HashMap<>();
-    this.authenticatorConfigMap = new HashMap<>();
-    initAuthenticatorConfigMap(authenticatorMapper);
+    this.authorizerConfigMap = new HashMap<>();
+    initAuthorizerConfigMap(authorizerMapper);
   }
 
   @LifecycleStart
@@ -108,39 +108,39 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
 
     try {
       notifierThread = Execs.makeThread(
-          "CoordinatorBasicAuthenticatorCacheNotifier-notifierThread",
+          "CoordinatorBasicAuthorizerCacheNotifier-notifierThread",
           () -> {
             while (!Thread.interrupted()) {
               try {
                 LOG.info("Waiting for cache update notification");
-                Set<String> authenticatorsToUpdateSnapshot;
+                Set<String> authorizersToUpdateSnapshot;
                 HashMap<String, byte[]> serializedUserMapsSnapshot;
-                synchronized (authenticatorsToUpdate) {
-                  if (authenticatorsToUpdate.isEmpty()) {
-                    authenticatorsToUpdate.wait();
+                synchronized (authorizersToUpdate) {
+                  if (authorizersToUpdate.isEmpty()) {
+                    authorizersToUpdate.wait();
                   }
-                  authenticatorsToUpdateSnapshot = new HashSet<>(authenticatorsToUpdate);
+                  authorizersToUpdateSnapshot = new HashSet<>(authorizersToUpdate);
                   serializedUserMapsSnapshot = new HashMap<String, byte[]>(serializedMaps);
-                  authenticatorsToUpdate.clear();
+                  authorizersToUpdate.clear();
                   serializedMaps.clear();
                 }
                 LOG.info("Sending cache update notifications");
-                for (String authenticator : authenticatorsToUpdateSnapshot) {
-                  BasicAuthDBConfig authenticatorConfig = authenticatorConfigMap.get(authenticator);
-                  if (!authenticatorConfig.isEnableCacheNotifications()) {
+                for (String authorizer : authorizersToUpdateSnapshot) {
+                  BasicAuthDBConfig authorizerConfig = authorizerConfigMap.get(authorizer);
+                  if (!authorizerConfig.isEnableCacheNotifications()) {
                     continue;
                   }
 
                   // Best effort, if a notification fails, the remote node will eventually poll to update its state
                   // We wait for responses however, to avoid flooding remote nodes with notifications.
                   List<ListenableFuture<StatusResponseHolder>> futures = sendUpdate(
-                      authenticator,
-                      serializedUserMapsSnapshot.get(authenticator)
+                      authorizer,
+                      serializedUserMapsSnapshot.get(authorizer)
                   );
                   for (ListenableFuture<StatusResponseHolder> future : futures) {
                     try {
                       StatusResponseHolder srh = future.get(
-                          authenticatorConfig.getCacheNotificationTimeout(), TimeUnit.MILLISECONDS
+                          authorizerConfig.getCacheNotificationTimeout(), TimeUnit.MILLISECONDS
                       );
                       LOG.info("Got status: " + srh.getStatus());
                     }
@@ -167,39 +167,36 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
   }
 
   @Override
-  public void addUpdate(String updatedAuthenticatorPrefix, byte[] userAndRoleMap)
+  public void addUpdate(String updatedAuthorizerPrefix, byte[] updatedUserMap)
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
 
-    synchronized (authenticatorsToUpdate) {
-      authenticatorsToUpdate.add(updatedAuthenticatorPrefix);
-      serializedMaps.put(updatedAuthenticatorPrefix, userAndRoleMap);
-      authenticatorsToUpdate.notify();
+    synchronized (authorizersToUpdate) {
+      authorizersToUpdate.add(updatedAuthorizerPrefix);
+      serializedMaps.put(updatedAuthorizerPrefix, updatedUserMap);
+      authorizersToUpdate.notify();
     }
   }
 
-  private List<ListenableFuture<StatusResponseHolder>> sendUpdate(
-      String updatedAuthenticatorPrefix,
-      byte[] serializedUserAndRoleMap
-  )
+  private List<ListenableFuture<StatusResponseHolder>> sendUpdate(String updatedAuthorizerPrefix, byte[] serializedUserMap)
   {
     List<ListenableFuture<StatusResponseHolder>> futures = new ArrayList<>();
     for (String nodeType : NODE_TYPES) {
       DruidNodeDiscovery nodeDiscovery = discoveryProvider.getForNodeType(nodeType);
       Collection<DiscoveryDruidNode> nodes = nodeDiscovery.getAllNodes();
       for (DiscoveryDruidNode node : nodes) {
-        URL listenerURL = getListenerURL(node.getDruidNode(), updatedAuthenticatorPrefix);
+        URL listenerURL = getListenerURL(node.getDruidNode(), updatedAuthorizerPrefix);
 
         // best effort, if this fails, remote node will poll and pick up the update eventually
         Request req = new Request(HttpMethod.POST, listenerURL);
-        req.setContent(MediaType.APPLICATION_JSON, serializedUserAndRoleMap);
+        req.setContent(MediaType.APPLICATION_JSON, serializedUserMap);
 
-        BasicAuthDBConfig authenticatorConfig = authenticatorConfigMap.get(updatedAuthenticatorPrefix);
+        BasicAuthDBConfig authorizerConfig = authorizerConfigMap.get(updatedAuthorizerPrefix);
 
         ListenableFuture<StatusResponseHolder> future = httpClient.go(
             req,
             new ResponseHandler(),
-            Duration.millis(authenticatorConfig.getCacheNotificationTimeout())
+            Duration.millis(authorizerConfig.getCacheNotificationTimeout())
         );
         futures.add(future);
       }
@@ -207,15 +204,15 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
     return futures;
   }
 
-  private void initAuthenticatorConfigMap(AuthenticatorMapper mapper)
+  private void initAuthorizerConfigMap(AuthorizerMapper mapper)
   {
-    for (Map.Entry<String, Authenticator> entry : mapper.getAuthenticatorMap().entrySet()) {
-      Authenticator authenticator = entry.getValue();
-      if (authenticator instanceof BasicHTTPAuthenticator) {
-        String authenticatorName = entry.getKey();
-        BasicHTTPAuthenticator basicHTTPAuthenticator = (BasicHTTPAuthenticator) authenticator;
-        BasicAuthDBConfig dbConfig = basicHTTPAuthenticator.getDbConfig();
-        authenticatorConfigMap.put(authenticatorName, dbConfig);
+    for (Map.Entry<String, Authorizer> entry : mapper.getAuthorizerMap().entrySet()) {
+      Authorizer authorizer = entry.getValue();
+      if (authorizer instanceof BasicRoleBasedAuthorizer) {
+        String authorizerName = entry.getKey();
+        BasicRoleBasedAuthorizer basicRoleBasedAuthorizer = (BasicRoleBasedAuthorizer) authorizer;
+        BasicAuthDBConfig dbConfig = basicRoleBasedAuthorizer.getDbConfig();
+        authorizerConfigMap.put(authorizerName, dbConfig);
       }
     }
   }
