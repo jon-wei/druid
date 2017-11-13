@@ -23,18 +23,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.TestDerbyConnector;
-import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import io.druid.security.basic.authentication.db.BasicAuthenticatorCommonCacheConfig;
-import io.druid.security.basic.authentication.db.cache.NoopBasicAuthenticatorCacheNotifier;
-import io.druid.security.basic.authentication.db.updater.CoordinatorBasicAuthenticatorMetadataStorageUpdater;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import io.druid.security.basic.authorization.db.cache.NoopBasicAuthorizerCacheNotifier;
-import io.druid.security.basic.authorization.db.entity.BasicAuthorizerRole;
 import io.druid.security.basic.authorization.db.entity.BasicAuthorizerUser;
 import io.druid.security.basic.authorization.db.updater.CoordinatorBasicAuthorizerMetadataStorageUpdater;
-import io.druid.server.security.AuthenticatorMapper;
 import io.druid.server.security.AuthorizerMapper;
 import org.junit.Assert;
 import org.junit.Before;
@@ -47,6 +43,13 @@ import java.util.Map;
 public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
 {
   private final static String AUTHORIZER_NAME = "test";
+  private final static String ADMIN_NAME = CoordinatorBasicAuthorizerMetadataStorageUpdater.DEFAULT_ADMIN_NAME;
+  private final static String INTERNAL_NAME = CoordinatorBasicAuthorizerMetadataStorageUpdater.DEFAULT_INTERNAL_SYSTEM_NAME;
+  private final static Map<String, BasicAuthorizerUser> baseUserMap = ImmutableMap.of(
+    ADMIN_NAME, new BasicAuthorizerUser(ADMIN_NAME, ImmutableSet.of(ADMIN_NAME)),
+    INTERNAL_NAME, new BasicAuthorizerUser(INTERNAL_NAME, ImmutableSet.of(INTERNAL_NAME))
+  );
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
@@ -94,16 +97,15 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
   public void testCreateDeleteUser() throws Exception
   {
     updater.createUser(AUTHORIZER_NAME, "druid");
-    Map<String, BasicAuthorizerUser> expectedUserMap = ImmutableMap.of(
-        AUTHORIZER_NAME, new BasicAuthorizerUser("druid", ImmutableSet.of())
-    );
-
+    Map<String, BasicAuthorizerUser> expectedUserMap = Maps.newHashMap(baseUserMap);
+    expectedUserMap.put("druid", new BasicAuthorizerUser("druid", ImmutableSet.of()));
     Map<String, BasicAuthorizerUser> actualUserMap = updater.deserializeUserMap(
         updater.getCurrentUserMapBytes(AUTHORIZER_NAME)
     );
     Assert.assertEquals(expectedUserMap, actualUserMap);
 
     updater.deleteUser(AUTHORIZER_NAME, "druid");
+    expectedUserMap.remove("druid");
     actualUserMap = updater.deserializeUserMap(
         updater.getCurrentUserMapBytes(AUTHORIZER_NAME)
     );

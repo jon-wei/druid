@@ -71,7 +71,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   private static final EmittingLogger LOG =
       new EmittingLogger(CoordinatorBasicAuthorizerMetadataStorageUpdater.class);
 
-  private static final List<ResourceAction> SUPERUSER_PERMISSIONS = makeSuperUserPermissions();
+  public static final List<ResourceAction> SUPERUSER_PERMISSIONS = makeSuperUserPermissions();
 
   public static final String USERS = "users";
   public static final String ROLES = "roles";
