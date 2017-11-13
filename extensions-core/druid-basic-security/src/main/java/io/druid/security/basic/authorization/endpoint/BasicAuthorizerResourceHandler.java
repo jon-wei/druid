@@ -28,17 +28,19 @@ public interface BasicAuthorizerResourceHandler
 {
   Response getAllUsers(String authorizerName);
 
-  Response getUser(String authorizerName);
+  Response getUser(String authorizerName, String userName);
 
-  Response createUser(String authorizerName);
+  Response createUser(String authorizerName, String userName);
+
+  Response deleteUser(String authorizerName, String userName);
 
   Response getAllRoles(String authorizerName);
 
-  Response getRole(String authorizerName);
+  Response getRole(String authorizerName, String roleName);
 
-  Response createRole(String authorizerName);
+  Response createRole(String authorizerName, String roleName);
 
-  Response deleteRole(String authorizerName);
+  Response deleteRole(String authorizerName, String roleName);
 
   Response assignRoleToUser(String authorizerName, String userName, String roleName);
 

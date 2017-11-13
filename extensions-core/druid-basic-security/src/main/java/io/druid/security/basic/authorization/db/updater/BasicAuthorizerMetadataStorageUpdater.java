@@ -45,4 +45,10 @@ public interface BasicAuthorizerMetadataStorageUpdater
   Map<String, BasicAuthorizerUser> getCachedUserMap(String prefix);
 
   Map<String, BasicAuthorizerRole> getCachedRoleMap(String prefix);
+
+  Map<String, BasicAuthorizerUser> deserializeUserMap(byte[] userMapBytes);
+
+  Map<String, BasicAuthorizerRole> deserializeRoleMap(byte[] roleMapBytes);
+
+  byte[] getCurrentRoleMapBytes(String prefix);
 }

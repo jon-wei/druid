@@ -396,6 +396,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     );
   }
 
+  @Override
   public byte[] getCurrentRoleMapBytes(String prefix)
   {
     return connector.lookup(
@@ -406,6 +407,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     );
   }
 
+  @Override
   public Map<String, BasicAuthorizerUser> deserializeUserMap(byte[] userMapBytes)
   {
     Map<String, BasicAuthorizerUser> userMap;
@@ -432,6 +434,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     }
   }
 
+  @Override
   public Map<String, BasicAuthorizerRole> deserializeRoleMap(byte[] roleMapBytes)
   {
     Map<String, BasicAuthorizerRole> roleMap;

@@ -19,8 +19,12 @@
 
 package io.druid.security.basic.authorization.endpoint;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.guice.LazySingleton;
+import io.druid.java.util.common.StringUtils;
+import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.BasicSecurityResourceFilter;
 
 import javax.servlet.http.HttpServletRequest;
@@ -39,6 +43,16 @@ import javax.ws.rs.core.Response;
 @LazySingleton
 public class BasicAuthorizerResource
 {
+  private BasicAuthorizerResourceHandler resourceHandler;
+
+  @Inject
+  public BasicAuthorizerResource(
+      BasicAuthorizerResourceHandler resourceHandler
+  )
+  {
+    this.resourceHandler = resourceHandler;
+  }
+
   /**
    * @param req HTTP request
    *
@@ -441,5 +455,4 @@ public class BasicAuthorizerResource
       return makeResponseForCallbackFailedException(cfe);
     }
   }
-
 }
