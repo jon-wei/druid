@@ -34,8 +34,8 @@ public class UserAndRoleMap
 
   @JsonCreator
   public UserAndRoleMap(
-      Map<String, BasicAuthorizerUser> userMap,
-      Map<String, BasicAuthorizerRole> roleMap
+      @JsonProperty("userMap") Map<String, BasicAuthorizerUser> userMap,
+      @JsonProperty("roleMap") Map<String, BasicAuthorizerRole> roleMap
   )
   {
     this.userMap = userMap;

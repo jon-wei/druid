@@ -48,6 +48,19 @@ import io.druid.security.basic.authentication.endpoint.BasicAuthenticatorResourc
 import io.druid.security.basic.authentication.endpoint.BasicAuthenticatorResourceHandler;
 import io.druid.security.basic.authentication.endpoint.CoordinatorBasicAuthenticatorResourceHandler;
 import io.druid.security.basic.authentication.endpoint.DefaultBasicAuthenticatorResourceHandler;
+import io.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheManager;
+import io.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheNotifier;
+import io.druid.security.basic.authorization.db.cache.CoordinatorBasicAuthorizerCacheManager;
+import io.druid.security.basic.authorization.db.cache.CoordinatorBasicAuthorizerCacheNotifier;
+import io.druid.security.basic.authorization.db.cache.DefaultBasicAuthorizerCacheManager;
+import io.druid.security.basic.authorization.db.cache.NoopBasicAuthorizerCacheNotifier;
+import io.druid.security.basic.authorization.db.updater.BasicAuthorizerMetadataStorageUpdater;
+import io.druid.security.basic.authorization.db.updater.CoordinatorBasicAuthorizerMetadataStorageUpdater;
+import io.druid.security.basic.authorization.db.updater.NoopBasicAuthorizerMetadataStorageUpdater;
+import io.druid.security.basic.authorization.endpoint.BasicAuthorizerResource;
+import io.druid.security.basic.authorization.endpoint.BasicAuthorizerResourceHandler;
+import io.druid.security.basic.authorization.endpoint.CoordinatorBasicAuthorizerResourceHandler;
+import io.druid.security.basic.authorization.endpoint.DefaultBasicAuthorizerResourceHandler;
 
 import java.util.List;
 
@@ -56,37 +69,15 @@ public class BasicSecurityDruidModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-
     JsonConfigProvider.bind(binder, "druid.auth.basic.common", BasicAuthenticatorCommonCacheConfig.class);
 
     LifecycleModule.register(binder, BasicAuthenticatorMetadataStorageUpdater.class);
+    LifecycleModule.register(binder, BasicAuthorizerMetadataStorageUpdater.class);
     LifecycleModule.register(binder, BasicAuthenticatorCacheManager.class);
+    LifecycleModule.register(binder, BasicAuthorizerCacheManager.class);
 
     Jerseys.addResource(binder, BasicAuthenticatorResource.class);
-
-    /*
-    binder.bind(BasicAuthenticatorResource.class)
-          .toProvider(new BasicAuthenticatorResourceProvider())
-          .in(LazySingleton.class);
-    Jerseys.addResource(binder, BasicAuthenticatorResource.class);
-    */
-
-    /*
-    Multibinder.newSetBinder(binder, BasicAuthenticatorResource.class, JSR311Resource.class)
-               .addBinding()
-               .toProvider(BasicAuthenticatorResourceProvider.class)
-               .in(LazySingleton.class);
-               */
-
-    /*
-    Multibinder.newSetBinder(binder, new TypeLiteral<BasicAuthenticatorResource>(){}, JSR311Resource.class)
-               .addBinding()
-               .toProvider(BasicAuthenticatorResourceProvider.class);
-               */
-
-    //Jerseys.addResource(binder, CoordinatorBasicAuthenticatorResource.class);
-
-    //Jerseys.addResource(binder, BasicAuthenticatorResourceProvider.class);
+    Jerseys.addResource(binder, BasicAuthorizerResource.class);
   }
 
   @Provides @LazySingleton
@@ -126,6 +117,46 @@ public class BasicSecurityDruidModule implements DruidModule
       return injector.getInstance(CoordinatorBasicAuthenticatorCacheNotifier.class);
     } else {
       return injector.getInstance(NoopBasicAuthenticatorCacheNotifier.class);
+    }
+  }
+
+  @Provides @LazySingleton
+  public static BasicAuthorizerMetadataStorageUpdater createAuthorizerStorageUpdater(final Injector injector)
+  {
+    if (isCoordinator(injector)) {
+      return injector.getInstance(CoordinatorBasicAuthorizerMetadataStorageUpdater.class);
+    } else {
+      return injector.getInstance(NoopBasicAuthorizerMetadataStorageUpdater.class);
+    }
+  }
+
+  @Provides @LazySingleton
+  public static BasicAuthorizerCacheManager createAuthorizerCacheManager(final Injector injector)
+  {
+    if (isCoordinator(injector)) {
+      return injector.getInstance(CoordinatorBasicAuthorizerCacheManager.class);
+    } else {
+      return injector.getInstance(DefaultBasicAuthorizerCacheManager.class);
+    }
+  }
+
+  @Provides @LazySingleton
+  public static BasicAuthorizerResourceHandler createAuthorizerResourceHandler(final Injector injector)
+  {
+    if (isCoordinator(injector)) {
+      return injector.getInstance(CoordinatorBasicAuthorizerResourceHandler.class);
+    } else {
+      return injector.getInstance(DefaultBasicAuthorizerResourceHandler.class);
+    }
+  }
+
+  @Provides @LazySingleton
+  public static BasicAuthorizerCacheNotifier createAuthorizerCacheNotifier(final Injector injector)
+  {
+    if (isCoordinator(injector)) {
+      return injector.getInstance(CoordinatorBasicAuthorizerCacheNotifier.class);
+    } else {
+      return injector.getInstance(NoopBasicAuthorizerCacheNotifier.class);
     }
   }
 
