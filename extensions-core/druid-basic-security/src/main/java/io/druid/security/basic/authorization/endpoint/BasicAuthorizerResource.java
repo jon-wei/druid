@@ -19,12 +19,9 @@
 
 package io.druid.security.basic.authorization.endpoint;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.guice.LazySingleton;
-import io.druid.java.util.common.StringUtils;
-import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.BasicSecurityResourceFilter;
 import io.druid.server.security.ResourceAction;
 

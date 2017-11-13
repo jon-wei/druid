@@ -41,7 +41,6 @@ import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.authentication.db.BasicAuthenticatorCommonCacheConfig;
-import io.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheNotifier;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import io.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheNotifier;
 import io.druid.security.basic.authorization.db.entity.BasicAuthorizerRole;
