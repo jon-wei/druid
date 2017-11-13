@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.security.db;
+package io.druid.security.authentication;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
@@ -76,7 +76,6 @@ public class CoordinatorBasicAuthenticatorResourceTest
   private BasicAuthenticatorResource resource;
   private CoordinatorBasicAuthenticatorMetadataStorageUpdater storageUpdater;
   private HttpServletRequest req;
-
 
   @Before
   public void setUp() throws Exception

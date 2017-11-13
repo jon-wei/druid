@@ -22,6 +22,7 @@ package io.druid.security.basic.authorization.db.entity;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.HashSet;
 import java.util.Set;
 
 public class BasicAuthorizerUser
@@ -36,7 +37,7 @@ public class BasicAuthorizerUser
   )
   {
     this.name = name;
-    this.roles = roles;
+    this.roles = roles == null ? new HashSet<>() : roles;
   }
 
   @JsonProperty

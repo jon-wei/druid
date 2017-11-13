@@ -83,4 +83,28 @@ public class NoopBasicAuthorizerMetadataStorageUpdater implements BasicAuthorize
   {
     throw new UnsupportedOperationException("not supported");
   }
+
+  @Override
+  public Map<String, BasicAuthorizerUser> deserializeUserMap(byte[] userMapBytes)
+  {
+    throw new UnsupportedOperationException("not supported");
+  }
+
+  @Override
+  public Map<String, BasicAuthorizerRole> deserializeRoleMap(byte[] roleMapBytes)
+  {
+    throw new UnsupportedOperationException("not supported");
+  }
+
+  @Override
+  public byte[] getCurrentUserMapBytes(String prefix)
+  {
+    throw new UnsupportedOperationException("not supported");
+  }
+
+  @Override
+  public byte[] getCurrentRoleMapBytes(String prefix)
+  {
+    throw new UnsupportedOperationException("not supported");
+  }
 }

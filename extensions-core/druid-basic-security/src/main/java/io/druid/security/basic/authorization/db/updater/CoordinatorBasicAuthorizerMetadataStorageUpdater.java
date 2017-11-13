@@ -708,16 +708,12 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
 
     if (!userMap.containsKey(DEFAULT_INTERNAL_SYSTEM_NAME)) {
       createUserInternal(authorizerName, DEFAULT_INTERNAL_SYSTEM_NAME);
-      if (userMap.get(DEFAULT_INTERNAL_SYSTEM_NAME).getRoles().contains(DEFAULT_INTERNAL_SYSTEM_NAME)) {
-        assignRole(authorizerName, DEFAULT_INTERNAL_SYSTEM_NAME, DEFAULT_INTERNAL_SYSTEM_NAME);
-      }
+      assignRoleInternal(authorizerName, DEFAULT_INTERNAL_SYSTEM_NAME, DEFAULT_INTERNAL_SYSTEM_NAME);
     }
 
     if (!userMap.containsKey(DEFAULT_ADMIN_NAME)) {
       createUserInternal(authorizerName, DEFAULT_ADMIN_NAME);
-      if (userMap.get(DEFAULT_ADMIN_NAME).getRoles().contains(DEFAULT_ADMIN_NAME)) {
-        assignRole(authorizerName, DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_NAME);
-      }
+      assignRoleInternal(authorizerName, DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_NAME);
     }
   }
 

@@ -37,7 +37,7 @@ public class CoordinatorBasicAuthorizerCacheManager implements BasicAuthorizerCa
   }
 
   @Override
-  public void handleAuthorizerUpdate(String authorizerPrefix, byte[] serializedUserMap, byte[] serializedRoleMap)
+  public void handleAuthorizerUpdate(String authorizerPrefix, byte[] serializedUserAndRoleMap)
   {
 
   }
