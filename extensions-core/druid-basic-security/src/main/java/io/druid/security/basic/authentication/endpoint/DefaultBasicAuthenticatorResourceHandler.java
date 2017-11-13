@@ -34,7 +34,6 @@ import java.util.Map;
 
 public class DefaultBasicAuthenticatorResourceHandler implements BasicAuthenticatorResourceHandler
 {
-  private static final String UNSUPPORTED_MSG = "This operation is only valid on coordinator nodes.";
   private static final Logger log = new Logger(DefaultBasicAuthenticatorResourceHandler.class);
   private static final Response NOT_FOUND_RESPONSE = Response.status(Response.Status.NOT_FOUND).build();
 

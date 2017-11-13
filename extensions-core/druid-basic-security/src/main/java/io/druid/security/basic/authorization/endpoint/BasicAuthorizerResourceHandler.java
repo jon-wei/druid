@@ -47,4 +47,6 @@ public interface BasicAuthorizerResourceHandler
   Response unassignRoleFromUser(String authorizerName, String userName, String roleName);
 
   Response setRolePermissions(String authorizerName, String roleName, List<ResourceAction> permissions);
+
+  Response authorizerUpdateListener(String authorizerName, byte[] serializedUserAndRoleMap);
 }

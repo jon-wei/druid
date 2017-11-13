@@ -386,6 +386,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     return cachedRoleMaps.get(prefix);
   }
 
+  @Override
   public byte[] getCurrentUserMapBytes(String prefix)
   {
     return connector.lookup(

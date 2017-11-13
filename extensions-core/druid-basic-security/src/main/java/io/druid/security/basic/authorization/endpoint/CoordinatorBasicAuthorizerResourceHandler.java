@@ -25,8 +25,8 @@ import com.google.inject.Inject;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.security.basic.BasicSecurityDBResourceException;
-import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
+import io.druid.security.basic.authorization.db.entity.BasicAuthorizerRole;
 import io.druid.security.basic.authorization.db.entity.BasicAuthorizerUser;
 import io.druid.security.basic.authorization.db.updater.BasicAuthorizerMetadataStorageUpdater;
 import io.druid.server.security.Authorizer;
@@ -76,7 +76,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
     }
 
     Map<String, BasicAuthorizerUser> userMap = storageUpdater.deserializeUserMap(
-        storageUpdater.getCurrentRoleMapBytes(authorizerName)
+        storageUpdater.getCurrentUserMapBytes(authorizerName)
     );
     return Response.ok(userMap.keySet()).build();
   }
@@ -90,7 +90,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
     }
 
     Map<String, BasicAuthorizerUser> userMap = storageUpdater.deserializeUserMap(
-        storageUpdater.getCurrentRoleMapBytes(authorizerName)
+        storageUpdater.getCurrentUserMapBytes(authorizerName)
     );
 
     try {
@@ -142,37 +142,108 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
   @Override
   public Response getAllRoles(String authorizerName)
   {
-    return null;
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
+      return makeResponseForAuthorizerNotFound(authorizerName);
+    }
+
+    Map<String, BasicAuthorizerRole> roleMap = storageUpdater.deserializeRoleMap(
+        storageUpdater.getCurrentRoleMapBytes(authorizerName)
+    );
+
+    return Response.ok(roleMap.keySet()).build();
   }
 
   @Override
   public Response getRole(String authorizerName, String roleName)
   {
-    return null;
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
+      return makeResponseForAuthorizerNotFound(authorizerName);
+    }
+
+    Map<String, BasicAuthorizerRole> roleMap = storageUpdater.deserializeRoleMap(
+        storageUpdater.getCurrentRoleMapBytes(authorizerName)
+    );
+
+    try {
+      BasicAuthorizerRole role = roleMap.get(roleName);
+      if (role == null) {
+        throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
+      }
+      return Response.ok(role).build();
+    }
+    catch (BasicSecurityDBResourceException e) {
+      return makeResponseForBasicSecurityDBResourceException(e);
+    }
   }
 
   @Override
   public Response createRole(String authorizerName, String roleName)
   {
-    return null;
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
+      return makeResponseForAuthorizerNotFound(authorizerName);
+    }
+
+    try {
+      storageUpdater.createRole(authorizerName, roleName);
+      return Response.ok().build();
+    }
+    catch (BasicSecurityDBResourceException cfe) {
+      return makeResponseForBasicSecurityDBResourceException(cfe);
+    }
   }
 
   @Override
   public Response deleteRole(String authorizerName, String roleName)
   {
-    return null;
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
+      return makeResponseForAuthorizerNotFound(authorizerName);
+    }
+
+    try {
+      storageUpdater.deleteRole(authorizerName, roleName);
+      return Response.ok().build();
+    }
+    catch (BasicSecurityDBResourceException cfe) {
+      return makeResponseForBasicSecurityDBResourceException(cfe);
+    }
   }
 
   @Override
   public Response assignRoleToUser(String authorizerName, String userName, String roleName)
   {
-    return null;
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
+      return makeResponseForAuthorizerNotFound(authorizerName);
+    }
+
+    try {
+      storageUpdater.assignRole(authorizerName, userName, roleName);
+      return Response.ok().build();
+    }
+    catch (BasicSecurityDBResourceException cfe) {
+      return makeResponseForBasicSecurityDBResourceException(cfe);
+    }
   }
 
   @Override
   public Response unassignRoleFromUser(String authorizerName, String userName, String roleName)
   {
-    return null;
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
+      return makeResponseForAuthorizerNotFound(authorizerName);
+    }
+
+    try {
+      storageUpdater.unassignRole(authorizerName, userName, roleName);
+      return Response.ok().build();
+    }
+    catch (BasicSecurityDBResourceException cfe) {
+      return makeResponseForBasicSecurityDBResourceException(cfe);
+    }
   }
 
   @Override
@@ -180,7 +251,24 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
       String authorizerName, String roleName, List<ResourceAction> permissions
   )
   {
-    return null;
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
+      return makeResponseForAuthorizerNotFound(authorizerName);
+    }
+
+    try {
+      storageUpdater.setPermissions(authorizerName, roleName, permissions);
+      return Response.ok().build();
+    }
+    catch (BasicSecurityDBResourceException cfe) {
+      return makeResponseForBasicSecurityDBResourceException(cfe);
+    }
+  }
+
+  @Override
+  public Response authorizerUpdateListener(String authorizerName, byte[] serializedUserAndRoleMap)
+  {
+    return Response.status(Response.Status.NOT_FOUND).build();
   }
 
   private static Response makeResponseForAuthorizerNotFound(String authorizerName)
