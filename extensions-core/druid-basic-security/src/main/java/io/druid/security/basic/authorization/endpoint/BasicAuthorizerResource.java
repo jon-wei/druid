@@ -26,6 +26,7 @@ import io.druid.guice.LazySingleton;
 import io.druid.java.util.common.StringUtils;
 import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.BasicSecurityResourceFilter;
+import io.druid.server.security.ResourceAction;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -38,6 +39,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.List;
 
 @Path("/druid-ext/basic-security/authorization")
 @LazySingleton
@@ -68,13 +70,7 @@ public class BasicAuthorizerResource
       @PathParam("authorizerName") final String authorizerName
   )
   {
-    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
-    if (authorizer == null) {
-      return makeResponseForAuthorizerNotFound(authorizerName);
-    }
-
-    List<Map<String, Object>> users = dbConnector.getAllUsers(authorizer.getDBPrefix());
-    return Response.ok(users).build();
+    return resourceHandler.getAllUsers(authorizerName);
   }
 
   /**
@@ -94,27 +90,7 @@ public class BasicAuthorizerResource
       @PathParam("userName") final String userName
   )
   {
-    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
-    if (authorizer == null) {
-      return makeResponseForAuthorizerNotFound(authorizerName);
-    }
-
-    try {
-      Map<String, Object> user = dbConnector.getUser(authorizer.getDBPrefix(), userName);
-      List<Map<String, Object>> roles = dbConnector.getRolesForUser(authorizer.getDBPrefix(), userName);
-      List<Map<String, Object>> permissions = dbConnector.getPermissionsForUser(authorizer.getDBPrefix(), userName);
-
-      Map<String, Object> userInfo = ImmutableMap.of(
-          "user", user,
-          "roles", roles,
-          "permissions", permissions
-      );
-
-      return Response.ok(userInfo).build();
-    }
-    catch (CallbackFailedException cfe) {
-      return makeResponseForCallbackFailedException(cfe);
-    }
+    return resourceHandler.getUser(authorizerName, userName);
   }
 
   /**
@@ -136,18 +112,7 @@ public class BasicAuthorizerResource
       @PathParam("userName") String userName
   )
   {
-    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
-    if (authorizer == null) {
-      return makeResponseForAuthorizerNotFound(authorizerName);
-    }
-
-    try {
-      dbConnector.createUser(authorizer.getDBPrefix(), userName);
-      return Response.ok().build();
-    }
-    catch (CallbackFailedException cfe) {
-      return makeResponseForCallbackFailedException(cfe);
-    }
+    return resourceHandler.createUser(authorizerName, userName);
   }
 
   /**
@@ -169,18 +134,7 @@ public class BasicAuthorizerResource
       @PathParam("userName") String userName
   )
   {
-    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
-    if (authorizer == null) {
-      return makeResponseForAuthorizerNotFound(authorizerName);
-    }
-
-    try {
-      dbConnector.deleteUser(authorizer.getDBPrefix(), userName);
-      return Response.ok().build();
-    }
-    catch (CallbackFailedException cfe) {
-      return makeResponseForCallbackFailedException(cfe);
-    }
+    return resourceHandler.deleteUser(authorizerName, userName);
   }
 
   /**
@@ -198,13 +152,7 @@ public class BasicAuthorizerResource
       @PathParam("authorizerName") final String authorizerName
   )
   {
-    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
-    if (authorizer == null) {
-      return makeResponseForAuthorizerNotFound(authorizerName);
-    }
-
-    List<Map<String, Object>> roles = dbConnector.getAllRoles(authorizer.getDBPrefix());
-    return Response.ok(roles).build();
+    return resourceHandler.getAllRoles(authorizerName);
   }
 
   /**
@@ -226,27 +174,7 @@ public class BasicAuthorizerResource
       @PathParam("roleName") final String roleName
   )
   {
-    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
-    if (authorizer == null) {
-      return makeResponseForAuthorizerNotFound(authorizerName);
-    }
-
-    try {
-      Map<String, Object> role = dbConnector.getRole(authorizer.getDBPrefix(), roleName);
-      List<Map<String, Object>> users = dbConnector.getUsersWithRole(authorizer.getDBPrefix(), roleName);
-      List<Map<String, Object>> permissions = dbConnector.getPermissionsForRole(authorizer.getDBPrefix(), roleName);
-
-      Map<String, Object> roleInfo = ImmutableMap.of(
-          "role", role,
-          "users", users,
-          "permissions", permissions
-      );
-
-      return Response.ok(roleInfo).build();
-    }
-    catch (CallbackFailedException cfe) {
-      return makeResponseForCallbackFailedException(cfe);
-    }
+    return resourceHandler.getRole(authorizerName, roleName);
   }
 
   /**
@@ -268,18 +196,7 @@ public class BasicAuthorizerResource
       @PathParam("roleName") final String roleName
   )
   {
-    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
-    if (authorizer == null) {
-      return makeResponseForAuthorizerNotFound(authorizerName);
-    }
-
-    try {
-      dbConnector.createRole(authorizer.getDBPrefix(), roleName);
-      return Response.ok().build();
-    }
-    catch (CallbackFailedException cfe) {
-      return makeResponseForCallbackFailedException(cfe);
-    }
+    return resourceHandler.createRole(authorizerName, roleName);
   }
 
   /**
@@ -301,18 +218,7 @@ public class BasicAuthorizerResource
       @PathParam("roleName") String roleName
   )
   {
-    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
-    if (authorizer == null) {
-      return makeResponseForAuthorizerNotFound(authorizerName);
-    }
-
-    try {
-      dbConnector.deleteRole(authorizer.getDBPrefix(), roleName);
-      return Response.ok().build();
-    }
-    catch (CallbackFailedException cfe) {
-      return makeResponseForCallbackFailedException(cfe);
-    }
+    return resourceHandler.deleteRole(authorizerName, roleName);
   }
 
   /**
@@ -336,18 +242,7 @@ public class BasicAuthorizerResource
       @PathParam("roleName") String roleName
   )
   {
-    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
-    if (authorizer == null) {
-      return makeResponseForAuthorizerNotFound(authorizerName);
-    }
-
-    try {
-      dbConnector.assignRole(authorizer.getDBPrefix(), userName, roleName);
-      return Response.ok().build();
-    }
-    catch (CallbackFailedException cfe) {
-      return makeResponseForCallbackFailedException(cfe);
-    }
+    return resourceHandler.assignRoleToUser(authorizerName, userName, roleName);
   }
 
   /**
@@ -371,26 +266,15 @@ public class BasicAuthorizerResource
       @PathParam("roleName") String roleName
   )
   {
-    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
-    if (authorizer == null) {
-      return makeResponseForAuthorizerNotFound(authorizerName);
-    }
-
-    try {
-      dbConnector.unassignRole(authorizer.getDBPrefix(), userName, roleName);
-      return Response.ok().build();
-    }
-    catch (CallbackFailedException cfe) {
-      return makeResponseForCallbackFailedException(cfe);
-    }
+    return resourceHandler.unassignRoleFromUser(authorizerName, userName, roleName);
   }
 
   /**
-   * Add permissions to a role.
+   * Set the permissions of a role. This replaces the previous permissions of the role.
    *
    * @param req             HTTP request
    * @param roleName        Name of role
-   * @param resourceActions Permissions to add
+   * @param resourceActions Permissions to set
    *
    * @return OK response. 400 error if role doesn't exist.
    */
@@ -399,60 +283,35 @@ public class BasicAuthorizerResource
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
-  public Response addPermissionsToRole(
+  public Response setRolePermissions(
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName,
       @PathParam("roleName") String roleName,
-      List<ResourceAction> resourceActions
+      List<ResourceAction> permissions
   )
   {
-    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
-    if (authorizer == null) {
-      return makeResponseForAuthorizerNotFound(authorizerName);
-    }
-
-    try {
-      for (ResourceAction resourceAction : resourceActions) {
-        dbConnector.addPermission(authorizer.getDBPrefix(), roleName, resourceAction);
-      }
-
-      return Response.ok().build();
-    }
-    catch (CallbackFailedException cfe) {
-      return makeResponseForCallbackFailedException(cfe);
-    }
+    return resourceHandler.setRolePermissions(authorizerName, roleName, permissions);
   }
 
   /**
-   * Delete a permission.
+   * Listen for update notifications for the auth storage
    *
-   * @param req    HTTP request
-   * @param permId ID of permission to delete
+   * @param req      HTTP request
+   * @param userName Name to assign the new user
    *
-   * @return OK response. 400 error if permission doesn't exist.
+   * @return OK response, or 400 error response if user already exists
    */
-  @DELETE
-  @Path("/{authorizerName}/permissions/{permId}")
+  @POST
+  @Path("/listen/{authorizerName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
-  public Response deletePermission(
+  public Response authorizerUpdateListener(
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName,
-      @PathParam("permId") Integer permId
+      byte[] serializedUserAndRoleMap
   )
   {
-    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
-    if (authorizer == null) {
-      return makeResponseForAuthorizerNotFound(authorizerName);
-    }
-
-    try {
-      dbConnector.deletePermission(authorizer.getDBPrefix(), permId);
-      return Response.ok().build();
-    }
-    catch (CallbackFailedException cfe) {
-      return makeResponseForCallbackFailedException(cfe);
-    }
+    return resourceHandler.authorizerUpdateListener(authorizerName, serializedUserAndRoleMap);
   }
 }
