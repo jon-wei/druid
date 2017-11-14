@@ -699,7 +699,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     if (permissions == null) {
       return;
     }
-    
+
     for (ResourceAction resourceAction : permissions) {
       // make sure the resource regex compiles
       try {
