@@ -64,6 +64,8 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 @ManageLifecycle
 public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAuthorizerMetadataStorageUpdater
@@ -678,6 +680,8 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
 
   private boolean setPermissionsOnce(String prefix, String roleName, List<ResourceAction> permissions)
   {
+    validatePermissions(permissions);
+
     byte[] oldRoleMapValue = getCurrentRoleMapBytes(prefix);
     Map<String, BasicAuthorizerRole> roleMap = deserializeRoleMap(oldRoleMapValue);
     if (roleMap.get(roleName) == null) {
@@ -688,6 +692,26 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     byte[] newRoleMapValue = serializeRoleMap(roleMap);
 
     return tryUpdateRoleMap(prefix, roleMap, oldRoleMapValue, newRoleMapValue);
+  }
+
+  private void validatePermissions(List<ResourceAction> permissions)
+  {
+    if (permissions == null) {
+      return;
+    }
+    
+    for (ResourceAction resourceAction : permissions) {
+      // make sure the resource regex compiles
+      try {
+        Pattern pattern = Pattern.compile(resourceAction.getResource().getName());
+      }
+      catch (PatternSyntaxException pse) {
+        throw new BasicSecurityDBResourceException(
+            "Invalid permission, resource name regex[%s] does not compile.",
+            resourceAction.getResource().getName()
+        );
+      }
+    }
   }
 
   private void initSuperusers(

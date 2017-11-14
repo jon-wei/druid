@@ -274,7 +274,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
 
   // role and permission tests
   @Test
-  public void testAddPermissionToRole() throws Exception
+  public void testSetRolePermissions() throws Exception
   {
     updater.createUser(AUTHORIZER_NAME, "druid");
     updater.createRole(AUTHORIZER_NAME, "druidRole");
@@ -288,57 +288,64 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
     );
 
     updater.setPermissions(AUTHORIZER_NAME, "druidRole", permsToAdd);
-    List<Map<String, Object>> dbPermsRole = authorizerConnector.getPermissionsForRole(TEST_DB_PREFIX, "druidRole");
-    Assert.assertEquals(expectedPerms, dbPermsRole);
-    List<Map<String, Object>> dbPermsUser = authorizerConnector.getPermissionsForUser(TEST_DB_PREFIX, "druid");
-    Assert.assertEquals(expectedPerms, dbPermsUser);
 
-    authorizerConnector.deletePermission(TEST_DB_PREFIX, 1);
-    dbPermsRole = authorizerConnector.getPermissionsForRole(TEST_DB_PREFIX, "druidRole");
-    Assert.assertEquals(ImmutableList.of(), dbPermsRole);
-    dbPermsUser = authorizerConnector.getPermissionsForUser(TEST_DB_PREFIX, "druid");
-    Assert.assertEquals(ImmutableList.of(), dbPermsUser);
+    Map<String, BasicAuthorizerUser> expectedUserMap = Maps.newHashMap(BASE_USER_MAP);
+    expectedUserMap.put("druid", new BasicAuthorizerUser("druid", ImmutableSet.of("druidRole")));
+
+    Map<String, BasicAuthorizerRole> expectedRoleMap = Maps.newHashMap(BASE_ROLE_MAP);
+    expectedRoleMap.put("druidRole", new BasicAuthorizerRole("druidRole", permsToAdd));
+
+    Map<String, BasicAuthorizerUser> actualUserMap = updater.deserializeUserMap(
+        updater.getCurrentUserMapBytes(AUTHORIZER_NAME)
+    );
+
+    Map<String, BasicAuthorizerRole> actualRoleMap = updater.deserializeRoleMap(
+        updater.getCurrentRoleMapBytes(AUTHORIZER_NAME)
+    );
+
+    Assert.assertEquals(expectedUserMap, actualUserMap);
+    Assert.assertEquals(expectedRoleMap, actualRoleMap);
+
+    updater.setPermissions(AUTHORIZER_NAME, "druidRole", null);
+    expectedRoleMap.put("druidRole", new BasicAuthorizerRole("druidRole", null));
+    actualRoleMap = updater.deserializeRoleMap(
+        updater.getCurrentRoleMapBytes(AUTHORIZER_NAME)
+    );
+
+    Assert.assertEquals(expectedUserMap, actualUserMap);
+    Assert.assertEquals(expectedRoleMap, actualRoleMap);
   }
 
   @Test
   public void testAddPermissionToNonExistentRole() throws Exception
   {
-    expectedException.expect(CallbackFailedException.class);
+    expectedException.expect(BasicSecurityDBResourceException.class);
     expectedException.expectMessage("Role [druidRole] does not exist.");
 
-    ResourceAction permission = new ResourceAction(
-        new Resource("testResource", ResourceType.DATASOURCE),
-        Action.WRITE
+    List<ResourceAction> permsToAdd = ImmutableList.of(
+        new ResourceAction(
+            new Resource("testResource", ResourceType.DATASOURCE),
+            Action.WRITE
+        )
     );
-    authorizerConnector.addPermission(TEST_DB_PREFIX, "druidRole", permission);
+
+    updater.setPermissions(AUTHORIZER_NAME, "druidRole", permsToAdd);
   }
 
   @Test
   public void testAddBadPermission() throws Exception
   {
-    expectedException.expect(CallbackFailedException.class);
+    expectedException.expect(BasicSecurityDBResourceException.class);
     expectedException.expectMessage("Invalid permission, resource name regex[??????????] does not compile.");
-    authorizerConnector.createRole(TEST_DB_PREFIX, "druidRole");
-    ResourceAction permission = new ResourceAction(
-        new Resource("??????????", ResourceType.DATASOURCE),
-        Action.WRITE
+    updater.createRole(AUTHORIZER_NAME, "druidRole");
+
+    List<ResourceAction> permsToAdd = ImmutableList.of(
+        new ResourceAction(
+            new Resource("??????????", ResourceType.DATASOURCE),
+            Action.WRITE
+        )
     );
-    authorizerConnector.addPermission(TEST_DB_PREFIX, "druidRole", permission);
-  }
 
-  @Test
-  public void testGetPermissionForNonExistentRole() throws Exception
-  {
-    expectedException.expect(CallbackFailedException.class);
-    expectedException.expectMessage("Role [druidRole] does not exist.");
-    authorizerConnector.getPermissionsForRole(TEST_DB_PREFIX, "druidRole");
-  }
-
-  @Test
-  public void testGetPermissionForNonExistentUser() throws Exception
-  {
-    expectedException.expect(CallbackFailedException.class);
-    expectedException.expectMessage("User [druid] does not exist.");
-    authorizerConnector.getPermissionsForUser(TEST_DB_PREFIX, "druid");
+    updater.setPermissions(AUTHORIZER_NAME, "druidRole", permsToAdd);
   }
 }
