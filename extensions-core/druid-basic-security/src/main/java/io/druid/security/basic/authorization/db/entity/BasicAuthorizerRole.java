@@ -52,4 +52,31 @@ public class BasicAuthorizerRole
   {
     return permissions;
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    BasicAuthorizerRole role = (BasicAuthorizerRole) o;
+
+    if (getName() != null ? !getName().equals(role.getName()) : role.getName() != null) {
+      return false;
+    }
+    return getPermissions() != null ? getPermissions().equals(role.getPermissions()) : role.getPermissions() == null;
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = getName() != null ? getName().hashCode() : 0;
+    result = 31 * result + (getPermissions() != null ? getPermissions().hashCode() : 0);
+    return result;
+  }
 }

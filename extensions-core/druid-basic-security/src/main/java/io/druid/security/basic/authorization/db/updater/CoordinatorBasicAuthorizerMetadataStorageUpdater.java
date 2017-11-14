@@ -583,7 +583,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     byte[] oldValue = getCurrentRoleMapBytes(prefix);
     Map<String, BasicAuthorizerRole> roleMap = deserializeRoleMap(oldValue);
     if (roleMap.get(roleName) != null) {
-      throw new BasicSecurityDBResourceException("User [%s] already exists.", roleName);
+      throw new BasicSecurityDBResourceException("Role [%s] already exists.", roleName);
     } else {
       roleMap.put(roleName, new BasicAuthorizerRole(roleName, null));
     }
