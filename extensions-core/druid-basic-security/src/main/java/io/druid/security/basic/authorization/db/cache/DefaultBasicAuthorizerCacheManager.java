@@ -44,7 +44,6 @@ import io.druid.security.basic.authorization.entity.UserAndRoleMap;
 import io.druid.security.basic.authorization.db.updater.CoordinatorBasicAuthorizerMetadataStorageUpdater;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
-import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 
@@ -199,8 +198,9 @@ public class DefaultBasicAuthorizerCacheManager implements BasicAuthorizerCacheM
         StringUtils.format("/druid-ext/basic-security/authorization/%s/cachedSerializedUserMap", prefix)
     );
     FullResponseHolder responseHolder = druidLeaderClient.go(req);
-    ChannelBuffer buf = responseHolder.getResponse().getContent();
-    byte[] userMapBytes = buf.array();
+    //ChannelBuffer buf = responseHolder.getResponse().getContent();
+    //byte[] userMapBytes = buf.array();
+    byte[] userMapBytes = StringUtils.toUtf8(responseHolder.getContent());
 
     UserAndRoleMap userAndRoleMap = objectMapper.readValue(
         userMapBytes,

@@ -21,7 +21,6 @@ package io.druid.security.basic;
 
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.security.basic.authorization.db.updater.CoordinatorBasicAuthorizerMetadataStorageUpdater;
 
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;

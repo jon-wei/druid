@@ -117,7 +117,8 @@ public class CoordinatorBasicAuthorizerResourceTest
     resource = new BasicAuthorizerResource(
         new CoordinatorBasicAuthorizerResourceHandler(
             storageUpdater,
-            authorizerMapper
+            authorizerMapper,
+            new ObjectMapper(new SmileFactory())
         )
     );
 

@@ -48,5 +48,7 @@ public interface BasicAuthorizerResourceHandler
 
   Response setRolePermissions(String authorizerName, String roleName, List<ResourceAction> permissions);
 
+  Response getCachedMaps(String authorizerName);
+
   Response authorizerUpdateListener(String authorizerName, byte[] serializedUserAndRoleMap);
 }

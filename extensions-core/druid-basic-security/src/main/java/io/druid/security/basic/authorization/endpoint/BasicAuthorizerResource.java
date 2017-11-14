@@ -19,6 +19,7 @@
 
 package io.druid.security.basic.authorization.endpoint;
 
+import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.guice.LazySingleton;
@@ -292,6 +293,25 @@ public class BasicAuthorizerResource
   {
     return resourceHandler.setRolePermissions(authorizerName, roleName, permissions);
   }
+
+  /**
+   * @param req HTTP request
+   *
+   * @return serialized user map
+   */
+  @GET
+  @Path("/{authorizerName}/cachedSerializedUserMap")
+  @Produces(SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response getCachedSerializedUserMap(
+      @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName
+  )
+  {
+    return resourceHandler.getCachedMaps(authorizerName);
+  }
+
 
   /**
    * Listen for update notifications for the auth storage

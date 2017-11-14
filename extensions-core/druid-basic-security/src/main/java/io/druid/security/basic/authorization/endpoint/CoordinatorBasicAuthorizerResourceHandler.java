@@ -19,9 +19,11 @@
 
 package io.druid.security.basic.authorization.endpoint;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.security.basic.BasicSecurityDBResourceException;
@@ -31,6 +33,7 @@ import io.druid.security.basic.authorization.entity.BasicAuthorizerRoleFull;
 import io.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 import io.druid.security.basic.authorization.entity.BasicAuthorizerUserFull;
 import io.druid.security.basic.authorization.db.updater.BasicAuthorizerMetadataStorageUpdater;
+import io.druid.security.basic.authorization.entity.UserAndRoleMap;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.ResourceAction;
@@ -47,14 +50,17 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
 
   private final BasicAuthorizerMetadataStorageUpdater storageUpdater;
   private final Map<String, BasicRoleBasedAuthorizer> authorizerMap;
+  private final ObjectMapper objectMapper;
 
   @Inject
   public CoordinatorBasicAuthorizerResourceHandler(
       BasicAuthorizerMetadataStorageUpdater storageUpdater,
-      AuthorizerMapper authorizerMapper
+      AuthorizerMapper authorizerMapper,
+      @Smile ObjectMapper objectMapper
   )
   {
     this.storageUpdater = storageUpdater;
+    this.objectMapper = objectMapper;
 
     this.authorizerMap = Maps.newHashMap();
     for (Map.Entry<String, Authorizer> authorizerEntry : authorizerMapper.getAuthorizerMap().entrySet()) {
@@ -249,6 +255,23 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
     catch (BasicSecurityDBResourceException cfe) {
       return makeResponseForBasicSecurityDBResourceException(cfe);
     }
+  }
+
+  @Override
+  public Response getCachedMaps(String authorizerName)
+  {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
+      return makeResponseForAuthorizerNotFound(authorizerName);
+    }
+
+    UserAndRoleMap userAndRoleMap = new UserAndRoleMap(
+        storageUpdater.getCachedUserMap(authorizerName),
+        storageUpdater.getCachedRoleMap(authorizerName)
+    );
+
+    return Response.ok(userAndRoleMap)
+                   .build();
   }
 
   @Override

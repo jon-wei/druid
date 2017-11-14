@@ -133,6 +133,12 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
   }
 
   @Override
+  public Response getCachedMaps(String authorizerName)
+  {
+    return NOT_FOUND_RESPONSE;
+  }
+
+  @Override
   public Response authorizerUpdateListener(String authorizerName, byte[] serializedUserAndRoleMap)
   {
     final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);

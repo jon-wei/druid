@@ -48,6 +48,7 @@ import io.druid.security.basic.authentication.endpoint.BasicAuthenticatorResourc
 import io.druid.security.basic.authentication.endpoint.BasicAuthenticatorResourceHandler;
 import io.druid.security.basic.authentication.endpoint.CoordinatorBasicAuthenticatorResourceHandler;
 import io.druid.security.basic.authentication.endpoint.DefaultBasicAuthenticatorResourceHandler;
+import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import io.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheManager;
 import io.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheNotifier;
 import io.druid.security.basic.authorization.db.cache.CoordinatorBasicAuthorizerCacheManager;
@@ -166,7 +167,8 @@ public class BasicSecurityDruidModule implements DruidModule
     return ImmutableList.of(
         new SimpleModule("BasicDruidSecurity").registerSubtypes(
             BasicHTTPAuthenticator.class,
-            BasicHTTPEscalator.class
+            BasicHTTPEscalator.class,
+            BasicRoleBasedAuthorizer.class
         )
     );
   }

@@ -19,6 +19,7 @@
 
 package io.druid.security.basic.authorization.db.cache;
 
+import com.google.inject.Inject;
 import io.druid.security.basic.authorization.entity.BasicAuthorizerRole;
 import io.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 import io.druid.security.basic.authorization.db.updater.BasicAuthorizerMetadataStorageUpdater;
@@ -29,6 +30,7 @@ public class CoordinatorBasicAuthorizerCacheManager implements BasicAuthorizerCa
 {
   private final BasicAuthorizerMetadataStorageUpdater storageUpdater;
 
+  @Inject
   public CoordinatorBasicAuthorizerCacheManager(
       BasicAuthorizerMetadataStorageUpdater storageUpdater
   )
