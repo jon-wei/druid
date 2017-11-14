@@ -21,6 +21,7 @@ package io.druid.security.basic;
 
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.security.basic.authorization.db.updater.CoordinatorBasicAuthorizerMetadataStorageUpdater;
 
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
@@ -37,7 +38,8 @@ public class BasicAuthUtils
   private static final Base64.Encoder ENCODER = Base64.getEncoder();
   private static final Base64.Decoder DECODER = Base64.getDecoder();
   private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-
+  public final static String ADMIN_NAME = "admin";
+  public final static String INTERNAL_USER_NAME = "druid_system";
 
   public static int SALT_LENGTH = 32;
   public static int KEY_ITERATIONS = 10000;

@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.TestDerbyConnector;
+import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.authentication.db.BasicAuthenticatorCommonCacheConfig;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
@@ -51,17 +52,16 @@ import java.util.Map;
 public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
 {
   private final static String AUTHORIZER_NAME = "test";
-  private final static String ADMIN_NAME = CoordinatorBasicAuthorizerMetadataStorageUpdater.DEFAULT_ADMIN_NAME;
-  private final static String INTERNAL_NAME = CoordinatorBasicAuthorizerMetadataStorageUpdater.DEFAULT_INTERNAL_SYSTEM_NAME;
 
   private final static Map<String, BasicAuthorizerUser> BASE_USER_MAP = ImmutableMap.of(
-    ADMIN_NAME, new BasicAuthorizerUser(ADMIN_NAME, ImmutableSet.of(ADMIN_NAME)),
-    INTERNAL_NAME, new BasicAuthorizerUser(INTERNAL_NAME, ImmutableSet.of(INTERNAL_NAME))
+      BasicAuthUtils.ADMIN_NAME, new BasicAuthorizerUser(BasicAuthUtils.ADMIN_NAME, ImmutableSet.of(BasicAuthUtils.ADMIN_NAME)),
+      BasicAuthUtils.INTERNAL_USER_NAME, new BasicAuthorizerUser(BasicAuthUtils.INTERNAL_USER_NAME, ImmutableSet.of(
+          BasicAuthUtils.INTERNAL_USER_NAME))
   );
 
   private final static Map<String, BasicAuthorizerRole> BASE_ROLE_MAP = ImmutableMap.of(
-      ADMIN_NAME, new BasicAuthorizerRole(ADMIN_NAME, CoordinatorBasicAuthorizerMetadataStorageUpdater.SUPERUSER_PERMISSIONS),
-      INTERNAL_NAME, new BasicAuthorizerRole(INTERNAL_NAME, CoordinatorBasicAuthorizerMetadataStorageUpdater.SUPERUSER_PERMISSIONS)
+      BasicAuthUtils.ADMIN_NAME, new BasicAuthorizerRole(BasicAuthUtils.ADMIN_NAME, CoordinatorBasicAuthorizerMetadataStorageUpdater.SUPERUSER_PERMISSIONS),
+      BasicAuthUtils.INTERNAL_USER_NAME, new BasicAuthorizerRole(BasicAuthUtils.INTERNAL_USER_NAME, CoordinatorBasicAuthorizerMetadataStorageUpdater.SUPERUSER_PERMISSIONS)
   );
 
   @Rule

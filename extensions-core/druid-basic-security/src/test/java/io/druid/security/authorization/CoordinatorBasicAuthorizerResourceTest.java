@@ -21,9 +21,12 @@ package io.druid.security.authorization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.TestDerbyConnector;
+import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.authentication.db.BasicAuthenticatorCommonCacheConfig;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import io.druid.security.basic.authorization.db.cache.NoopBasicAuthorizerCacheNotifier;
@@ -33,12 +36,16 @@ import io.druid.security.basic.authorization.endpoint.CoordinatorBasicAuthorizer
 import io.druid.server.security.AuthorizerMapper;
 import org.easymock.EasyMock;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.Response;
+import java.util.Map;
+import java.util.Set;
 
 public class CoordinatorBasicAuthorizerResourceTest
 {
@@ -116,35 +123,59 @@ public class CoordinatorBasicAuthorizerResourceTest
   @Test
   public void testSeparateDatabaseTables()
   {
-    Response response = resource.getAllUsers(req, BASIC_AUTHORIZER_NAME);
+    Response response = resource.getAllUsers(req, AUTHORIZER_NAME);
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableList.of(), response.getEntity());
-
-    resource.createUser(req, BASIC_AUTHORIZER_NAME, "druid");
-    resource.createUser(req, BASIC_AUTHORIZER_NAME, "druid2");
-    resource.createUser(req, BASIC_AUTHORIZER_NAME, "druid3");
-
-    resource.createUser(req, BASIC_AUTHORIZER_NAME2, "druid4");
-    resource.createUser(req, BASIC_AUTHORIZER_NAME2, "druid5");
-    resource.createUser(req, BASIC_AUTHORIZER_NAME2, "druid6");
-
-    List<Map<String, Object>> expectedUsers = ImmutableList.of(
-        ImmutableMap.of("name", "druid"),
-        ImmutableMap.of("name", "druid2"),
-        ImmutableMap.of("name", "druid3")
-    );
-    List<Map<String, Object>> expectedUsers2 = ImmutableList.of(
-        ImmutableMap.of("name", "druid4"),
-        ImmutableMap.of("name", "druid5"),
-        ImmutableMap.of("name", "druid6")
+    Assert.assertEquals(
+        ImmutableSet.of(BasicAuthUtils.ADMIN_NAME, BasicAuthUtils.INTERNAL_USER_NAME),
+        response.getEntity()
     );
 
-    response = resource.getAllUsers(req, BASIC_AUTHORIZER_NAME);
+    resource.createUser(req, AUTHORIZER_NAME, "druid");
+    resource.createUser(req, AUTHORIZER_NAME, "druid2");
+    resource.createUser(req, AUTHORIZER_NAME, "druid3");
+
+    resource.createUser(req, AUTHORIZER_NAME2, "druid4");
+    resource.createUser(req, AUTHORIZER_NAME2, "druid5");
+    resource.createUser(req, AUTHORIZER_NAME2, "druid6");
+
+    Set<String> expectedUsers = ImmutableSet.of(
+        BasicAuthUtils.ADMIN_NAME,
+        BasicAuthUtils.INTERNAL_USER_NAME,
+        "druid",
+        "druid2",
+        "druid3"
+    );
+
+    Set<String> expectedUsers2 = ImmutableSet.of(
+        BasicAuthUtils.ADMIN_NAME,
+        BasicAuthUtils.INTERNAL_USER_NAME,
+        "druid4",
+        "druid5",
+        "druid6"
+    );
+
+    response = resource.getAllUsers(req, AUTHORIZER_NAME);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(expectedUsers, response.getEntity());
 
-    response = resource.getAllUsers(req, BASIC_AUTHORIZER_NAME2);
+    response = resource.getAllUsers(req, AUTHORIZER_NAME2);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(expectedUsers2, response.getEntity());
+  }
+
+  @Test
+  public void testInvalidAuthorizer()
+  {
+    Response response = resource.getAllUsers(req, "invalidName");
+    Assert.assertEquals(400, response.getStatus());
+    Assert.assertEquals(
+        errorMapWithMsg("Basic authorizer with name [invalidName] does not exist."),
+        response.getEntity()
+    );
+  }
+
+  private static Map<String, String> errorMapWithMsg(String errorMsg)
+  {
+    return ImmutableMap.of("error", errorMsg);
   }
 }
