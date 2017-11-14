@@ -19,7 +19,7 @@
 
 package io.druid.security.basic.authentication.db.cache;
 
-import io.druid.security.basic.authentication.db.entity.BasicAuthenticatorUser;
+import io.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 
 import java.util.Map;
 

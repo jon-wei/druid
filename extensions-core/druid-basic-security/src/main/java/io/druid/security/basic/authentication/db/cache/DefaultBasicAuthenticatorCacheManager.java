@@ -38,7 +38,7 @@ import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import io.druid.security.basic.authentication.db.BasicAuthenticatorCommonCacheConfig;
-import io.druid.security.basic.authentication.db.entity.BasicAuthenticatorUser;
+import io.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 import io.druid.security.basic.authentication.db.updater.CoordinatorBasicAuthenticatorMetadataStorageUpdater;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;

@@ -19,8 +19,8 @@
 
 package io.druid.security.basic.authorization.db.updater;
 
-import io.druid.security.basic.authorization.db.entity.BasicAuthorizerRole;
-import io.druid.security.basic.authorization.db.entity.BasicAuthorizerUser;
+import io.druid.security.basic.authorization.entity.BasicAuthorizerRole;
+import io.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 import io.druid.server.security.ResourceAction;
 
 import java.util.List;

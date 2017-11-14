@@ -26,7 +26,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
-import io.druid.security.basic.authentication.db.entity.BasicAuthenticatorUser;
+import io.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 import io.druid.security.basic.authentication.db.updater.BasicAuthenticatorMetadataStorageUpdater;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;

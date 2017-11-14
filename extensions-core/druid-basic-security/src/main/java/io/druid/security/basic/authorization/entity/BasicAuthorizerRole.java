@@ -17,27 +17,28 @@
  * under the License.
  */
 
-package io.druid.security.basic.authorization.db.entity;
+package io.druid.security.basic.authorization.entity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.server.security.ResourceAction;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
-public class BasicAuthorizerUser
+public class BasicAuthorizerRole
 {
   private final String name;
-  private final Set<String> roles;
+  private final List<ResourceAction> permissions;
 
   @JsonCreator
-  public BasicAuthorizerUser(
+  public BasicAuthorizerRole(
       @JsonProperty("name") String name,
-      @JsonProperty("roles") Set<String> roles
+      @JsonProperty("permissions") List<ResourceAction> permissions
   )
   {
     this.name = name;
-    this.roles = roles == null ? new HashSet<>() : roles;
+    this.permissions = permissions == null ? new ArrayList<>() : permissions;
   }
 
   @JsonProperty
@@ -47,9 +48,9 @@ public class BasicAuthorizerUser
   }
 
   @JsonProperty
-  public Set<String> getRoles()
+  public List<ResourceAction> getPermissions()
   {
-    return roles;
+    return permissions;
   }
 
   @Override
@@ -62,12 +63,12 @@ public class BasicAuthorizerUser
       return false;
     }
 
-    BasicAuthorizerUser that = (BasicAuthorizerUser) o;
+    BasicAuthorizerRole role = (BasicAuthorizerRole) o;
 
-    if (getName() != null ? !getName().equals(that.getName()) : that.getName() != null) {
+    if (getName() != null ? !getName().equals(role.getName()) : role.getName() != null) {
       return false;
     }
-    return getRoles() != null ? getRoles().equals(that.getRoles()) : that.getRoles() == null;
+    return getPermissions() != null ? getPermissions().equals(role.getPermissions()) : role.getPermissions() == null;
 
   }
 
@@ -75,7 +76,7 @@ public class BasicAuthorizerUser
   public int hashCode()
   {
     int result = getName() != null ? getName().hashCode() : 0;
-    result = 31 * result + (getRoles() != null ? getRoles().hashCode() : 0);
+    result = 31 * result + (getPermissions() != null ? getPermissions().hashCode() : 0);
     return result;
   }
 }

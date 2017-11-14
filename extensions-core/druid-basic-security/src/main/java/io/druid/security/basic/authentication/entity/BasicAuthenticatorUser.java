@@ -17,32 +17,24 @@
  * under the License.
  */
 
-package io.druid.security.basic.authorization.db.entity;
+package io.druid.security.basic.authentication.entity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.server.security.ResourceAction;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-
-public class BasicAuthorizerRoleFull
+public class BasicAuthenticatorUser
 {
   private final String name;
-  private final Set<String> users;
-  private final List<ResourceAction> permissions;
+  private final BasicAuthenticatorCredentials credentials;
 
   @JsonCreator
-  public BasicAuthorizerRoleFull(
+  public BasicAuthenticatorUser(
       @JsonProperty("name") String name,
-      @JsonProperty("users") Set<String> users,
-      @JsonProperty("permissions") List<ResourceAction> permissions
+      @JsonProperty("credentials") BasicAuthenticatorCredentials credentials
   )
   {
     this.name = name;
-    this.users = users;
-    this.permissions = permissions == null ? new ArrayList<>() : permissions;
+    this.credentials = credentials;
   }
 
   @JsonProperty
@@ -52,14 +44,9 @@ public class BasicAuthorizerRoleFull
   }
 
   @JsonProperty
-  public List<ResourceAction> getPermissions()
+  public BasicAuthenticatorCredentials getCredentials()
   {
-    return permissions;
-  }
-
-  public Set<String> getUsers()
-  {
-    return users;
+    return credentials;
   }
 
   @Override
@@ -72,15 +59,12 @@ public class BasicAuthorizerRoleFull
       return false;
     }
 
-    BasicAuthorizerRoleFull that = (BasicAuthorizerRoleFull) o;
+    BasicAuthenticatorUser that = (BasicAuthenticatorUser) o;
 
     if (getName() != null ? !getName().equals(that.getName()) : that.getName() != null) {
       return false;
     }
-    if (getUsers() != null ? !getUsers().equals(that.getUsers()) : that.getUsers() != null) {
-      return false;
-    }
-    return getPermissions() != null ? getPermissions().equals(that.getPermissions()) : that.getPermissions() == null;
+    return getCredentials() != null ? getCredentials().equals(that.getCredentials()) : that.getCredentials() == null;
 
   }
 
@@ -88,8 +72,7 @@ public class BasicAuthorizerRoleFull
   public int hashCode()
   {
     int result = getName() != null ? getName().hashCode() : 0;
-    result = 31 * result + (getUsers() != null ? getUsers().hashCode() : 0);
-    result = 31 * result + (getPermissions() != null ? getPermissions().hashCode() : 0);
+    result = 31 * result + (getCredentials() != null ? getCredentials().hashCode() : 0);
     return result;
   }
 }

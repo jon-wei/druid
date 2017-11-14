@@ -21,7 +21,7 @@ package io.druid.security.basic.authentication.db.cache;
 
 import com.google.inject.Inject;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.security.basic.authentication.db.entity.BasicAuthenticatorUser;
+import io.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 import io.druid.security.basic.authentication.db.updater.BasicAuthenticatorMetadataStorageUpdater;
 
 import java.util.Map;

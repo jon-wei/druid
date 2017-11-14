@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.security.basic.authorization.db.entity;
+package io.druid.security.basic.authorization.entity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -25,19 +25,23 @@ import io.druid.server.security.ResourceAction;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
-public class BasicAuthorizerRole
+public class BasicAuthorizerRoleFull
 {
   private final String name;
+  private final Set<String> users;
   private final List<ResourceAction> permissions;
 
   @JsonCreator
-  public BasicAuthorizerRole(
+  public BasicAuthorizerRoleFull(
       @JsonProperty("name") String name,
+      @JsonProperty("users") Set<String> users,
       @JsonProperty("permissions") List<ResourceAction> permissions
   )
   {
     this.name = name;
+    this.users = users;
     this.permissions = permissions == null ? new ArrayList<>() : permissions;
   }
 
@@ -53,6 +57,11 @@ public class BasicAuthorizerRole
     return permissions;
   }
 
+  public Set<String> getUsers()
+  {
+    return users;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -63,12 +72,15 @@ public class BasicAuthorizerRole
       return false;
     }
 
-    BasicAuthorizerRole role = (BasicAuthorizerRole) o;
+    BasicAuthorizerRoleFull that = (BasicAuthorizerRoleFull) o;
 
-    if (getName() != null ? !getName().equals(role.getName()) : role.getName() != null) {
+    if (getName() != null ? !getName().equals(that.getName()) : that.getName() != null) {
       return false;
     }
-    return getPermissions() != null ? getPermissions().equals(role.getPermissions()) : role.getPermissions() == null;
+    if (getUsers() != null ? !getUsers().equals(that.getUsers()) : that.getUsers() != null) {
+      return false;
+    }
+    return getPermissions() != null ? getPermissions().equals(that.getPermissions()) : that.getPermissions() == null;
 
   }
 
@@ -76,6 +88,7 @@ public class BasicAuthorizerRole
   public int hashCode()
   {
     int result = getName() != null ? getName().hashCode() : 0;
+    result = 31 * result + (getUsers() != null ? getUsers().hashCode() : 0);
     result = 31 * result + (getPermissions() != null ? getPermissions().hashCode() : 0);
     return result;
   }

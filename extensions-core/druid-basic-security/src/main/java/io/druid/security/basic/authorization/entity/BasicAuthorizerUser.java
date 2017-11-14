@@ -17,24 +17,27 @@
  * under the License.
  */
 
-package io.druid.security.basic.authentication.db.entity;
+package io.druid.security.basic.authorization.entity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class BasicAuthenticatorUser
+import java.util.HashSet;
+import java.util.Set;
+
+public class BasicAuthorizerUser
 {
   private final String name;
-  private final BasicAuthenticatorCredentials credentials;
+  private final Set<String> roles;
 
   @JsonCreator
-  public BasicAuthenticatorUser(
+  public BasicAuthorizerUser(
       @JsonProperty("name") String name,
-      @JsonProperty("credentials") BasicAuthenticatorCredentials credentials
+      @JsonProperty("roles") Set<String> roles
   )
   {
     this.name = name;
-    this.credentials = credentials;
+    this.roles = roles == null ? new HashSet<>() : roles;
   }
 
   @JsonProperty
@@ -44,9 +47,9 @@ public class BasicAuthenticatorUser
   }
 
   @JsonProperty
-  public BasicAuthenticatorCredentials getCredentials()
+  public Set<String> getRoles()
   {
-    return credentials;
+    return roles;
   }
 
   @Override
@@ -59,12 +62,12 @@ public class BasicAuthenticatorUser
       return false;
     }
 
-    BasicAuthenticatorUser that = (BasicAuthenticatorUser) o;
+    BasicAuthorizerUser that = (BasicAuthorizerUser) o;
 
     if (getName() != null ? !getName().equals(that.getName()) : that.getName() != null) {
       return false;
     }
-    return getCredentials() != null ? getCredentials().equals(that.getCredentials()) : that.getCredentials() == null;
+    return getRoles() != null ? getRoles().equals(that.getRoles()) : that.getRoles() == null;
 
   }
 
@@ -72,7 +75,7 @@ public class BasicAuthenticatorUser
   public int hashCode()
   {
     int result = getName() != null ? getName().hashCode() : 0;
-    result = 31 * result + (getCredentials() != null ? getCredentials().hashCode() : 0);
+    result = 31 * result + (getRoles() != null ? getRoles().hashCode() : 0);
     return result;
   }
 }

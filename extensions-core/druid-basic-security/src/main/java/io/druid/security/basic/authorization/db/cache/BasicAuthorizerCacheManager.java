@@ -19,8 +19,8 @@
 
 package io.druid.security.basic.authorization.db.cache;
 
-import io.druid.security.basic.authorization.db.entity.BasicAuthorizerRole;
-import io.druid.security.basic.authorization.db.entity.BasicAuthorizerUser;
+import io.druid.security.basic.authorization.entity.BasicAuthorizerRole;
+import io.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 
 import java.util.Map;
 
