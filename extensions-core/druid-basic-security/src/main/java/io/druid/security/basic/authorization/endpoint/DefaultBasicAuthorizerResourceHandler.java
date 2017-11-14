@@ -71,7 +71,7 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
   }
 
   @Override
-  public Response getUser(String authorizerName, String userName)
+  public Response getUser(String authorizerName, String userName, boolean isFull)
   {
     return NOT_FOUND_RESPONSE;
   }
@@ -95,7 +95,7 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
   }
 
   @Override
-  public Response getRole(String authorizerName, String roleName)
+  public Response getRole(String authorizerName, String roleName, boolean isFull)
   {
     return NOT_FOUND_RESPONSE;
   }

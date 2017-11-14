@@ -33,6 +33,7 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -84,10 +85,11 @@ public class BasicAuthorizerResource
   public Response getUser(
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName,
-      @PathParam("userName") final String userName
+      @PathParam("userName") final String userName,
+      @QueryParam("full") String full
   )
   {
-    return resourceHandler.getUser(authorizerName, userName);
+    return resourceHandler.getUser(authorizerName, userName, full != null);
   }
 
   /**
@@ -168,10 +170,11 @@ public class BasicAuthorizerResource
   public Response getRole(
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName,
-      @PathParam("roleName") final String roleName
+      @PathParam("roleName") final String roleName,
+      @QueryParam("full") String full
   )
   {
-    return resourceHandler.getRole(authorizerName, roleName);
+    return resourceHandler.getRole(authorizerName, roleName, full != null);
   }
 
   /**

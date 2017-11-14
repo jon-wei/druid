@@ -28,7 +28,7 @@ public interface BasicAuthorizerResourceHandler
 {
   Response getAllUsers(String authorizerName);
 
-  Response getUser(String authorizerName, String userName);
+  Response getUser(String authorizerName, String userName, boolean isFull);
 
   Response createUser(String authorizerName, String userName);
 
@@ -36,7 +36,7 @@ public interface BasicAuthorizerResourceHandler
 
   Response getAllRoles(String authorizerName);
 
-  Response getRole(String authorizerName, String roleName);
+  Response getRole(String authorizerName, String roleName, boolean isFull);
 
   Response createRole(String authorizerName, String roleName);
 
