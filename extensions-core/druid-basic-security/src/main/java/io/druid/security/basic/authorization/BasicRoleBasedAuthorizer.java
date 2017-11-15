@@ -23,8 +23,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.LoadingCache;
 import io.druid.java.util.common.IAE;
 import io.druid.security.basic.authentication.db.BasicAuthDBConfig;
 import io.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheManager;
@@ -36,7 +34,6 @@ import io.druid.server.security.Action;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.Resource;
-import io.druid.server.security.ResourceAction;
 
 import java.util.Map;
 import java.util.regex.Matcher;

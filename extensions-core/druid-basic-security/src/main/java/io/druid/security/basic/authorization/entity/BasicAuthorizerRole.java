@@ -21,7 +21,6 @@ package io.druid.security.basic.authorization.entity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.server.security.ResourceAction;
 
 import java.util.ArrayList;
 import java.util.List;

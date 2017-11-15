@@ -302,7 +302,10 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
     expectedUserMap.put("druid", new BasicAuthorizerUser("druid", ImmutableSet.of("druidRole")));
 
     Map<String, BasicAuthorizerRole> expectedRoleMap = Maps.newHashMap(BASE_ROLE_MAP);
-    expectedRoleMap.put("druidRole", new BasicAuthorizerRole("druidRole", BasicAuthorizerPermission.makePermissionList(permsToAdd)));
+    expectedRoleMap.put(
+        "druidRole",
+        new BasicAuthorizerRole("druidRole", BasicAuthorizerPermission.makePermissionList(permsToAdd))
+    );
 
     Map<String, BasicAuthorizerUser> actualUserMap = updater.deserializeUserMap(
         updater.getCurrentUserMapBytes(AUTHORIZER_NAME)

@@ -65,8 +65,6 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 
 @ManageLifecycle
 public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAuthorizerMetadataStorageUpdater
