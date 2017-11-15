@@ -43,6 +43,7 @@ import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.authentication.db.BasicAuthenticatorCommonCacheConfig;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import io.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheNotifier;
+import io.druid.security.basic.authorization.entity.BasicAuthorizerPermission;
 import io.druid.security.basic.authorization.entity.BasicAuthorizerRole;
 import io.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 import io.druid.security.basic.authorization.entity.UserAndRoleMap;
@@ -680,38 +681,18 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
 
   private boolean setPermissionsOnce(String prefix, String roleName, List<ResourceAction> permissions)
   {
-    validatePermissions(permissions);
-
     byte[] oldRoleMapValue = getCurrentRoleMapBytes(prefix);
     Map<String, BasicAuthorizerRole> roleMap = deserializeRoleMap(oldRoleMapValue);
     if (roleMap.get(roleName) == null) {
       throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
     }
-
-    roleMap.put(roleName, new BasicAuthorizerRole(roleName, permissions));
+    roleMap.put(
+        roleName,
+        new BasicAuthorizerRole(roleName, BasicAuthorizerPermission.makePermissionList(permissions))
+    );
     byte[] newRoleMapValue = serializeRoleMap(roleMap);
 
     return tryUpdateRoleMap(prefix, roleMap, oldRoleMapValue, newRoleMapValue);
-  }
-
-  private void validatePermissions(List<ResourceAction> permissions)
-  {
-    if (permissions == null) {
-      return;
-    }
-
-    for (ResourceAction resourceAction : permissions) {
-      // make sure the resource regex compiles
-      try {
-        Pattern pattern = Pattern.compile(resourceAction.getResource().getName());
-      }
-      catch (PatternSyntaxException pse) {
-        throw new BasicSecurityDBResourceException(
-            "Invalid permission, resource name regex[%s] does not compile.",
-            resourceAction.getResource().getName()
-        );
-      }
-    }
   }
 
   private void initSuperusers(

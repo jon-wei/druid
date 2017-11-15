@@ -31,13 +31,13 @@ public class BasicAuthorizerRoleFull
 {
   private final String name;
   private final Set<String> users;
-  private final List<ResourceAction> permissions;
+  private final List<BasicAuthorizerPermission> permissions;
 
   @JsonCreator
   public BasicAuthorizerRoleFull(
       @JsonProperty("name") String name,
       @JsonProperty("users") Set<String> users,
-      @JsonProperty("permissions") List<ResourceAction> permissions
+      @JsonProperty("permissions") List<BasicAuthorizerPermission> permissions
   )
   {
     this.name = name;
@@ -52,7 +52,7 @@ public class BasicAuthorizerRoleFull
   }
 
   @JsonProperty
-  public List<ResourceAction> getPermissions()
+  public List<BasicAuthorizerPermission> getPermissions()
   {
     return permissions;
   }

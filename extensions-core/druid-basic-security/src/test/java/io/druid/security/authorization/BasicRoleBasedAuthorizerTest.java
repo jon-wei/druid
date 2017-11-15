@@ -136,39 +136,4 @@ public class BasicRoleBasedAuthorizerTest
     );
     Assert.assertFalse(access.isAllowed());
   }
-
-  @Test
-  public void testMorePermissionsThanCacheSize()
-  {
-    updater.createUser(AUTHORIZER_NAME, "druid");
-    updater.createRole(AUTHORIZER_NAME, "druidRole");
-    updater.assignRole(AUTHORIZER_NAME, "druid", "druidRole");
-
-    List<ResourceAction> permissions = new ArrayList<>();
-    for (int i = 0; i < authorizer.getPermissionCacheSize() + 50; i++) {
-      ResourceAction permission = new ResourceAction(
-          new Resource("testResource-" + i, ResourceType.DATASOURCE),
-          Action.WRITE
-      );
-      permissions.add(permission);
-    }
-
-    updater.setPermissions(AUTHORIZER_NAME, "druidRole", permissions);
-
-    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null);
-
-    Access access = authorizer.authorize(
-        authenticationResult,
-        new Resource("testResource-300", ResourceType.DATASOURCE),
-        Action.WRITE
-    );
-    Assert.assertTrue(access.isAllowed());
-
-    access = authorizer.authorize(
-        authenticationResult,
-        new Resource("matchesNothing", ResourceType.DATASOURCE),
-        Action.WRITE
-    );
-    Assert.assertFalse(access.isAllowed());
-  }
 }

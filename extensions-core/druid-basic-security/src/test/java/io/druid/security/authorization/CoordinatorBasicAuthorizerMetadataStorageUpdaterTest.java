@@ -33,6 +33,7 @@ import io.druid.security.basic.authentication.db.BasicAuthenticatorCommonCacheCo
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import io.druid.security.basic.authorization.db.cache.NoopBasicAuthorizerCacheNotifier;
 import io.druid.security.basic.authorization.db.updater.CoordinatorBasicAuthorizerMetadataStorageUpdater;
+import io.druid.security.basic.authorization.entity.BasicAuthorizerPermission;
 import io.druid.security.basic.authorization.entity.BasicAuthorizerRole;
 import io.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 import io.druid.server.security.Action;
@@ -60,8 +61,16 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
   );
 
   private final static Map<String, BasicAuthorizerRole> BASE_ROLE_MAP = ImmutableMap.of(
-      BasicAuthUtils.ADMIN_NAME, new BasicAuthorizerRole(BasicAuthUtils.ADMIN_NAME, CoordinatorBasicAuthorizerMetadataStorageUpdater.SUPERUSER_PERMISSIONS),
-      BasicAuthUtils.INTERNAL_USER_NAME, new BasicAuthorizerRole(BasicAuthUtils.INTERNAL_USER_NAME, CoordinatorBasicAuthorizerMetadataStorageUpdater.SUPERUSER_PERMISSIONS)
+      BasicAuthUtils.ADMIN_NAME,
+      new BasicAuthorizerRole(
+          BasicAuthUtils.ADMIN_NAME,
+          BasicAuthorizerPermission.makePermissionList(CoordinatorBasicAuthorizerMetadataStorageUpdater.SUPERUSER_PERMISSIONS)
+      ),
+      BasicAuthUtils.INTERNAL_USER_NAME,
+      new BasicAuthorizerRole(
+          BasicAuthUtils.INTERNAL_USER_NAME,
+          BasicAuthorizerPermission.makePermissionList(CoordinatorBasicAuthorizerMetadataStorageUpdater.SUPERUSER_PERMISSIONS)
+      )
   );
 
   @Rule
@@ -293,7 +302,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
     expectedUserMap.put("druid", new BasicAuthorizerUser("druid", ImmutableSet.of("druidRole")));
 
     Map<String, BasicAuthorizerRole> expectedRoleMap = Maps.newHashMap(BASE_ROLE_MAP);
-    expectedRoleMap.put("druidRole", new BasicAuthorizerRole("druidRole", permsToAdd));
+    expectedRoleMap.put("druidRole", new BasicAuthorizerRole("druidRole", BasicAuthorizerPermission.makePermissionList(permsToAdd)));
 
     Map<String, BasicAuthorizerUser> actualUserMap = updater.deserializeUserMap(
         updater.getCurrentUserMapBytes(AUTHORIZER_NAME)

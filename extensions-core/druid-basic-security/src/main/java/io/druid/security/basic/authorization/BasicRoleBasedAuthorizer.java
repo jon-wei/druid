@@ -28,6 +28,7 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
 import io.druid.java.util.common.IAE;
 import io.druid.security.basic.authentication.db.BasicAuthDBConfig;
 import io.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheManager;
+import io.druid.security.basic.authorization.entity.BasicAuthorizerPermission;
 import io.druid.security.basic.authorization.entity.BasicAuthorizerRole;
 import io.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 import io.druid.server.security.Access;
@@ -44,10 +45,7 @@ import java.util.regex.Pattern;
 @JsonTypeName("basic")
 public class BasicRoleBasedAuthorizer implements Authorizer
 {
-  private static final int DEFAULT_PERMISSION_CACHE_SIZE = 5000;
   private final BasicAuthorizerCacheManager cacheManager;
-  private final LoadingCache<String, Pattern> permissionPatternCache;
-  private final int permissionCacheSize;
   private final String name;
   private final BasicAuthDBConfig dbConfig;
 
@@ -63,10 +61,6 @@ public class BasicRoleBasedAuthorizer implements Authorizer
   {
     this.name = name;
     this.cacheManager = cacheManager;
-    this.permissionCacheSize = permissionCacheSize == null ? DEFAULT_PERMISSION_CACHE_SIZE : permissionCacheSize;
-    this.permissionPatternCache = Caffeine.newBuilder()
-                                          .maximumSize(this.permissionCacheSize)
-                                          .build(regexStr -> Pattern.compile(regexStr));
     this.dbConfig = new BasicAuthDBConfig(
         null,
         null,
@@ -101,7 +95,7 @@ public class BasicRoleBasedAuthorizer implements Authorizer
 
     for (String roleName : user.getRoles()) {
       BasicAuthorizerRole role = roleMap.get(roleName);
-      for (ResourceAction permission : role.getPermissions()) {
+      for (BasicAuthorizerPermission permission : role.getPermissions()) {
         if (permissionCheck(resource, action, permission)) {
           return new Access(true);
         }
@@ -111,27 +105,20 @@ public class BasicRoleBasedAuthorizer implements Authorizer
     return new Access(false);
   }
 
-  private boolean permissionCheck(Resource resource, Action action, ResourceAction permission)
+  private boolean permissionCheck(Resource resource, Action action, BasicAuthorizerPermission permission)
   {
-    if (action != permission.getAction()) {
+    if (action != permission.getResourceAction().getAction()) {
       return false;
     }
 
-    Resource permissionResource = permission.getResource();
+    Resource permissionResource = permission.getResourceAction().getResource();
     if (permissionResource.getType() != resource.getType()) {
       return false;
     }
 
-    String permissionResourceName = permissionResource.getName();
-
-    Pattern resourceNamePattern = permissionPatternCache.get(permissionResourceName);
+    Pattern resourceNamePattern = permission.getResourceNamePattern();
     Matcher resourceNameMatcher = resourceNamePattern.matcher(resource.getName());
     return resourceNameMatcher.matches();
-  }
-
-  public int getPermissionCacheSize()
-  {
-    return permissionCacheSize;
   }
 
   public BasicAuthDBConfig getDbConfig()

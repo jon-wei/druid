@@ -29,12 +29,12 @@ import java.util.List;
 public class BasicAuthorizerRole
 {
   private final String name;
-  private final List<ResourceAction> permissions;
+  private final List<BasicAuthorizerPermission> permissions;
 
   @JsonCreator
   public BasicAuthorizerRole(
       @JsonProperty("name") String name,
-      @JsonProperty("permissions") List<ResourceAction> permissions
+      @JsonProperty("permissions") List<BasicAuthorizerPermission> permissions
   )
   {
     this.name = name;
@@ -48,7 +48,7 @@ public class BasicAuthorizerRole
   }
 
   @JsonProperty
-  public List<ResourceAction> getPermissions()
+  public List<BasicAuthorizerPermission> getPermissions()
   {
     return permissions;
   }
