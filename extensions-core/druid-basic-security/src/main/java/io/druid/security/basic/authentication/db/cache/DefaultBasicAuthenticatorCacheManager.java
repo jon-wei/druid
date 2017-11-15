@@ -37,6 +37,8 @@ import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
+import io.druid.security.basic.authentication.BytesFullResponseHandler;
+import io.druid.security.basic.authentication.BytesFullResponseHolder;
 import io.druid.security.basic.authentication.db.BasicAuthenticatorCommonCacheConfig;
 import io.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 import io.druid.security.basic.authentication.db.updater.CoordinatorBasicAuthenticatorMetadataStorageUpdater;
@@ -186,9 +188,11 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
         HttpMethod.GET,
         StringUtils.format("/druid-ext/basic-security/authentication/%s/cachedSerializedUserMap", prefix)
     );
-    FullResponseHolder responseHolder = druidLeaderClient.go(req);
-    ChannelBuffer buf = responseHolder.getResponse().getContent();
-    byte[] userMapBytes = buf.array();
+    BytesFullResponseHolder responseHolder = (BytesFullResponseHolder) druidLeaderClient.go(
+        req,
+        new BytesFullResponseHandler()
+    );
+    byte[] userMapBytes = responseHolder.getBytes();
     Map<String, BasicAuthenticatorUser> userMap = objectMapper.readValue(
         userMapBytes,
         CoordinatorBasicAuthenticatorMetadataStorageUpdater.USER_MAP_TYPE_REFERENCE

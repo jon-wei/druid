@@ -148,7 +148,7 @@ public class DruidLeaderClient
 
       try {
         try {
-          fullResponseHolder = httpClient.go(request, new FullResponseHandler(Charsets.UTF_8)).get();
+          fullResponseHolder = httpClient.go(request, responseHandler).get();
         }
         catch (ExecutionException e) {
           // Unwrap IOExceptions and ChannelExceptions, re-throw others

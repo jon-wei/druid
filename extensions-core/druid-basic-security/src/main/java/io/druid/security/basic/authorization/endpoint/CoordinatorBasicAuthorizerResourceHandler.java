@@ -270,8 +270,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
         storageUpdater.getCachedRoleMap(authorizerName)
     );
 
-    return Response.ok(userAndRoleMap)
-                   .build();
+    return Response.ok(userAndRoleMap).build();
   }
 
   @Override
