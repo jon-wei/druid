@@ -60,8 +60,6 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
         );
       }
     }
-
-    log.info("Created COORDINATOR basic auth resource");
   }
 
   @Override

@@ -30,12 +30,16 @@ public class BytesFullResponseHandler implements HttpResponseHandler<FullRespons
   @Override
   public ClientResponse<FullResponseHolder> handleResponse(HttpResponse response)
   {
+    BytesFullResponseHolder holder = new BytesFullResponseHolder(
+        response.getStatus(),
+        response,
+        null
+    );
+
+    holder.addChunk(response.getContent().array());
+
     return ClientResponse.unfinished(
-        new BytesFullResponseHolder(
-            response.getStatus(),
-            response,
-            null
-        )
+        holder
     );
   }
 

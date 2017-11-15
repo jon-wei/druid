@@ -73,8 +73,6 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
         );
       }
     }
-
-    log.info("Created COORDINATOR basic authorizer resource");
   }
 
   @Override

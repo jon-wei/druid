@@ -112,7 +112,7 @@ public class CoordinatorBasicAuthorizerCacheNotifier implements BasicAuthorizerC
           () -> {
             while (!Thread.interrupted()) {
               try {
-                LOG.info("Waiting for cache update notification");
+                LOG.debug("Waiting for cache update notification");
                 Set<String> authorizersToUpdateSnapshot;
                 HashMap<String, byte[]> serializedUserMapsSnapshot;
                 synchronized (authorizersToUpdate) {
@@ -124,7 +124,7 @@ public class CoordinatorBasicAuthorizerCacheNotifier implements BasicAuthorizerC
                   authorizersToUpdate.clear();
                   serializedMaps.clear();
                 }
-                LOG.info("Sending cache update notifications");
+                LOG.debug("Sending cache update notifications");
                 for (String authorizer : authorizersToUpdateSnapshot) {
                   BasicAuthDBConfig authorizerConfig = authorizerConfigMap.get(authorizer);
                   if (!authorizerConfig.isEnableCacheNotifications()) {
@@ -142,14 +142,14 @@ public class CoordinatorBasicAuthorizerCacheNotifier implements BasicAuthorizerC
                       StatusResponseHolder srh = future.get(
                           authorizerConfig.getCacheNotificationTimeout(), TimeUnit.MILLISECONDS
                       );
-                      LOG.info("Got status: " + srh.getStatus());
+                      LOG.debug("Got status: " + srh.getStatus());
                     }
                     catch (Exception e) {
-                      LOG.makeAlert("Failed to get response for cache notification.");
+                      LOG.makeAlert("Failed to get response for cache notification.").emit();
                     }
                   }
                 }
-                LOG.info("Received responses for cache update notifications.");
+                LOG.debug("Received responses for cache update notifications.");
               }
               catch (Throwable t) {
                 LOG.makeAlert(t, "Error occured while handling updates for cachedUserMaps.").emit();
@@ -224,7 +224,7 @@ public class CoordinatorBasicAuthorizerCacheNotifier implements BasicAuthorizerC
           druidNode.getServiceScheme(),
           druidNode.getHost(),
           druidNode.getPortToUse(),
-          StringUtils.format("/druid-ext/basic-security/authentication/listen/%s", authPrefix)
+          StringUtils.format("/druid-ext/basic-security/authorization/listen/%s", authPrefix)
       );
     }
     catch (MalformedURLException mue) {

@@ -142,7 +142,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     }
 
     try {
-      LOG.info("STARTING COORDINATOR BASIC AUTHORIZER STORAGE UPDATER");
+      LOG.info("Starting CoordinatorBasicAuthorizerMetadataStorageUpdater");
       for (Map.Entry<String, Authorizer> entry : authorizerMapper.getAuthorizerMap().entrySet()) {
         Authorizer authorizer = entry.getValue();
         if (authorizer instanceof BasicRoleBasedAuthorizer) {
@@ -179,7 +179,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
                 return ScheduledExecutors.Signal.STOP;
               }
               try {
-                LOG.info("Scheduled db poll is running");
+                LOG.debug("Scheduled db poll is running");
                 for (String authorizerName : authorizerNames) {
 
                   byte[] userMapBytes = getCurrentUserMapBytes(authorizerName);
@@ -200,7 +200,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
                     }
                   }
                 }
-                LOG.info("Scheduled db poll is done");
+                LOG.debug("Scheduled db poll is done");
               }
               catch (Throwable t) {
                 LOG.makeAlert(t, "Error occured while polling for cachedUserMaps.").emit();

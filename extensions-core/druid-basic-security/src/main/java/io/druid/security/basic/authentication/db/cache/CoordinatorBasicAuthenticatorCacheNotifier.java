@@ -112,7 +112,7 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
           () -> {
             while (!Thread.interrupted()) {
               try {
-                LOG.info("Waiting for cache update notification");
+                LOG.debug("Waiting for cache update notification");
                 Set<String> authenticatorsToUpdateSnapshot;
                 HashMap<String, byte[]> serializedUserMapsSnapshot;
                 synchronized (authenticatorsToUpdate) {
@@ -124,7 +124,7 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
                   authenticatorsToUpdate.clear();
                   serializedMaps.clear();
                 }
-                LOG.info("Sending cache update notifications");
+                LOG.debug("Sending cache update notifications");
                 for (String authenticator : authenticatorsToUpdateSnapshot) {
                   BasicAuthDBConfig authenticatorConfig = authenticatorConfigMap.get(authenticator);
                   if (!authenticatorConfig.isEnableCacheNotifications()) {
@@ -142,14 +142,14 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
                       StatusResponseHolder srh = future.get(
                           authenticatorConfig.getCacheNotificationTimeout(), TimeUnit.MILLISECONDS
                       );
-                      LOG.info("Got status: " + srh.getStatus());
+                      LOG.debug("Got status: " + srh.getStatus());
                     }
                     catch (Exception e) {
-                      LOG.makeAlert("Failed to get response for cache notification.");
+                      LOG.makeAlert("Failed to get response for cache notification.").emit();
                     }
                   }
                 }
-                LOG.info("Received responses for cache update notifications.");
+                LOG.debug("Received responses for cache update notifications.");
               }
               catch (Throwable t) {
                 LOG.makeAlert(t, "Error occured while handling updates for cachedUserMaps.").emit();

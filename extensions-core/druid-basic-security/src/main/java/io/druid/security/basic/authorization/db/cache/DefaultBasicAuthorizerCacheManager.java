@@ -89,8 +89,6 @@ public class DefaultBasicAuthorizerCacheManager implements BasicAuthorizerCacheM
     this.cachedRoleMaps = new ConcurrentHashMap<>();
     this.authorizerPrefixes = new HashSet<>();
     this.druidLeaderClient = druidLeaderClient;
-
-    LOG.info("created DEFAULT basic auth cache manager.");
   }
 
   @LifecycleStart
@@ -100,10 +98,12 @@ public class DefaultBasicAuthorizerCacheManager implements BasicAuthorizerCacheM
       throw new ISE("can't start.");
     }
 
+    LOG.info("Starting DefaultBasicAuthorizerCacheManager.");
+
     try {
       initUserMaps();
 
-      this.exec = Execs.scheduledSingleThreaded("BasicAuthenticatorCacheManager-Exec--%d");
+      this.exec = Execs.scheduledSingleThreaded("BasicAuthorizerCacheManager-Exec--%d");
 
       ScheduledExecutors.scheduleWithFixedDelay(
           exec,
@@ -111,7 +111,7 @@ public class DefaultBasicAuthorizerCacheManager implements BasicAuthorizerCacheM
           new Duration(commonCacheConfig.getPollingPeriod()),
           () -> {
             try {
-              LOG.info("Scheduled cache poll is running");
+              LOG.debug("Scheduled cache poll is running");
               for (String authorizerPrefix : authorizerPrefixes) {
                 UserAndRoleMap userAndRoleMap = fetchUserAndRoleMapFromCoordinator(authorizerPrefix, false);
                 if (userAndRoleMap != null) {
@@ -119,10 +119,10 @@ public class DefaultBasicAuthorizerCacheManager implements BasicAuthorizerCacheM
                   cachedRoleMaps.put(authorizerPrefix, userAndRoleMap.getRoleMap());
                 }
               }
-              LOG.info("Scheduled cache poll is done");
+              LOG.debug("Scheduled cache poll is done");
 
               long randomDelay = ThreadLocalRandom.current().nextLong(0, commonCacheConfig.getMaxRandomDelay());
-              LOG.info("Inserting random polling delay of [%s] ms", randomDelay);
+              LOG.debug("Inserting random polling delay of [%s] ms", randomDelay);
               Thread.sleep(randomDelay);
             }
             catch (Throwable t) {
@@ -132,6 +132,7 @@ public class DefaultBasicAuthorizerCacheManager implements BasicAuthorizerCacheM
       );
 
       lifecycleLock.started();
+      LOG.info("Started DefaultBasicAuthorizerCacheManager.");
     }
     finally {
       lifecycleLock.exitStart();
@@ -141,7 +142,7 @@ public class DefaultBasicAuthorizerCacheManager implements BasicAuthorizerCacheM
   @Override
   public void handleAuthorizerUpdate(String authorizerPrefix, byte[] serializedUserAndRoleMap)
   {
-    LOG.info("Received cache update for authorizer [%s].", authorizerPrefix);
+    LOG.debug("Received cache update for authorizer [%s].", authorizerPrefix);
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
     try {
       UserAndRoleMap userAndRoleMap = objectMapper.readValue(
@@ -153,7 +154,7 @@ public class DefaultBasicAuthorizerCacheManager implements BasicAuthorizerCacheM
       cachedRoleMaps.put(authorizerPrefix, userAndRoleMap.getRoleMap());
     }
     catch (IOException ioe) {
-      LOG.makeAlert("WTF? Could not deserialize user map received from coordinator.");
+      LOG.makeAlert("WTF? Could not deserialize user map received from coordinator.").emit();
     }
   }
 

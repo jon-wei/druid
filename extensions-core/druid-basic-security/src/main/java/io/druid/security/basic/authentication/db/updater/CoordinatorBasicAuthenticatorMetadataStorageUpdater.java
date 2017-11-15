@@ -116,7 +116,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
     }
 
     try {
-      LOG.info("STARTING COORDINATOR BASIC AUTHENTICATOR STORAGE UPDATER");
+      LOG.info("Starting CoordinatorBasicAuthenticatorMetadataStorageUpdater.");
       for (Map.Entry<String, Authenticator> entry : authenticatorMapper.getAuthenticatorMap().entrySet()) {
         Authenticator authenticator = entry.getValue();
         if (authenticator instanceof BasicHTTPAuthenticator) {
@@ -160,7 +160,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
                 return ScheduledExecutors.Signal.STOP;
               }
               try {
-                LOG.info("Scheduled db poll is running");
+                LOG.debug("Scheduled db poll is running");
                 for (String authenticatorPrefix : authenticatorPrefixes) {
 
                   byte[] userMapBytes = getCurrentUserMapBytes(authenticatorPrefix);
@@ -172,7 +172,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
                     }
                   }
                 }
-                LOG.info("Scheduled db poll is done");
+                LOG.debug("Scheduled db poll is done");
               }
               catch (Throwable t) {
                 LOG.makeAlert(t, "Error occured while polling for cachedUserMaps.").emit();

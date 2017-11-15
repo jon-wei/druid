@@ -84,8 +84,6 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
     this.cachedUserMaps = new ConcurrentHashMap<>();
     this.authenticatorPrefixes = new HashSet<>();
     this.druidLeaderClient = druidLeaderClient;
-
-    LOG.info("created DEFAULT basic auth cache manager.");
   }
 
   @LifecycleStart
@@ -94,6 +92,8 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
     if (!lifecycleLock.canStart()) {
       throw new ISE("can't start.");
     }
+
+    LOG.info("Starting DefaultBasicAuthenticatorCacheManager.");
 
     try {
       initUserMaps();
@@ -106,17 +106,17 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
           new Duration(commonCacheConfig.getPollingPeriod()),
           () -> {
             try {
-              LOG.info("Scheduled cache poll is running");
+              LOG.debug("Scheduled cache poll is running");
               for (String authenticatorPrefix : authenticatorPrefixes) {
                 Map<String, BasicAuthenticatorUser> userMap = fetchUserMapFromCoordinator(authenticatorPrefix, false);
                 if (userMap != null) {
                   cachedUserMaps.put(authenticatorPrefix, userMap);
                 }
               }
-              LOG.info("Scheduled cache poll is done");
+              LOG.debug("Scheduled cache poll is done");
 
               long randomDelay = ThreadLocalRandom.current().nextLong(0, commonCacheConfig.getMaxRandomDelay());
-              LOG.info("Inserting random polling delay of [%s] ms", randomDelay);
+              LOG.debug("Inserting random polling delay of [%s] ms", randomDelay);
               Thread.sleep(randomDelay);
             }
             catch (Throwable t) {
@@ -126,6 +126,7 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
       );
 
       lifecycleLock.started();
+      LOG.info("Started DefaultBasicAuthenticatorCacheManager.");
     }
     finally {
       lifecycleLock.exitStart();
@@ -135,7 +136,7 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
   @Override
   public void handleAuthenticatorUpdate(String authenticatorPrefix, byte[] serializedUserMap)
   {
-    LOG.info("Received cache update for authenticator [%s].", authenticatorPrefix);
+    LOG.debug("Received cache update for authenticator [%s].", authenticatorPrefix);
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
     try {
       cachedUserMaps.put(
@@ -147,7 +148,7 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
       );
     }
     catch (IOException ioe) {
-      LOG.makeAlert("WTF? Could not deserialize user map received from coordinator.");
+      LOG.makeAlert("WTF? Could not deserialize user map received from coordinator.").emit();
     }
   }
 

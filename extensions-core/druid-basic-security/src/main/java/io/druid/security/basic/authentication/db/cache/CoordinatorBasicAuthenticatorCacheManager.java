@@ -39,7 +39,7 @@ public class CoordinatorBasicAuthenticatorCacheManager implements BasicAuthentic
   {
     this.storageUpdater = storageUpdater;
 
-    log.info("Starting COORDINATOR basic auth cache manager.");
+    log.info("Starting coordinator basic authenticator cache manager.");
   }
 
   @Override
