@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.security.basic.authentication.db.BasicAuthDBConfig;
 import io.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheManager;
 import io.druid.security.basic.authorization.entity.BasicAuthorizerPermission;
@@ -42,6 +43,8 @@ import java.util.regex.Pattern;
 @JsonTypeName("basic")
 public class BasicRoleBasedAuthorizer implements Authorizer
 {
+  private static final Logger log = new Logger(BasicRoleBasedAuthorizer.class);
+
   private final BasicAuthorizerCacheManager cacheManager;
   private final String name;
   private final BasicAuthDBConfig dbConfig;
@@ -84,6 +87,8 @@ public class BasicRoleBasedAuthorizer implements Authorizer
     if (roleMap == null) {
       throw new IAE("Could not load roleMap for authorizer [%s]", name);
     }
+
+    log.info("authentication result: " + authenticationResult.getIdentity());
 
     BasicAuthorizerUser user = userMap.get(authenticationResult.getIdentity());
     if (user == null) {

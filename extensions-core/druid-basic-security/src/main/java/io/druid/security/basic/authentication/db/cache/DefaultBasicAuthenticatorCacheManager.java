@@ -22,6 +22,7 @@ package io.druid.security.basic.authentication.db.cache;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.http.client.Request;
 import io.druid.client.coordinator.Coordinator;
@@ -62,7 +63,7 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
 
   private final ConcurrentHashMap<String, Map<String, BasicAuthenticatorUser>> cachedUserMaps;
   private final Set<String> authenticatorPrefixes;
-  private final AuthenticatorMapper authenticatorMapper;
+  private final Injector injector;
   private final ObjectMapper objectMapper;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
   private final DruidLeaderClient druidLeaderClient;
@@ -72,13 +73,13 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
 
   @Inject
   public DefaultBasicAuthenticatorCacheManager(
-      AuthenticatorMapper authenticatorMapper,
+      Injector injector,
       BasicAuthenticatorCommonCacheConfig commonCacheConfig,
       @Smile ObjectMapper objectMapper,
       @Coordinator DruidLeaderClient druidLeaderClient
   )
   {
-    this.authenticatorMapper = authenticatorMapper;
+    this.injector = injector;
     this.commonCacheConfig = commonCacheConfig;
     this.objectMapper = objectMapper;
     this.cachedUserMaps = new ConcurrentHashMap<>();
@@ -201,6 +202,12 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
 
   private void initUserMaps()
   {
+    AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
+
+    if (authenticatorMapper == null || authenticatorMapper.getAuthenticatorMap() == null) {
+      return;
+    }
+
     for (Map.Entry<String, Authenticator> entry : authenticatorMapper.getAuthenticatorMap().entrySet()) {
       Authenticator authenticator = entry.getValue();
       if (authenticator instanceof BasicHTTPAuthenticator) {

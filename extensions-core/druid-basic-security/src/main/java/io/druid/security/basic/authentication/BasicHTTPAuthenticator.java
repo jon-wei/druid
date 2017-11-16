@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.inject.Provider;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.authentication.db.BasicAuthDBConfig;
 import io.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheManager;
@@ -52,6 +53,8 @@ import java.util.Map;
 @JsonTypeName("basic")
 public class BasicHTTPAuthenticator implements Authenticator
 {
+  private static final Logger log = new Logger(BasicHTTPAuthenticator.class);
+
   private final Provider<BasicAuthenticatorCacheManager> cacheManager;
   private final String internalClientUsername;
   private final String internalClientPassword;
@@ -157,6 +160,9 @@ public class BasicHTTPAuthenticator implements Authenticator
     {
       HttpServletResponse httpResp = (HttpServletResponse) servletResponse;
       String userSecret = BasicAuthUtils.getBasicUserSecretFromHttpReq((HttpServletRequest) servletRequest);
+
+      log.info("userSecret: " + userSecret);
+
       if (userSecret == null) {
         // Request didn't have HTTP Basic auth credentials, move on to the next filter
         filterChain.doFilter(servletRequest, servletResponse);

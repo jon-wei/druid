@@ -22,6 +22,7 @@ package io.druid.security.basic.authorization.db.cache;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.http.client.Request;
 import io.druid.client.coordinator.Coordinator;
@@ -66,7 +67,7 @@ public class DefaultBasicAuthorizerCacheManager implements BasicAuthorizerCacheM
   private final ConcurrentHashMap<String, Map<String, BasicAuthorizerRole>> cachedRoleMaps;
 
   private final Set<String> authorizerPrefixes;
-  private final AuthorizerMapper authorizerMapper;
+  private final Injector injector;
   private final ObjectMapper objectMapper;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
   private final DruidLeaderClient druidLeaderClient;
@@ -76,13 +77,13 @@ public class DefaultBasicAuthorizerCacheManager implements BasicAuthorizerCacheM
 
   @Inject
   public DefaultBasicAuthorizerCacheManager(
-      AuthorizerMapper authorizerMapper,
+      Injector injector,
       BasicAuthenticatorCommonCacheConfig commonCacheConfig,
       @Smile ObjectMapper objectMapper,
       @Coordinator DruidLeaderClient druidLeaderClient
   )
   {
-    this.authorizerMapper = authorizerMapper;
+    this.injector = injector;
     this.commonCacheConfig = commonCacheConfig;
     this.objectMapper = objectMapper;
     this.cachedUserMaps = new ConcurrentHashMap<>();
@@ -214,6 +215,12 @@ public class DefaultBasicAuthorizerCacheManager implements BasicAuthorizerCacheM
 
   private void initUserMaps()
   {
+    AuthorizerMapper authorizerMapper = injector.getInstance(AuthorizerMapper.class);
+
+    if (authorizerMapper == null || authorizerMapper.getAuthorizerMap() == null) {
+      return;
+    }
+
     for (Map.Entry<String, Authorizer> entry : authorizerMapper.getAuthorizerMap().entrySet()) {
       Authorizer authorizer = entry.getValue();
       if (authorizer instanceof BasicRoleBasedAuthorizer) {

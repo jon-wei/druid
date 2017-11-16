@@ -115,6 +115,10 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
       throw new ISE("can't start.");
     }
 
+    if (authenticatorMapper == null || authenticatorMapper.getAuthenticatorMap() == null) {
+      return;
+    }
+
     try {
       LOG.info("Starting CoordinatorBasicAuthenticatorMetadataStorageUpdater.");
       for (Map.Entry<String, Authenticator> entry : authenticatorMapper.getAuthenticatorMap().entrySet()) {

@@ -140,6 +140,10 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
       throw new ISE("can't start.");
     }
 
+    if (authorizerMapper == null || authorizerMapper.getAuthorizerMap() == null) {
+      return;
+    }
+
     try {
       LOG.info("Starting CoordinatorBasicAuthorizerMetadataStorageUpdater");
       for (Map.Entry<String, Authorizer> entry : authorizerMapper.getAuthorizerMap().entrySet()) {

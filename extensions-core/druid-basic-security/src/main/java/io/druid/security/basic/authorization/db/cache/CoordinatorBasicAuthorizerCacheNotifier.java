@@ -206,6 +206,10 @@ public class CoordinatorBasicAuthorizerCacheNotifier implements BasicAuthorizerC
 
   private void initAuthorizerConfigMap(AuthorizerMapper mapper)
   {
+    if (mapper == null || mapper.getAuthorizerMap() == null) {
+      return;
+    }
+
     for (Map.Entry<String, Authorizer> entry : mapper.getAuthorizerMap().entrySet()) {
       Authorizer authorizer = entry.getValue();
       if (authorizer instanceof BasicRoleBasedAuthorizer) {

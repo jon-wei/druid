@@ -209,6 +209,10 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
 
   private void initAuthenticatorConfigMap(AuthenticatorMapper mapper)
   {
+    if (mapper == null || mapper.getAuthenticatorMap() == null) {
+      return;
+    }
+
     for (Map.Entry<String, Authenticator> entry : mapper.getAuthenticatorMap().entrySet()) {
       Authenticator authenticator = entry.getValue();
       if (authenticator instanceof BasicHTTPAuthenticator) {
