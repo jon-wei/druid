@@ -37,11 +37,6 @@ public class AuthenticatorMapper
     this.authenticatorMap = authenticatorMap;
   }
 
-  public List<Authenticator> getAuthenticatorChain()
-  {
-    return Lists.newArrayList(authenticatorMap.values());
-  }
-
   public Map<String, Authenticator> getAuthenticatorMap()
   {
     return authenticatorMap;

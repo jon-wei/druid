@@ -17,28 +17,24 @@
  * under the License.
  */
 
-package io.druid.server.security;
+package io.druid.segment.virtual;
 
-import com.google.common.collect.Maps;
+import io.druid.math.expr.Expr;
 
-import java.util.Map;
+import javax.annotation.Nullable;
 
-public class AuthTestUtils
+public class SingleInputBindings implements Expr.ObjectBinding
 {
-  public static final AuthenticatorMapper TEST_AUTHENTICATOR_MAPPER;
-  public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER;
+  private Object value;
 
-  static {
-    final Map<String, Authenticator> defaultMap = Maps.newHashMap();
-    defaultMap.put(AuthConfig.ALLOW_ALL_NAME, new AllowAllAuthenticator());
-    TEST_AUTHENTICATOR_MAPPER = new AuthenticatorMapper(defaultMap);
+  @Override
+  public Object get(final String name)
+  {
+    return value;
+  }
 
-    TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null) {
-      @Override
-      public Authorizer getAuthorizer(String name)
-      {
-        return new AllowAllAuthorizer();
-      }
-    };
+  public void set(@Nullable final Object value)
+  {
+    this.value = value;
   }
 }

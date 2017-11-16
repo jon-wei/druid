@@ -19,26 +19,25 @@
 
 package io.druid.server.security;
 
-import com.google.common.collect.Maps;
+import com.metamx.http.client.HttpClient;
 
-import java.util.Map;
-
-public class AuthTestUtils
+public class NoopEscalator implements Escalator
 {
-  public static final AuthenticatorMapper TEST_AUTHENTICATOR_MAPPER;
-  public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER;
+  @Override
+  public HttpClient createEscalatedClient(HttpClient baseClient)
+  {
+    return baseClient;
+  }
 
-  static {
-    final Map<String, Authenticator> defaultMap = Maps.newHashMap();
-    defaultMap.put(AuthConfig.ALLOW_ALL_NAME, new AllowAllAuthenticator());
-    TEST_AUTHENTICATOR_MAPPER = new AuthenticatorMapper(defaultMap);
+  @Override
+  public org.eclipse.jetty.client.HttpClient createEscalatedJettyClient(org.eclipse.jetty.client.HttpClient baseClient)
+  {
+    return baseClient;
+  }
 
-    TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null) {
-      @Override
-      public Authorizer getAuthorizer(String name)
-      {
-        return new AllowAllAuthorizer();
-      }
-    };
+  @Override
+  public AuthenticationResult createEscalatedAuthenticationResult()
+  {
+    return AllowAllAuthenticator.ALLOW_ALL_RESULT;
   }
 }

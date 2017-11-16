@@ -41,7 +41,7 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.DruidNode;
-import io.druid.server.security.AllowAllEscalator;
+import io.druid.server.security.NoopEscalator;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
 import io.druid.server.security.AuthenticatorMapper;
@@ -446,7 +446,7 @@ public class DruidAvaticaHandlerTest
                 Pair.of("COLUMN_NAME", "unique_dim1"),
                 Pair.of("DATA_TYPE", Types.OTHER),
                 Pair.of("TYPE_NAME", "OTHER"),
-                Pair.of("IS_NULLABLE", "NO")
+                Pair.of("IS_NULLABLE", "YES")
             )
         ),
         getRows(
@@ -529,7 +529,7 @@ public class DruidAvaticaHandlerTest
                 Pair.of("COLUMN_NAME", "unique_dim1"),
                 Pair.of("DATA_TYPE", Types.OTHER),
                 Pair.of("TYPE_NAME", "OTHER"),
-                Pair.of("IS_NULLABLE", "NO")
+                Pair.of("IS_NULLABLE", "YES")
             )
         ),
         getRows(
@@ -723,7 +723,7 @@ public class DruidAvaticaHandlerTest
             plannerConfig,
             new AuthConfig(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            new AllowAllEscalator(),
+            new NoopEscalator(),
             CalciteTests.getJsonMapper()
         ),
         smallFrameConfig,

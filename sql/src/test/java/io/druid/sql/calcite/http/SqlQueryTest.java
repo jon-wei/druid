@@ -17,27 +17,22 @@
  * under the License.
  */
 
-package io.druid.server.security;
+package io.druid.sql.calcite.http;
 
-import com.metamx.http.client.HttpClient;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
+import io.druid.segment.TestHelper;
+import io.druid.sql.http.SqlQuery;
+import org.junit.Assert;
+import org.junit.Test;
 
-public class AllowAllEscalator implements Escalator
+public class SqlQueryTest
 {
-  @Override
-  public HttpClient createEscalatedClient(HttpClient baseClient)
+  @Test
+  public void testSerde() throws Exception
   {
-    return baseClient;
-  }
-
-  @Override
-  public org.eclipse.jetty.client.HttpClient createEscalatedJettyClient(org.eclipse.jetty.client.HttpClient baseClient)
-  {
-    return baseClient;
-  }
-
-  @Override
-  public AuthenticationResult createEscalatedAuthenticationResult()
-  {
-    return AllowAllAuthenticator.ALLOW_ALL_RESULT;
+    final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
+    final SqlQuery query = new SqlQuery("SELECT 1", SqlQuery.ResultFormat.ARRAY, ImmutableMap.of("useCache", false));
+    Assert.assertEquals(query, jsonMapper.readValue(jsonMapper.writeValueAsString(query), SqlQuery.class));
   }
 }

@@ -92,12 +92,11 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.server.QueryLifecycleFactory;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.NoopRequestLogger;
-import io.druid.server.security.AllowAllEscalator;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AllowAllAuthenticator;
+import io.druid.server.security.NoopEscalator;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Authenticator;
@@ -165,12 +164,12 @@ public class CalciteTests
   static {
     final Map<String, Authenticator> defaultMap = Maps.newHashMap();
     defaultMap.put(
-        "allowAll",
+        AuthConfig.ALLOW_ALL_NAME,
         new AllowAllAuthenticator() {
           @Override
           public AuthenticationResult authenticateJDBCContext(Map<String, Object> context)
           {
-            return new AuthenticationResult((String) context.get("user"), "allowAll", null);
+            return new AuthenticationResult((String) context.get("user"), AuthConfig.ALLOW_ALL_NAME, null);
           }
         }
     );
@@ -178,7 +177,7 @@ public class CalciteTests
   }
   public static final Escalator TEST_AUTHENTICATOR_ESCALATOR;
   static {
-    TEST_AUTHENTICATOR_ESCALATOR = new AllowAllEscalator() {
+    TEST_AUTHENTICATOR_ESCALATOR = new NoopEscalator() {
 
       @Override
       public AuthenticationResult createEscalatedAuthenticationResult()
@@ -189,14 +188,14 @@ public class CalciteTests
   }
 
   public static final AuthenticationResult REGULAR_USER_AUTH_RESULT = new AuthenticationResult(
-      "allowAll",
-      "allowAll",
+      AuthConfig.ALLOW_ALL_NAME,
+      AuthConfig.ALLOW_ALL_NAME,
       null
   );
 
   public static final AuthenticationResult SUPER_USER_AUTH_RESULT = new AuthenticationResult(
       TEST_SUPERUSER_NAME,
-      "allowAll",
+      AuthConfig.ALLOW_ALL_NAME,
       null
   );
 
@@ -409,7 +408,6 @@ public class CalciteTests
         new DefaultGenericQueryMetricsFactory(INJECTOR.getInstance(Key.get(ObjectMapper.class, Json.class))),
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
         new NoopRequestLogger(),
-        new ServerConfig(),
         new AuthConfig(),
         TEST_AUTHORIZER_MAPPER
     );
