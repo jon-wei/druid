@@ -25,8 +25,10 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteArrayDataOutput;
+import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.metamx.common.IAE;
+import com.metamx.common.StringUtils;
 import com.metamx.common.logger.Logger;
 import com.metamx.common.parsers.ParseException;
 import io.druid.data.input.InputRow;
@@ -42,8 +44,10 @@ import org.apache.hadoop.io.WritableUtils;
 
 import java.io.DataInput;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.CRC32;
 
 /**
  */
@@ -118,7 +122,35 @@ public class InputRowSerde
         }
       }
 
-      return out.toByteArray();
+      try {
+        byte[] baseMsg = out.toByteArray();
+
+        CRC32 crc32 = new CRC32();
+        crc32.reset();
+        crc32.update(baseMsg);
+        long checksum = crc32.getValue();
+
+        String hostname = InetAddress.getLocalHost().getCanonicalHostName();
+        byte[] hostnameBytes = hostname.getBytes(Charsets.UTF_8);
+
+        ByteArrayDataOutput outWithChecksum = ByteStreams.newDataOutput();
+        outWithChecksum.writeLong(checksum);
+        outWithChecksum.writeInt(hostnameBytes.length);
+        outWithChecksum.write(hostnameBytes);
+        outWithChecksum.writeInt(baseMsg.length);
+        outWithChecksum.write(baseMsg);
+
+        return outWithChecksum.toByteArray();
+      }
+      catch (Exception e) {
+        throw new RuntimeException(
+            String.format(
+                "Got exception while creating checksum, hostname [%s]",
+                InetAddress.getLocalHost().getCanonicalHostName()
+            ),
+            e
+        );
+      }
     } catch(IOException ex) {
       throw Throwables.propagate(ex);
     }
@@ -178,6 +210,47 @@ public class InputRowSerde
   {
     try {
       DataInput in = ByteStreams.newDataInput(data);
+
+      String srcHostname = null;
+      try {
+        // checksum and hostname
+        long theirChecksum = in.readLong();
+        int hostnameLen = in.readInt();
+        byte[] hostnameBytes = new byte[hostnameLen];
+        in.readFully(hostnameBytes);
+        srcHostname = StringUtils.fromUtf8(hostnameBytes);
+        int baseMsgLen = in.readInt();
+        byte[] baseMsg = new byte[baseMsgLen];
+        in.readFully(baseMsg);
+        in = ByteStreams.newDataInput(baseMsg);
+
+        CRC32 crc32 = new CRC32();
+        crc32.reset();
+        crc32.update(baseMsg);
+        long myChecksum = crc32.getValue();
+
+        if (theirChecksum != myChecksum) {
+          String msg = String.format(
+              "Input row checksum validation failed, [%s],[%s], srcHostname[%s], dstHostname[%s]",
+              theirChecksum,
+              myChecksum,
+              srcHostname,
+              InetAddress.getLocalHost().getCanonicalHostName()
+          );
+          log.error(msg);
+          throw new RuntimeException(msg);
+        }
+
+      }
+      catch (Exception e) {
+        String msg = String.format(
+            "Got an exception in checksum area, srcHostname[%s], dstHostname[%s]",
+            srcHostname,
+            InetAddress.getLocalHost().getCanonicalHostName()
+        );
+        log.error(msg);
+        throw new RuntimeException(msg, e);
+      }
 
       //Read timestamp
       long timestamp = in.readLong();
