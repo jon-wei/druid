@@ -53,6 +53,15 @@ import java.util.zip.CRC32;
  */
 public class InputRowSerde
 {
+  private static String HOSTNAME;
+  static {
+    try {
+      HOSTNAME = InetAddress.getLocalHost().getCanonicalHostName();
+    }
+    catch (Exception e) {
+      HOSTNAME = "not initialized";
+    }
+  }
   private static final Logger log = new Logger(InputRowSerde.class);
 
   public static final byte[] toBytes(final InputRow row, AggregatorFactory[] aggs, boolean reportParseExceptions)
@@ -130,8 +139,7 @@ public class InputRowSerde
         crc32.update(baseMsg);
         long checksum = crc32.getValue();
 
-        String hostname = InetAddress.getLocalHost().getCanonicalHostName();
-        byte[] hostnameBytes = hostname.getBytes(Charsets.UTF_8);
+        byte[] hostnameBytes = HOSTNAME.getBytes(Charsets.UTF_8);
 
         ByteArrayDataOutput outWithChecksum = ByteStreams.newDataOutput();
         outWithChecksum.writeLong(checksum);
@@ -235,7 +243,7 @@ public class InputRowSerde
               theirChecksum,
               myChecksum,
               srcHostname,
-              InetAddress.getLocalHost().getCanonicalHostName()
+              HOSTNAME
           );
           log.error(msg);
           throw new RuntimeException(msg);
