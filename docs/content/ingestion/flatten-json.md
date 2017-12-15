@@ -58,7 +58,7 @@ To flatten this JSON, the parseSpec could be defined as follows:
       "dim2",
       {
         "type": "path",
-        "name": "foo.bar",
+        "name": "foo.bar.path",
         "expr": "$.foo.bar"
       },
       {
