@@ -64,6 +64,7 @@ import io.druid.query.aggregation.first.FloatFirstAggregatorFactory;
 import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import io.druid.query.aggregation.last.DoubleLastAggregatorFactory;
 import io.druid.query.aggregation.last.FloatLastAggregatorFactory;
 import io.druid.query.aggregation.last.LongLastAggregatorFactory;
 import io.druid.query.aggregation.post.ExpressionPostAggregator;
@@ -260,6 +261,39 @@ public class TopNQueryRunnerTest
         chest
     );
     return mergeRunner.run(QueryPlus.wrap(query), context);
+  }
+
+  @Test
+  public void testDoubleFirstLastAggsTopN()
+  {
+    AggregatorFactory aggregatorFactory = new DoubleMaxAggregatorFactory("maxIndex", "index");
+    CountAggregatorFactory countAggregatorFactory = new CountAggregatorFactory("count");
+    DoubleMinAggregatorFactory doubleMinAggregatorFactory = new DoubleMinAggregatorFactory("minIndex", "index");
+    DoubleFirstAggregatorFactory doubleFirstAggregatorFactory = new DoubleFirstAggregatorFactory("firstIndex", "index");
+    DoubleLastAggregatorFactory doubleLastAggregatorFactory = new DoubleLastAggregatorFactory("lastIndex", "index");
+
+    TopNQuery topNQuery = new TopNQueryBuilder().dataSource(QueryRunnerTestHelper.dataSource)
+                                                .dimension(QueryRunnerTestHelper.marketDimension)
+                                                .metric("maxIndex")
+                                                .threshold(4)
+                                                .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                                .granularity(QueryRunnerTestHelper.allGran)
+                                                .aggregators(ImmutableList.of(aggregatorFactory,
+                                                                              countAggregatorFactory,
+                                                                              doubleMinAggregatorFactory,
+                                                                              doubleFirstAggregatorFactory,
+                                                                              doubleLastAggregatorFactory
+                                                ))
+                                                .context(ImmutableMap.<String, Object>of("bySegment", false))
+                                                .build();
+
+    List<Result<TopNResultValue>> expectedResults = ImmutableList.of(
+        new Result<>(
+            DateTimes.of("2020-04-02T00:00:00.000Z"),
+            new TopNResultValue(ImmutableList.of())
+        )
+    );
+    assertExpectedResults(expectedResults, topNQuery);
   }
 
   @Test
