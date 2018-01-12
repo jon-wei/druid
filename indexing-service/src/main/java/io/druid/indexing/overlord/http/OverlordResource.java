@@ -621,7 +621,10 @@ public class OverlordResource
               status.getStatusCode(),
               status.getDuration(),
               TaskLocation.unknown(),
-              pair.rhs);
+              pair.rhs,
+              status.getMetrics(),
+              status.getErrorMsg(),
+              status.getContext());
         }));
 
     return Response.ok(completeTasks).build();
@@ -777,7 +780,13 @@ public class OverlordResource
                             null,
                             null,
                             workItem.getLocation(),
+<<<<<<< HEAD
                             workItem.getDataSource()
+=======
+                            null,
+                            null,
+                            null
+>>>>>>> More task status WIP
                         );
                       }
                     }
