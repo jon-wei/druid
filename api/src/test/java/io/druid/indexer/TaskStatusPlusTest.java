@@ -54,6 +54,9 @@ public class TaskStatusPlusTest
         1000L,
         TaskLocation.create("testHost", 1010, -1),
         "ds_test"
+        null,
+        null,
+        null
     );
     final String json = mapper.writeValueAsString(status);
     Assert.assertEquals(status, mapper.readValue(json, TaskStatusPlus.class));
