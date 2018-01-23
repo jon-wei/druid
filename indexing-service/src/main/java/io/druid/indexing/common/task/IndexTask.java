@@ -683,7 +683,12 @@ public class IndexTask extends AbstractTask
           }
         }
       }
+      catch (Exception e) {
+        log.error(e, "IndexTask exception:");
+        throw e;
+      }
       finally {
+        log.info("About to call driver.persist()");
         driver.persist(committerSupplier.get());
       }
 
