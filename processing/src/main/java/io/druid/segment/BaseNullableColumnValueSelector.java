@@ -17,33 +17,24 @@
  * under the License.
  */
 
-package io.druid.segment.serde;
+package io.druid.segment;
 
-import com.google.common.base.Supplier;
-import io.druid.collections.bitmap.ImmutableBitmap;
-import io.druid.segment.column.GenericColumn;
-import io.druid.segment.column.FloatsColumn;
-import io.druid.segment.data.CompressedColumnarFloatsSupplier;
+import io.druid.guice.annotations.PublicApi;
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 
 /**
-*/
-public class FloatGenericColumnSupplier implements Supplier<GenericColumn>
+ * Null value checking polymorphic "part" of the {@link ColumnValueSelector} interface for primitive values.
+ * Users of {@link BaseLongColumnValueSelector#getLong()}, {@link BaseDoubleColumnValueSelector#getDouble()}
+ * and {@link BaseFloatColumnValueSelector#getFloat()} are required to check the nullability of the primitive
+ * types returned.
+ */
+@PublicApi
+public interface BaseNullableColumnValueSelector
 {
-  private final CompressedColumnarFloatsSupplier column;
-  private final ImmutableBitmap nullValueBitmap;
-
-  public FloatGenericColumnSupplier(
-      CompressedColumnarFloatsSupplier column,
-      ImmutableBitmap nullValueBitmap
-  )
-  {
-    this.column = column;
-    this.nullValueBitmap = nullValueBitmap;
-  }
-
-  @Override
-  public GenericColumn get()
-  {
-    return new FloatsColumn(column.get(), nullValueBitmap);
-  }
+  /**
+   * returns true if selected primitive value is null for {@link BaseFloatColumnValueSelector},
+   * {@link BaseLongColumnValueSelector} and {@link BaseDoubleColumnValueSelector} otherwise false.
+   */
+  @CalledFromHotLoop
+  boolean isNull();
 }
