@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
+import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.column.ValueType;
@@ -45,7 +46,11 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
     }
 
-    return DimensionHandlerUtils.convertObjectToFloat(dimValues);
+    Float ret = DimensionHandlerUtils.convertObjectToFloat(dimValues);
+    if (ret == null) {
+      throw new ParseException("Unparseable value for float dimension: [%s]", dimValues);
+    }
+    return ret;
   }
 
   @Override

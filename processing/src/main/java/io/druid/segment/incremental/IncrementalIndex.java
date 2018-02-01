@@ -40,6 +40,8 @@ import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
@@ -90,6 +92,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>, Closeable
 {
+  private static final Logger log = new Logger(IncrementalIndex.class);
+
   private volatile DateTime maxIngestedEventTime;
 
   // Used to discover ValueType based on the class of values in a row
@@ -541,7 +545,16 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         }
         DimensionHandler handler = desc.getHandler();
         DimensionIndexer indexer = desc.getIndexer();
-        Object dimsKey = indexer.processRowValsToUnsortedEncodedKeyComponent(row.getRaw(dimension));
+
+        Object dimsKey;
+
+        try {
+          dimsKey = indexer.processRowValsToUnsortedEncodedKeyComponent(row.getRaw(dimension));
+        }
+        catch (ParseException pe) {
+          String errorMsg = String.format("Encountered ParseException on row [%s]", row);
+          throw new RuntimeException(errorMsg, pe);
+        }
 
         // Set column capabilities as data is coming in
         if (!capabilities.hasMultipleValues() && dimsKey != null && handler.getLengthOfEncodedKeyComponent(dimsKey) > 1) {
