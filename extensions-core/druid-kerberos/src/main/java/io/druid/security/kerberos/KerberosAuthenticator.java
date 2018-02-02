@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Throwables;
 import io.druid.guice.annotations.Self;
-import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.DruidNode;
 import io.druid.server.security.AuthConfig;
@@ -62,7 +61,6 @@ import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
-import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
@@ -80,7 +78,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Random;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -147,6 +144,8 @@ public class KerberosAuthenticator implements Authenticator
           String configPrefix = filterConfig.getInitParameter(CONFIG_PREFIX);
           configPrefix = (configPrefix != null) ? configPrefix + "." : "";
           Properties config = getConfiguration(configPrefix, filterConfig);
+
+          /*
           String signatureSecret = config.getProperty(configPrefix + SIGNATURE_SECRET);
           if (signatureSecret == null) {
             signatureSecret = Long.toString(new Random().nextLong());
@@ -174,11 +173,36 @@ public class KerberosAuthenticator implements Authenticator
             }
           };
           mySigner = new Signer(signerSecretProvider);
+          */
+          initializeSecretProviderMine(filterConfig, config);
         }
         finally {
           Thread.currentThread().setContextClassLoader(prevLoader);
         }
       }
+
+      protected void initializeSecretProviderMine(FilterConfig filterConfig, Properties config)
+          throws ServletException
+      {
+        SignerSecretProvider secretProvider = (SignerSecretProvider) filterConfig.getServletContext()
+                                                                                 .getAttribute(SIGNER_SECRET_PROVIDER_ATTRIBUTE);
+        if (secretProvider == null) {
+          // As tomcat cannot specify the provider object in the configuration.
+          // It'll go into this path
+          try {
+            secretProvider = constructSecretProvider(
+                filterConfig.getServletContext(),
+                config, false
+            );
+            //isInitializedByTomcat = true;
+          }
+          catch (Exception ex) {
+            throw new ServletException(ex);
+          }
+        }
+        mySigner = new Signer(secretProvider);
+      }
+
 
       // Copied from hadoop-auth's AuthenticationFilter, to allow us to change error response handling in doFilterSuper
       @Override
