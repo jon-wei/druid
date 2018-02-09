@@ -257,6 +257,10 @@ public class AppenderatorDriver implements Closeable
       final Supplier<Committer> committerSupplier
   ) throws IOException
   {
+    if (true) {
+      log.info("About to throw exception A");
+      throw new RuntimeException("Test exception A");
+    }
     return add(row, sequenceName, committerSupplier, false, true);
   }
 
@@ -326,6 +330,10 @@ public class AppenderatorDriver implements Closeable
   public Object persist(final Committer committer) throws InterruptedException
   {
     try {
+      if (true) {
+        log.info("About to throw exception B");
+        throw new RuntimeException("Test exception B");
+      }
       log.info("Persisting data.");
       final long start = System.currentTimeMillis();
       final Object commitMetadata = appenderator.persistAll(wrapCommitter(committer)).get();

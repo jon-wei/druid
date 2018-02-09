@@ -222,6 +222,17 @@ public class IndexTask extends AbstractTask
   @Override
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
+    Thread.currentThread().setUncaughtExceptionHandler(
+        new Thread.UncaughtExceptionHandler()
+        {
+          @Override
+          public void uncaughtException(Thread t, Throwable e)
+          {
+            log.error(e, "Thread [%s] got an uncaught exception", t);
+          }
+        }
+    );
+
     final boolean determineIntervals = !ingestionSchema.getDataSchema()
                                                        .getGranularitySpec()
                                                        .bucketIntervals()
