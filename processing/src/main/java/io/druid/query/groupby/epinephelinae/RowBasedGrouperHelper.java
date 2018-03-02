@@ -853,7 +853,7 @@ public class RowBasedGrouperHelper
           @Override
           public int compare(Grouper.Entry<RowBasedKey> entry1, Grouper.Entry<RowBasedKey> entry2)
           {
-            return compareDimsInRowsWithAggs(
+            int x = compareDimsInRowsWithAggs(
                 entry1,
                 entry2,
                 0,
@@ -863,6 +863,8 @@ public class RowBasedGrouperHelper
                 isNumericField,
                 comparators
             );
+            System.out.println("----------------------------------------------------------------RBGH: " + x + "|" + entry1 + ", " + entry2);
+            return x;
           }
         };
       }

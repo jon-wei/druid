@@ -35,6 +35,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Random;
 
 public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyType>
 {
@@ -64,6 +65,8 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
   // pushing down limit and the sort order includes aggregators
   private BufferGrouperOffsetHeapIndexUpdater heapIndexUpdater;
   private boolean initialized = false;
+
+  private int rng = 0;
 
   public LimitedBufferHashGrouper(
       final Supplier<ByteBuffer> bufferSupplier,
@@ -99,6 +102,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     // pushing down limits
     offset += Integer.BYTES;
     this.bucketSize = offset;
+    this.rng = new Random().nextInt(1000);
   }
 
   @Override
@@ -353,6 +357,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
         final Grouper.Entry<KeyType> entry = bucketEntryForOffset(offset);
         curr++;
 
+        System.out.println("LBHG: " + rng + ":" + entry);
         return entry;
       }
 

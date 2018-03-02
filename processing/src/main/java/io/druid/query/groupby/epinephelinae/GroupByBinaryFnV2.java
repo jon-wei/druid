@@ -22,6 +22,7 @@ package io.druid.query.groupby.epinephelinae;
 import com.google.common.collect.Maps;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.AllGranularity;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -43,6 +44,7 @@ public class GroupByBinaryFnV2 implements BinaryFn<Row, Row, Row>
   @Override
   public Row apply(final Row arg1, final Row arg2)
   {
+    //System.out.println(StringUtils.format("GBBFN, row1: %s, | row2: %s", arg1, arg2));
     if (arg1 == null) {
       return arg2;
     } else if (arg2 == null) {

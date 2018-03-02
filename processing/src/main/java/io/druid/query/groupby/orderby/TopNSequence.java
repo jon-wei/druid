@@ -59,6 +59,7 @@ public class TopNSequence<T> extends BaseSequence<T, Iterator<T>>
                   @Override
                   public MinMaxPriorityQueue<T> accumulate(MinMaxPriorityQueue<T> theQueue, T row)
                   {
+                    System.out.println("TNS-MMPQ: " + row);
                     theQueue.offer(row);
                     return theQueue;
                   }
@@ -77,7 +78,9 @@ public class TopNSequence<T> extends BaseSequence<T, Iterator<T>>
               @Override
               public T next()
               {
-                return queue.poll();
+                T t = queue.poll();
+                System.out.println("TNS, t: " + t);
+                return t;
               }
 
               @Override

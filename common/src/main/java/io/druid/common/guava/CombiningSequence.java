@@ -20,6 +20,7 @@
 package io.druid.common.guava;
 
 import com.google.common.collect.Ordering;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Yielder;
@@ -28,6 +29,7 @@ import io.druid.java.util.common.guava.YieldingAccumulator;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 
 import java.io.IOException;
+import java.util.Random;
 
 /**
  */
@@ -155,6 +157,7 @@ public class CombiningSequence<T> implements Sequence<T>
     private OutType retVal;
     private T lastMergedVal;
     private boolean accumulatedSomething = false;
+    private int rng;
 
     CombiningYieldingAccumulator(
         Ordering<T> ordering,
@@ -165,6 +168,7 @@ public class CombiningSequence<T> implements Sequence<T>
       this.ordering = ordering;
       this.mergeFn = mergeFn;
       this.accumulator = accumulator;
+      this.rng = new Random().nextInt(100);
     }
 
     public OutType getRetVal()
@@ -198,6 +202,8 @@ public class CombiningSequence<T> implements Sequence<T>
     @Override
     public T accumulate(T prevValue, T t)
     {
+      //System.out.println("COMBS: " + t);
+      //System.out.println(StringUtils.format("COMBS" + rng + ", prevValue: %s, t: %s", prevValue, t));
       if (!accumulatedSomething) {
         accumulatedSomething = true;
       }

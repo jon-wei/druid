@@ -272,6 +272,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
             if (query.getPostAggregatorSpecs().isEmpty() && fudgeTimestamp == null) {
               return row;
             }
+            System.out.println("GBSV2: " + row);
+
 
             final Map<String, Object> newMap;
 

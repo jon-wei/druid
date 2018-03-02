@@ -299,7 +299,7 @@ public class GroupByLimitPushDownTest2
       public int getNumThreads()
       {
         // Used by "v2" strategy for concurrencyHint
-        return 2;
+        return 1;
       }
 
       @Override
@@ -424,6 +424,24 @@ public class GroupByLimitPushDownTest2
         Collections.singletonList(Intervals.utc(1500000000000L, 1900000000000L))
     );
 
+    DefaultLimitSpec ls1 = new DefaultLimitSpec(
+        Arrays.asList(
+                    new OrderByColumnSpec("d0", OrderByColumnSpec.Direction.ASCENDING, StringComparators.NUMERIC),
+                    new OrderByColumnSpec("d1", OrderByColumnSpec.Direction.ASCENDING, StringComparators.NUMERIC),
+                    new OrderByColumnSpec("d2", OrderByColumnSpec.Direction.ASCENDING, StringComparators.NUMERIC)
+        ),
+        100
+    );
+
+    DefaultLimitSpec ls2 = new DefaultLimitSpec(
+        Arrays.asList(
+                    new OrderByColumnSpec("d0", OrderByColumnSpec.Direction.DESCENDING, StringComparators.NUMERIC),
+                    new OrderByColumnSpec("d1", OrderByColumnSpec.Direction.DESCENDING, StringComparators.NUMERIC),
+                    new OrderByColumnSpec("d2", OrderByColumnSpec.Direction.DESCENDING, StringComparators.NUMERIC)
+        ),
+        100
+    );
+
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource("blah")
@@ -442,14 +460,7 @@ public class GroupByLimitPushDownTest2
             Arrays.asList(new CountAggregatorFactory("a0"))
         )
         .setLimitSpec(
-            new DefaultLimitSpec(
-                Arrays.asList(
-                    new OrderByColumnSpec("d0", OrderByColumnSpec.Direction.DESCENDING, StringComparators.NUMERIC),
-                    new OrderByColumnSpec("d1", OrderByColumnSpec.Direction.DESCENDING, StringComparators.NUMERIC),
-                    new OrderByColumnSpec("d2", OrderByColumnSpec.Direction.DESCENDING, StringComparators.NUMERIC)
-                ),
-                100
-            )
+            ls2
         )
         .setContext(
             ImmutableMap.of(
@@ -468,27 +479,31 @@ public class GroupByLimitPushDownTest2
 
     Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
         "2017-07-14T02:40:00.000Z",
-        "dimA", "mango",
-        "hour", 1505260800000L,
-        "metASum", 26L
+        "d0", 2027L,
+        "d1", 3L,
+        "d2", 17L,
+        "a0", 1L
     );
     Row expectedRow1 = GroupByQueryRunnerTestHelper.createExpectedRow(
         "2017-07-14T02:40:00.000Z",
-        "dimA", "pomegranate",
-        "hour", 1505260800000L,
-        "metASum", 7113L
+        "d0", 2024L,
+        "d1", 1L,
+        "d2", 14L,
+        "a0", 1L
     );
     Row expectedRow2 = GroupByQueryRunnerTestHelper.createExpectedRow(
         "2017-07-14T02:40:00.000Z",
-        "dimA", "mango",
-        "hour", 1505264400000L,
-        "metASum", 10L
+        "d0", 2020L,
+        "d1", 11L,
+        "d2", 13L,
+        "a0", 1L
     );
     Row expectedRow3 = GroupByQueryRunnerTestHelper.createExpectedRow(
         "2017-07-14T02:40:00.000Z",
-        "dimA", "pomegranate",
-        "hour", 1505264400000L,
-        "metASum", 7726L
+        "d0", 2017L,
+        "d1", 9L,
+        "d2", 13L,
+        "a0", 1L
     );
 
     Assert.assertEquals(4, results.size());
@@ -497,6 +512,7 @@ public class GroupByLimitPushDownTest2
     Assert.assertEquals(expectedRow2, results.get(2));
     Assert.assertEquals(expectedRow3, results.get(3));
   }
+
   private List<QueryRunner<Row>> getRunner1()
   {
     List<QueryRunner<Row>> runners = Lists.newArrayList();

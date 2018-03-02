@@ -588,8 +588,8 @@ public class GroupByQuery extends BaseQuery<Row>
       if (isNumericField.get(i)) {
         if (comparator.equals(StringComparators.NUMERIC)) {
           dimCompare = ((Ordering) Comparators.naturalNullsFirst()).compare(
-              lhs.getRaw(fieldName),
-              rhs.getRaw(fieldName)
+              lhsObj,
+              rhsObj
           );
         } else {
           dimCompare = comparator.compare(String.valueOf(lhsObj), String.valueOf(rhsObj));

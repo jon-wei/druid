@@ -494,7 +494,6 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     Assert.assertEquals(expectedRow2, results.get(2));
     Assert.assertEquals(expectedRow3, results.get(3));
   }
-
   private List<QueryRunner<Row>> getRunner1()
   {
     List<QueryRunner<Row>> runners = Lists.newArrayList();
