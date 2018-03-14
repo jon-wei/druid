@@ -38,7 +38,6 @@ import io.druid.indexer.IngestionState;
 import io.druid.indexer.MetadataStorageUpdaterJobHandler;
 import io.druid.indexer.TaskMetricsGetter;
 import io.druid.indexer.TaskMetricsUtils;
-import io.druid.indexer.TimeWindowMovingAverageCollector;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskStatus;
@@ -107,13 +106,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   private InnerProcessingStatsGetter determinePartitionsStatsGetter;
 
   @JsonIgnore
-  private TimeWindowMovingAverageCollector determinePartitionsMovingAverageCollector;
-
-  @JsonIgnore
   private InnerProcessingStatsGetter buildSegmentsStatsGetter;
-
-  @JsonIgnore
-  private TimeWindowMovingAverageCollector buildSegmentsMovingAverageCollector;
 
   @JsonIgnore
   private IngestionState ingestionState;
@@ -279,13 +272,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     );
     determinePartitionsStatsGetter = new InnerProcessingStatsGetter(determinePartitionsInnerProcessingRunner);
 
-    determinePartitionsMovingAverageCollector = new TimeWindowMovingAverageCollector(
-        1000,
-        60,
-        determinePartitionsStatsGetter
-    );
-
-
     String[] input1 = new String[]{
         toolbox.getObjectMapper().writeValueAsString(spec),
         toolbox.getConfig().getHadoopWorkingPath(),
@@ -300,7 +286,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       Thread.currentThread().setContextClassLoader(loader);
 
       ingestionState = IngestionState.DETERMINE_PARTITIONS;
-      determinePartitionsMovingAverageCollector.start();
 
       final String determineConfigStatusString = (String) determinePartitionsInnerProcessingRunTask.invoke(
           determinePartitionsInnerProcessingRunner,
@@ -326,7 +311,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       throw new RuntimeException(e);
     }
     finally {
-      determinePartitionsMovingAverageCollector.stop();
       Thread.currentThread().setContextClassLoader(oldLoader);
     }
 
@@ -379,12 +363,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     );
     buildSegmentsStatsGetter = new InnerProcessingStatsGetter(innerProcessingRunner);
 
-    buildSegmentsMovingAverageCollector = new TimeWindowMovingAverageCollector(
-        1000,
-        60,
-        buildSegmentsStatsGetter
-    );
-
     String[] input = new String[]{
         toolbox.getObjectMapper().writeValueAsString(indexerSchema),
         version
@@ -397,7 +375,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       Thread.currentThread().setContextClassLoader(loader);
 
       ingestionState = IngestionState.BUILD_SEGMENTS;
-      buildSegmentsMovingAverageCollector.start();
       final String jobStatusString = (String) innerProcessingRunTask.invoke(
           innerProcessingRunner,
           new Object[]{input}
@@ -425,7 +402,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       throw new RuntimeException(e);
     }
     finally {
-      buildSegmentsMovingAverageCollector.stop();
       Thread.currentThread().setContextClassLoader(oldLoader);
     }
   }
@@ -441,33 +417,16 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     authorizationCheck(req, Action.READ);
     Map<String, Object> returnMap = Maps.newHashMap();
     Map<String, Object> totalsMap = Maps.newHashMap();
-    Map<String, Object> averagesMap = Maps.newHashMap();
 
     if (determinePartitionsStatsGetter != null) {
       totalsMap.put("determinePartitions", determinePartitionsStatsGetter.getTotalMetrics());
-    }
-
-    if (determinePartitionsMovingAverageCollector != null) {
-      averagesMap.put(
-          "determinePartitions",
-          IndexTask.getMovingAverages(determinePartitionsMovingAverageCollector, windows)
-      );
     }
 
     if (buildSegmentsStatsGetter != null) {
       totalsMap.put("buildSegments", buildSegmentsStatsGetter.getTotalMetrics());
     }
 
-    if (buildSegmentsMovingAverageCollector != null) {
-      averagesMap.put(
-          "buildSegments",
-          IndexTask.getMovingAverages(buildSegmentsMovingAverageCollector, windows)
-      );
-    }
-
     returnMap.put("totals", totalsMap);
-    returnMap.put("averages", averagesMap);
-
     return Response.ok(returnMap).build();
   }
 
