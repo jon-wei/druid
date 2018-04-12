@@ -485,6 +485,17 @@ public class KafkaSupervisor implements Supervisor
   }
 
   @Override
+  public Map<String, Object> getStats(List<Integer> windows)
+  {
+    try {
+      return getCurrentTotalStats(windows);
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
   public void reset(DataSourceMetadata dataSourceMetadata)
   {
     log.info("Posting ResetNotice");
@@ -2197,5 +2208,58 @@ public class KafkaSupervisor implements Supervisor
         log.warn(e, "Exception while getting current/latest offsets");
       }
     };
+  }
+
+  private Map<String, Object> getCurrentTotalStats(List<Integer> windows) throws InterruptedException, ExecutionException, TimeoutException
+  {
+    Map<String, Object> allStats = Maps.newHashMap();
+    final List<ListenableFuture<Void>> futures = new ArrayList<>();
+
+    for (int groupId : taskGroups.keySet()) {
+      Map<String, Object> groupStats = (Map<String, Object>) allStats.get(String.valueOf(groupId));
+      if (groupStats == null) {
+        groupStats = Maps.newHashMap();
+        allStats.put(String.valueOf(groupId), groupStats);
+      }
+
+      final Map<String, Object> eGroupStats = groupStats;
+      TaskGroup group = taskGroups.get(groupId);
+      for (String taskId : group.taskIds()) {
+        futures.add(
+            Futures.transform(
+                taskClient.getMovingAveragesAsync(taskId, windows),
+                (Function<Map<String, Object>, Void>) (currentStats) -> {
+                  eGroupStats.put(taskId, currentStats);
+                  return null;
+                }
+            )
+        );
+      }
+    }
+
+    for (int groupId : pendingCompletionTaskGroups.keySet()) {
+      Map<String, Object> groupStats = (Map<String, Object>) allStats.get(String.valueOf(groupId));
+      if (groupStats == null) {
+        groupStats = Maps.newHashMap();
+        allStats.put(String.valueOf(groupId), groupStats);
+      }
+
+      final Map<String, Object> eGroupStats = groupStats;
+      TaskGroup group = taskGroups.get(groupId);
+      for (String taskId : group.taskIds()) {
+        futures.add(
+            Futures.transform(
+                taskClient.getMovingAveragesAsync(taskId, windows),
+                (Function<Map<String, Object>, Void>) (currentStats) -> {
+                  eGroupStats.put(taskId, currentStats);
+                  return null;
+                }
+            )
+        );
+      }
+    }
+
+    Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    return allStats;
   }
 }

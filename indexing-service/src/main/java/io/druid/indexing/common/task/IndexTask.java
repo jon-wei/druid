@@ -41,7 +41,6 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.indexer.IngestionState;
-import io.druid.indexer.TaskMetricsGetter;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
@@ -53,6 +52,7 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.stats.RowIngestionMeters;
 import io.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
@@ -71,7 +71,6 @@ import io.druid.segment.indexing.TuningConfig;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.FireDepartmentMetricsTaskMetricsGetter;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.appenderator.AppenderatorConfig;
@@ -165,22 +164,19 @@ public class IndexTask extends AbstractTask implements ChatHandler
   private FireDepartmentMetrics buildSegmentsFireDepartmentMetrics;
 
   @JsonIgnore
-  private TaskMetricsGetter buildSegmentsMetricsGetter;
-
-  @JsonIgnore
   private CircularBuffer<Throwable> buildSegmentsSavedParseExceptions;
-
-  @JsonIgnore
-  private FireDepartmentMetrics determinePartitionsFireDepartmentMetrics;
-
-  @JsonIgnore
-  private TaskMetricsGetter determinePartitionsMetricsGetter;
 
   @JsonIgnore
   private CircularBuffer<Throwable> determinePartitionsSavedParseExceptions;
 
   @JsonIgnore
   private String errorMsg;
+
+  @JsonIgnore
+  private RowIngestionMeters determinePartitionsMeters;
+
+  @JsonIgnore
+  private RowIngestionMeters buildSegmentsMeters;
 
   @JsonCreator
   public IndexTask(
@@ -330,15 +326,18 @@ public class IndexTask extends AbstractTask implements ChatHandler
   @Produces(MediaType.APPLICATION_JSON)
   public Response getRowStats(
       @Context final HttpServletRequest req,
-      @QueryParam("full") String full
+      @QueryParam("full") String full,
+      @QueryParam("windows") List<Integer> windows
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     Map<String, Object> returnMap = Maps.newHashMap();
     Map<String, Object> totalsMap = Maps.newHashMap();
+    Map<String, Object> averagesMap = Maps.newHashMap();
 
     boolean needsDeterminePartitions = false;
     boolean needsBuildSegments = false;
+    boolean hasWindows = windows != null && windows.size() > 0;
 
     if (full != null) {
       needsDeterminePartitions = true;
@@ -358,24 +357,39 @@ public class IndexTask extends AbstractTask implements ChatHandler
     }
 
     if (needsDeterminePartitions) {
-      if (determinePartitionsMetricsGetter != null) {
+      if (determinePartitionsMeters != null) {
         totalsMap.put(
             "determinePartitions",
-            determinePartitionsMetricsGetter.getTotalMetrics()
+            determinePartitionsMeters.getTotals()
+        );
+      }
+      if (hasWindows && determinePartitionsMeters != null) {
+        averagesMap.put(
+            "determinePartitions",
+            determinePartitionsMeters.getMovingAverages()
         );
       }
     }
 
     if (needsBuildSegments) {
-      if (buildSegmentsMetricsGetter != null) {
+      if (buildSegmentsMeters != null) {
         totalsMap.put(
             "buildSegments",
-            buildSegmentsMetricsGetter.getTotalMetrics()
+            buildSegmentsMeters.getTotals()
+        );
+      }
+      if (hasWindows && buildSegmentsMeters != null) {
+        averagesMap.put(
+            "buildSegments",
+            buildSegmentsMeters.getMovingAverages()
         );
       }
     }
 
     returnMap.put("totals", totalsMap);
+    if (hasWindows) {
+      returnMap.put("averages", averagesMap);
+    }
     return Response.ok(returnMap).build();
   }
 
@@ -496,16 +510,16 @@ public class IndexTask extends AbstractTask implements ChatHandler
   private Map<String, Object> getTaskCompletionRowStats()
   {
     Map<String, Object> metrics = Maps.newHashMap();
-    if (determinePartitionsMetricsGetter != null) {
+    if (determinePartitionsMeters != null) {
       metrics.put(
           "determinePartitions",
-          determinePartitionsMetricsGetter.getTotalMetrics()
+          determinePartitionsMeters.getTotals()
       );
     }
-    if (buildSegmentsMetricsGetter != null) {
+    if (buildSegmentsMeters != null) {
       metrics.put(
           "buildSegments",
-          buildSegmentsMetricsGetter.getTotalMetrics()
+          buildSegmentsMeters.getTotals()
       );
     }
     return metrics;
@@ -699,11 +713,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
       boolean determineNumPartitions
   ) throws IOException
   {
-    determinePartitionsFireDepartmentMetrics = new FireDepartmentMetrics();
-    determinePartitionsMetricsGetter = new FireDepartmentMetricsTaskMetricsGetter(
-        determinePartitionsFireDepartmentMetrics
-    );
-
     final Map<Interval, Optional<HyperLogLogCollector>> hllCollectors = new TreeMap<>(
         Comparators.intervalsByStartThenEnd()
     );
@@ -714,6 +723,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
     try (
         final Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser(), firehoseTempDir)
     ) {
+      determinePartitionsMeters = new RowIngestionMeters(null);
 
       while (firehose.hasMore()) {
         try {
@@ -721,7 +731,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
           // The null inputRow means the caller must skip this row.
           if (inputRow == null) {
-            determinePartitionsFireDepartmentMetrics.incrementThrownAway();
+            determinePartitionsMeters.getThrownAway().mark();
             continue;
           }
 
@@ -739,7 +749,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
             final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
             if (!optInterval.isPresent()) {
-              determinePartitionsFireDepartmentMetrics.incrementThrownAway();
+              determinePartitionsMeters.getThrownAway().mark();
               continue;
             }
             interval = optInterval.get();
@@ -763,7 +773,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
               hllCollectors.put(interval, Optional.absent());
             }
           }
-          determinePartitionsFireDepartmentMetrics.incrementProcessed();
+          determinePartitionsMeters.getProcessed().mark();
         }
         catch (ParseException e) {
           if (ingestionSchema.getTuningConfig().isLogParseExceptions()) {
@@ -774,8 +784,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
             determinePartitionsSavedParseExceptions.add(e);
           }
 
-          determinePartitionsFireDepartmentMetrics.incrementUnparseable();
-          if (determinePartitionsFireDepartmentMetrics.unparseable() > ingestionSchema.getTuningConfig()
+          determinePartitionsMeters.getUnparseable().mark();
+          if (determinePartitionsMeters.getUnparseable().getCount() > ingestionSchema.getTuningConfig()
                                                                                        .getMaxParseExceptions()) {
             throw new RuntimeException("Max parse exceptions exceeded, terminating task...");
           }
@@ -839,7 +849,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
         dataSchema, new RealtimeIOConfig(null, null, null), null
     );
     buildSegmentsFireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
-    buildSegmentsMetricsGetter = new FireDepartmentMetricsTaskMetricsGetter(buildSegmentsFireDepartmentMetrics);
 
     if (toolbox.getMonitorScheduler() != null) {
       final RealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(this, fireDepartmentForMetrics);
@@ -919,12 +928,14 @@ public class IndexTask extends AbstractTask implements ChatHandler
     ) {
       driver.startJob();
 
+      buildSegmentsMeters = new RowIngestionMeters(null);
+
       while (firehose.hasMore()) {
         try {
           final InputRow inputRow = firehose.nextRow();
 
           if (inputRow == null) {
-            buildSegmentsFireDepartmentMetrics.incrementThrownAway();
+            buildSegmentsMeters.getThrownAway().mark();
             continue;
           }
 
@@ -938,7 +949,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
           final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
           if (!optInterval.isPresent()) {
-            buildSegmentsFireDepartmentMetrics.incrementThrownAway();
+            buildSegmentsMeters.getThrownAway().mark();
             continue;
           }
 
@@ -974,7 +985,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           if (addResult.getParseException() != null) {
             handleParseException(addResult.getParseException());
           } else {
-            buildSegmentsFireDepartmentMetrics.incrementProcessed();
+            buildSegmentsMeters.getProcessed().mark();
           }
         }
         catch (ParseException e) {
@@ -1002,9 +1013,9 @@ public class IndexTask extends AbstractTask implements ChatHandler
       } else {
         log.info(
             "Processed[%,d] events, unparseable[%,d], thrownAway[%,d].",
-            buildSegmentsFireDepartmentMetrics.processed(),
-            buildSegmentsFireDepartmentMetrics.unparseable(),
-            buildSegmentsFireDepartmentMetrics.thrownAway()
+            buildSegmentsMeters.getProcessed().getCount(),
+            buildSegmentsMeters.getUnparseable().getCount(),
+            buildSegmentsMeters.getThrownAway().getCount()
         );
         log.info(
             "Published segments[%s]", Joiner.on(", ").join(
@@ -1027,9 +1038,9 @@ public class IndexTask extends AbstractTask implements ChatHandler
   private void handleParseException(ParseException e)
   {
     if (e.isFromPartiallyValidRow()) {
-      buildSegmentsFireDepartmentMetrics.incrementProcessedWithErrors();
+      buildSegmentsMeters.getProcessedWithError().mark();
     } else {
-      buildSegmentsFireDepartmentMetrics.incrementUnparseable();
+      buildSegmentsMeters.getUnparseable().mark();
     }
 
     if (ingestionSchema.tuningConfig.isLogParseExceptions()) {
@@ -1040,8 +1051,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
       buildSegmentsSavedParseExceptions.add(e);
     }
 
-    if (buildSegmentsFireDepartmentMetrics.unparseable()
-        + buildSegmentsFireDepartmentMetrics.processedWithErrors() > ingestionSchema.tuningConfig.getMaxParseExceptions()) {
+    if (buildSegmentsMeters.getUnparseable().getCount()
+        + buildSegmentsMeters.getProcessedWithError().getCount() > ingestionSchema.tuningConfig.getMaxParseExceptions()) {
       log.error("Max parse exceptions exceeded, terminating task...");
       throw new RuntimeException("Max parse exceptions exceeded, terminating task...", e);
     }
@@ -1284,7 +1295,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
         @Deprecated @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
         @JsonProperty("publishTimeout") @Nullable Long publishTimeout, // deprecated
         @JsonProperty("pushTimeout") @Nullable Long pushTimeout,
-        @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+        @JsonProperty("segmentWriteOutMediumFactory") @Nullable
+        SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
         @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
         @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
         @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions

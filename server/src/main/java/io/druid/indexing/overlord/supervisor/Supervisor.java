@@ -22,6 +22,8 @@ package io.druid.indexing.overlord.supervisor;
 import io.druid.indexing.overlord.DataSourceMetadata;
 
 import javax.annotation.Nullable;
+import java.util.List;
+import java.util.Map;
 
 public interface Supervisor
 {
@@ -36,6 +38,11 @@ public interface Supervisor
   void stop(boolean stopGracefully);
 
   SupervisorReport getStatus();
+
+  default Map<String, Object> getStats(List<Integer> windows)
+  {
+    return null;
+  }
 
   void reset(DataSourceMetadata dataSourceMetadata);
 

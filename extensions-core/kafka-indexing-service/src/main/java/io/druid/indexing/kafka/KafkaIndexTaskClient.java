@@ -57,7 +57,9 @@ import java.io.IOException;
 import java.net.Socket;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
+import java.util.StringJoiner;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 
@@ -252,6 +254,55 @@ public class KafkaIndexTaskClient
     catch (IOException e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  private static String createWindowsURLParams(final List<Integer> windows)
+  {
+    StringJoiner joiner = new StringJoiner("&");
+    for (Integer window : windows) {
+      joiner.add(StringUtils.format("windows=%d", window));
+    }
+    return joiner.toString();
+  }
+
+  public Map<String, Object> getMovingAverages(final String id, final List<Integer> windows)
+  {
+    log.debug("GetMovingAverages task[%s]", id);
+
+    try {
+      final FullResponseHolder response = submitRequest(
+          id,
+          HttpMethod.GET,
+          "rowStats",
+          windows == null ? null : createWindowsURLParams(windows),
+          true
+      );
+      return response.getContent() == null || response.getContent().isEmpty()
+             ? null
+             : jsonMapper.readValue(response.getContent(), new TypeReference<Map<String, Object>>()
+             {
+             });
+    }
+    catch (NoTaskLocationException e) {
+      return null;
+    }
+    catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  public ListenableFuture<Map<String, Object>> getMovingAveragesAsync(final String id, final List<Integer> windows)
+  {
+    return executorService.submit(
+        new Callable<Map<String, Object>>()
+        {
+          @Override
+          public Map<String, Object> call()
+          {
+            return getMovingAverages(id, windows);
+          }
+        }
+    );
   }
 
   public Map<Integer, Long> getCurrentOffsets(final String id, final boolean retry)

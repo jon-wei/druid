@@ -44,6 +44,7 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -187,6 +188,35 @@ public class SupervisorResource
         }
     );
   }
+
+  @GET
+  @Path("/{id}/stats")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response getTotalStats(
+      @PathParam("id") final String id,
+      @QueryParam("windows") List<Integer> windows
+  )
+  {
+    return asLeaderWithSupervisorManager(
+        new Function<SupervisorManager, Response>()
+        {
+          @Override
+          public Response apply(SupervisorManager manager)
+          {
+            Optional<Map<String, Object>> stats = manager.getSupervisorStats(id, windows);
+            if (!stats.isPresent()) {
+              return Response.status(Response.Status.NOT_FOUND)
+                             .entity(ImmutableMap.of("error", StringUtils.format("[%s] does not exist", id)))
+                             .build();
+            }
+
+            return Response.ok(stats.get()).build();
+          }
+        }
+    );
+  }
+
 
   @POST
   @Path("/{id}/shutdown")

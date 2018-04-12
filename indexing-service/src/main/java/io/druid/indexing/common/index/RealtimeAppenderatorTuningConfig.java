@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
+import io.druid.indexing.common.MovingAverageCollector;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.TuningConfig;
 import io.druid.segment.realtime.appenderator.AppenderatorConfig;
@@ -51,8 +52,6 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   {
     return Files.createTempDir();
   }
-
-
 
   private final int maxRowsInMemory;
   private final int maxRowsPerSegment;

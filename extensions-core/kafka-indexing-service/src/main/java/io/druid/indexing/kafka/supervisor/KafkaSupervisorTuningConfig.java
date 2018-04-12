@@ -62,7 +62,9 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
       @JsonProperty("intermediateHandoffPeriod") Period intermediateHandoffPeriod,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
+      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
+      @JsonProperty("movingAverageWindowSizeMillis") @Nullable Long movingAveragWindowSizeMillis,
+      @JsonProperty("movingAverageNumWindows") @Nullable Integer movingAverageNumWindows
   )
   {
     super(
