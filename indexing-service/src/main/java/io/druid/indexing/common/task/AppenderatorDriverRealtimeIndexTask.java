@@ -44,6 +44,7 @@ import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import io.druid.indexing.common.MovingAverageCollector;
 import io.druid.indexing.common.TaskReport;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -89,6 +90,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -145,6 +147,9 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
 
   @JsonIgnore
   private TaskMetricsGetter metricsGetter;
+
+  @JsonIgnore
+  private MovingAverageCollector movingAverageCollector;
 
   @JsonIgnore
   private volatile boolean gracefullyStopped = false;
@@ -306,6 +311,12 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         }
       }
 
+      movingAverageCollector = new MovingAverageCollector(
+          1000,
+          60,
+          new FireDepartmentMetricsTaskMetricsGetter(metrics)
+      );
+      movingAverageCollector.start();
       ingestionState = IngestionState.BUILD_SEGMENTS;
 
       // Time to read data!
@@ -385,6 +396,10 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         chatHandlerProvider.get().unregister(getId());
       }
 
+      if (movingAverageCollector != null) {
+        movingAverageCollector.stop();
+      }
+
       CloseQuietly.close(firehose);
       CloseQuietly.close(appenderator);
       CloseQuietly.close(driver);
@@ -462,18 +477,30 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   @Path("/rowStats")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getRowStats(
-      @Context final HttpServletRequest req
+      @Context final HttpServletRequest req,
+      @QueryParam("windows") List<Integer> windows
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     Map<String, Object> returnMap = Maps.newHashMap();
     Map<String, Object> totalsMap = Maps.newHashMap();
+    Map<String, Object> averagesMap = Maps.newHashMap();
+
+    boolean hasWindows = windows != null && windows.size() > 0;
 
     if (metricsGetter != null) {
       totalsMap.put(
           "buildSegments",
           metricsGetter.getTotalMetrics()
       );
+    }
+
+    if (hasWindows && movingAverageCollector != null) {
+      averagesMap.put(
+          "buildSegments",
+          IndexTask.getMovingAverages(movingAverageCollector, windows)
+      );
+      returnMap.put("averages", averagesMap);
     }
 
     returnMap.put("totals", totalsMap);

@@ -47,6 +47,7 @@ import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import io.druid.indexing.common.MovingAverageCollector;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskReport;
 import io.druid.indexing.common.TaskStatus;
@@ -172,6 +173,9 @@ public class IndexTask extends AbstractTask implements ChatHandler
   private CircularBuffer<Throwable> buildSegmentsSavedParseExceptions;
 
   @JsonIgnore
+  private MovingAverageCollector buildSegmentsMovingAverageCollector;
+
+  @JsonIgnore
   private FireDepartmentMetrics determinePartitionsFireDepartmentMetrics;
 
   @JsonIgnore
@@ -179,6 +183,9 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
   @JsonIgnore
   private CircularBuffer<Throwable> determinePartitionsSavedParseExceptions;
+
+  @JsonIgnore
+  private MovingAverageCollector determinePartitionsMovingAverageCollector;
 
   @JsonIgnore
   private String errorMsg;
@@ -331,15 +338,18 @@ public class IndexTask extends AbstractTask implements ChatHandler
   @Produces(MediaType.APPLICATION_JSON)
   public Response getRowStats(
       @Context final HttpServletRequest req,
-      @QueryParam("full") String full
+      @QueryParam("full") String full,
+      @QueryParam("windows") List<Integer> windows
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     Map<String, Object> returnMap = Maps.newHashMap();
     Map<String, Object> totalsMap = Maps.newHashMap();
+    Map<String, Object> averagesMap = Maps.newHashMap();
 
     boolean needsDeterminePartitions = false;
     boolean needsBuildSegments = false;
+    boolean hasWindows = windows != null && windows.size() > 0;
 
     if (full != null) {
       needsDeterminePartitions = true;
@@ -365,6 +375,12 @@ public class IndexTask extends AbstractTask implements ChatHandler
             determinePartitionsMetricsGetter.getTotalMetrics()
         );
       }
+      if (hasWindows && determinePartitionsMovingAverageCollector != null) {
+        averagesMap.put(
+            "determinePartitions",
+            getMovingAverages(determinePartitionsMovingAverageCollector, windows)
+        );
+      }
     }
 
     if (needsBuildSegments) {
@@ -374,10 +390,39 @@ public class IndexTask extends AbstractTask implements ChatHandler
             buildSegmentsMetricsGetter.getTotalMetrics()
         );
       }
+      if (hasWindows && buildSegmentsMovingAverageCollector != null) {
+        averagesMap.put(
+            "buildSegments",
+            getMovingAverages(buildSegmentsMovingAverageCollector, windows)
+        );
+      }
     }
 
     returnMap.put("totals", totalsMap);
+    if (hasWindows) {
+      returnMap.put("averages", averagesMap);
+    }
     return Response.ok(returnMap).build();
+  }
+
+  public static Map<String, Object> getMovingAverages(
+      MovingAverageCollector collector,
+      List<Integer> windows
+  )
+  {
+    Map<String, Object> returnMap = Maps.newHashMap();
+    returnMap.put("startTime", collector.getStartTime());
+    returnMap.put("stopTime", collector.getStopTime());
+
+    for (Integer windowSize : windows) {
+      if (windowSize != null) {
+        returnMap.put(
+            StringUtils.format("%ds", windowSize),
+            collector.getAverages(windowSize)
+        );
+      }
+    }
+    return returnMap;
   }
 
   @JsonProperty("spec")
@@ -716,6 +761,13 @@ public class IndexTask extends AbstractTask implements ChatHandler
         final Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser(), firehoseTempDir)
     ) {
 
+      determinePartitionsMovingAverageCollector = new MovingAverageCollector(
+          1000,
+          60,
+          new FireDepartmentMetricsTaskMetricsGetter(determinePartitionsFireDepartmentMetrics)
+      );
+      determinePartitionsMovingAverageCollector.start();
+
       while (firehose.hasMore()) {
         try {
           final InputRow inputRow = firehose.nextRow();
@@ -779,6 +831,11 @@ public class IndexTask extends AbstractTask implements ChatHandler
           if (determinePartitionsFireDepartmentMetrics.unparseable() > ingestionSchema.getTuningConfig()
                                                                                        .getMaxParseExceptions()) {
             throw new RuntimeException("Max parse exceptions exceeded, terminating task...");
+          }
+        }
+        finally {
+          if (determinePartitionsMovingAverageCollector != null) {
+            determinePartitionsMovingAverageCollector.stop();
           }
         }
       }
@@ -924,6 +981,13 @@ public class IndexTask extends AbstractTask implements ChatHandler
     ) {
       driver.startJob();
 
+      buildSegmentsMovingAverageCollector = new MovingAverageCollector(
+          1000,
+          60,
+          new FireDepartmentMetricsTaskMetricsGetter(buildSegmentsFireDepartmentMetrics)
+      );
+      buildSegmentsMovingAverageCollector.start();
+
       while (firehose.hasMore()) {
         try {
           final InputRow inputRow = firehose.nextRow();
@@ -1026,6 +1090,11 @@ public class IndexTask extends AbstractTask implements ChatHandler
     }
     catch (TimeoutException | ExecutionException e) {
       throw Throwables.propagate(e);
+    }
+    finally {
+      if (buildSegmentsMovingAverageCollector != null) {
+        buildSegmentsMovingAverageCollector.stop();
+      }
     }
   }
 

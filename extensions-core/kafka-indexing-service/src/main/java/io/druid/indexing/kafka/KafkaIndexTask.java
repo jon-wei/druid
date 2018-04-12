@@ -55,6 +55,7 @@ import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import io.druid.indexing.common.MovingAverageCollector;
 import io.druid.indexing.common.TaskReport;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -63,6 +64,7 @@ import io.druid.indexing.common.actions.ResetDataSourceMetadataAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.AbstractTask;
+import io.druid.indexing.common.task.IndexTask;
 import io.druid.indexing.common.task.IndexTaskUtils;
 import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.common.task.TaskResource;
@@ -254,6 +256,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
   private TaskMetricsGetter metricsGetter;
   private String errorMsg;
+  private MovingAverageCollector movingAverageCollector;
 
   @JsonCreator
   public KafkaIndexTask(
@@ -624,6 +627,13 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
       Set<Integer> assignment = assignPartitionsAndSeekToNext(consumer, topic);
 
+
+      movingAverageCollector = new MovingAverageCollector(
+          1000,
+          60,
+          new FireDepartmentMetricsTaskMetricsGetter(fireDepartmentMetrics)
+      );
+      movingAverageCollector.start();
       ingestionState = IngestionState.BUILD_SEGMENTS;
 
       // Main loop.
@@ -838,6 +848,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       }
       finally {
         log.info("Persisting all pending data");
+        movingAverageCollector.stop();
         driver.persist(committerSupplier.get()); // persist pending data
       }
 
@@ -976,6 +987,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         )
     );
 
+    movingAverageCollector = new MovingAverageCollector(
+        1000,
+        60,
+        new FireDepartmentMetricsTaskMetricsGetter(fireDepartmentMetrics)
+    );
+    movingAverageCollector.start();
     ingestionState = IngestionState.BUILD_SEGMENTS;
 
     try (
@@ -1196,6 +1213,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         throw e;
       }
       finally {
+        movingAverageCollector.stop();
         driver.persist(committerSupplier.get()); // persist pending data
       }
 
@@ -1579,18 +1597,30 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   @Path("/rowStats")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getRowStats(
-      @Context final HttpServletRequest req
+      @Context final HttpServletRequest req,
+      @QueryParam("windows") List<Integer> windows
   )
   {
     authorizationCheck(req, Action.READ);
     Map<String, Object> returnMap = Maps.newHashMap();
     Map<String, Object> totalsMap = Maps.newHashMap();
+    Map<String, Object> averagesMap = Maps.newHashMap();
+
+    boolean hasWindows = windows != null && windows.size() > 0;
 
     if (metricsGetter != null) {
       totalsMap.put(
           "buildSegments",
           metricsGetter.getTotalMetrics()
       );
+    }
+
+    if (hasWindows && movingAverageCollector != null) {
+      averagesMap.put(
+          "buildSegments",
+          IndexTask.getMovingAverages(movingAverageCollector, windows)
+      );
+      returnMap.put("averages", averagesMap);
     }
 
     returnMap.put("totals", totalsMap);

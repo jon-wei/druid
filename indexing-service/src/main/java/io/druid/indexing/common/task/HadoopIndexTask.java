@@ -41,6 +41,7 @@ import io.druid.indexer.TaskMetricsGetter;
 import io.druid.indexer.TaskMetricsUtils;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import io.druid.indexing.common.MovingAverageCollector;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskReport;
@@ -101,10 +102,16 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   private final Optional<ChatHandlerProvider> chatHandlerProvider;
 
   @JsonIgnore
-  private InnerProcessingStatsGetter determinePartitionsStatsGetter;
+  private InnerProcessingStatsGetter determinePartitionsMetricsGetter;
 
   @JsonIgnore
-  private InnerProcessingStatsGetter buildSegmentsStatsGetter;
+  private MovingAverageCollector determinePartitionsMovingAverageCollector;
+
+  @JsonIgnore
+  private InnerProcessingStatsGetter buildSegmentsMetricsGetter;
+
+  @JsonIgnore
+  private MovingAverageCollector buildSegmentsMovingAverageCollector;
 
   @JsonIgnore
   private IngestionState ingestionState;
@@ -271,7 +278,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         "io.druid.indexing.common.task.HadoopIndexTask$HadoopDetermineConfigInnerProcessingRunner",
         loader
     );
-    determinePartitionsStatsGetter = new InnerProcessingStatsGetter(determinePartitionsInnerProcessingRunner);
+    determinePartitionsMetricsGetter = new InnerProcessingStatsGetter(determinePartitionsInnerProcessingRunner);
 
     String[] determinePartitionsInput = new String[]{
         toolbox.getObjectMapper().writeValueAsString(spec),
@@ -290,6 +297,11 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       Thread.currentThread().setContextClassLoader(loader);
 
       ingestionState = IngestionState.DETERMINE_PARTITIONS;
+      determinePartitionsMovingAverageCollector = new MovingAverageCollector(
+          1000,
+          60,
+          determinePartitionsMetricsGetter
+      );
 
       final String determineConfigStatusString = (String) determinePartitionsInnerProcessingRunTask.invoke(
           determinePartitionsInnerProcessingRunner,
@@ -315,6 +327,9 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       throw new RuntimeException(e);
     }
     finally {
+      if (determinePartitionsMovingAverageCollector != null) {
+        determinePartitionsMovingAverageCollector.stop();
+      }
       Thread.currentThread().setContextClassLoader(oldLoader);
     }
 
@@ -362,7 +377,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         "io.druid.indexing.common.task.HadoopIndexTask$HadoopIndexGeneratorInnerProcessingRunner",
         loader
     );
-    buildSegmentsStatsGetter = new InnerProcessingStatsGetter(innerProcessingRunner);
+    buildSegmentsMetricsGetter = new InnerProcessingStatsGetter(innerProcessingRunner);
 
     String[] buildSegmentsInput = new String[]{
         toolbox.getObjectMapper().writeValueAsString(indexerSchema),
@@ -376,6 +391,12 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       Thread.currentThread().setContextClassLoader(loader);
 
       ingestionState = IngestionState.BUILD_SEGMENTS;
+      buildSegmentsMovingAverageCollector = new MovingAverageCollector(
+          1000,
+          60,
+          buildSegmentsMetricsGetter
+      );
+
       final String jobStatusString = (String) innerProcessingRunTask.invoke(
           innerProcessingRunner,
           new Object[]{buildSegmentsInput}
@@ -407,6 +428,9 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       throw new RuntimeException(e);
     }
     finally {
+      if (buildSegmentsMovingAverageCollector != null) {
+        buildSegmentsMovingAverageCollector.stop();
+      }
       Thread.currentThread().setContextClassLoader(oldLoader);
     }
   }
@@ -416,22 +440,70 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   @Produces(MediaType.APPLICATION_JSON)
   public Response getRowStats(
       @Context final HttpServletRequest req,
+      @QueryParam("full") String full,
       @QueryParam("windows") List<Integer> windows
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     Map<String, Object> returnMap = Maps.newHashMap();
     Map<String, Object> totalsMap = Maps.newHashMap();
+    Map<String, Object> averagesMap = Maps.newHashMap();
 
-    if (determinePartitionsStatsGetter != null) {
-      totalsMap.put("determinePartitions", determinePartitionsStatsGetter.getTotalMetrics());
+    boolean needsDeterminePartitions = false;
+    boolean needsBuildSegments = false;
+    boolean hasWindows = windows != null && windows.size() > 0;
+
+    if (full != null) {
+      needsDeterminePartitions = true;
+      needsBuildSegments = true;
+    } else {
+      switch (ingestionState) {
+        case DETERMINE_PARTITIONS:
+          needsDeterminePartitions = true;
+          break;
+        case BUILD_SEGMENTS:
+        case COMPLETED:
+          needsBuildSegments = true;
+          break;
+        default:
+          break;
+      }
     }
 
-    if (buildSegmentsStatsGetter != null) {
-      totalsMap.put("buildSegments", buildSegmentsStatsGetter.getTotalMetrics());
+    if (needsDeterminePartitions) {
+      if (determinePartitionsMetricsGetter != null) {
+        totalsMap.put(
+            "determinePartitions",
+            determinePartitionsMetricsGetter.getTotalMetrics()
+        );
+      }
+      if (hasWindows && determinePartitionsMovingAverageCollector != null) {
+        averagesMap.put(
+            "determinePartitions",
+            IndexTask.getMovingAverages(determinePartitionsMovingAverageCollector, windows)
+        );
+      }
+    }
+
+    if (needsBuildSegments) {
+      if (buildSegmentsMetricsGetter != null) {
+        totalsMap.put(
+            "buildSegments",
+            buildSegmentsMetricsGetter.getTotalMetrics()
+        );
+      }
+      if (hasWindows && buildSegmentsMovingAverageCollector != null) {
+        averagesMap.put(
+            "buildSegments",
+            IndexTask.getMovingAverages(buildSegmentsMovingAverageCollector, windows)
+        );
+      }
     }
 
     returnMap.put("totals", totalsMap);
+    if (hasWindows) {
+      returnMap.put("averages", averagesMap);
+    }
     return Response.ok(returnMap).build();
   }
 
