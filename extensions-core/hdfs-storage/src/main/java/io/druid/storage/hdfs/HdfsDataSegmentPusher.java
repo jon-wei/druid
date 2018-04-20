@@ -21,6 +21,7 @@ package io.druid.storage.hdfs;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Ordering;
 import com.google.common.io.ByteSink;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
@@ -42,7 +43,12 @@ import org.joda.time.format.ISODateTimeFormat;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -67,12 +73,51 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     this.hadoopConfig = hadoopConfig;
     this.jsonMapper = jsonMapper;
     Path storageDir = new Path(config.getStorageDirectory());
-    this.fullyQualifiedStorageDirectory = FileSystem.newInstance(storageDir.toUri(), hadoopConfig)
-                                                    .makeQualified(storageDir)
-                                                    .toUri()
-                                                    .toString();
 
-    log.info("Configured HDFS as deep storage");
+    log.error("DEBUG BUILD #3");
+
+    log.error("My class is: " + getClass());
+
+    RuntimeMXBean bean = ManagementFactory.getRuntimeMXBean();
+    List<String> jvmArgs = bean.getInputArguments();
+
+    for (int i = 0; i < jvmArgs.size(); i++) {
+      log.error(jvmArgs.get(i));
+    }
+
+    log.error((" -classpath " + System.getProperty("java.class.path")));
+    // print the non-JVM command line arguments
+    // print name of the main class with its arguments, like org.ClassName param1 param2
+    log.error(" " + System.getProperty("sun.java.command"));
+
+    Iterator<Map.Entry<String, String>> entryIterator = hadoopConfig.iterator();
+    List<String> configKeyValues = new ArrayList<>();
+    while (entryIterator.hasNext()) {
+      Map.Entry<String, String> ent = entryIterator.next();
+      String keyVal = StringUtils.format("Hadoop config[%s : %s]", ent.getKey(), ent.getValue());
+      configKeyValues.add(keyVal);
+    }
+
+    String bigString = "";
+    configKeyValues.sort(Ordering.natural());
+    for (String keyVal : configKeyValues) {
+      log.error(keyVal);
+      bigString += "\n" + keyVal;
+    }
+
+    try {
+      this.fullyQualifiedStorageDirectory = FileSystem.newInstance(storageDir.toUri(), hadoopConfig)
+                                                      .makeQualified(storageDir)
+                                                      .toUri()
+                                                      .toString();
+    }
+    catch (Exception uhe) {
+      throw new RuntimeException(bigString, uhe);
+    }
+
+    log.error("FQSD: " + fullyQualifiedStorageDirectory);
+
+    log.info("Configured HDFS as deep storage CHANGE");
   }
 
   @Deprecated

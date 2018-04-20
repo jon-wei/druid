@@ -77,6 +77,8 @@ import org.joda.time.Interval;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -264,6 +266,7 @@ public class IndexGeneratorJob implements Jobby
   public static class IndexGeneratorMapper extends HadoopDruidIndexerMapper<BytesWritable, BytesWritable>
   {
     private static final HashFunction hashFunction = Hashing.murmur3_128();
+    private static final Logger mylog = new Logger(IndexGeneratorMapper.class);
 
     private AggregatorFactory[] aggregators;
     private AggregatorFactory[] combiningAggs;
@@ -274,6 +277,21 @@ public class IndexGeneratorJob implements Jobby
         throws IOException, InterruptedException
     {
       super.setup(context);
+      mylog.error("My class is: " + getClass());
+
+      RuntimeMXBean bean = ManagementFactory.getRuntimeMXBean();
+      List<String> jvmArgs = bean.getInputArguments();
+
+      for (int i = 0; i < jvmArgs.size(); i++) {
+        mylog.error(jvmArgs.get(i));
+      }
+
+      mylog.error((" -classpath " + System.getProperty("java.class.path")));
+      // print the non-JVM command line arguments
+      // print name of the main class with its arguments, like org.ClassName param1 param2
+      mylog.error(" " + System.getProperty("sun.java.command"));
+
+
       aggregators = config.getSchema().getDataSchema().getAggregators();
       combiningAggs = new AggregatorFactory[aggregators.length];
       for (int i = 0; i < aggregators.length; ++i) {

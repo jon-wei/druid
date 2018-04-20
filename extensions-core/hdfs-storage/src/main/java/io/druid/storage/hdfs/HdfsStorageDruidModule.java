@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Ordering;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.multibindings.MapBinder;
@@ -34,6 +35,7 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.initialization.DruidModule;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.storage.hdfs.tasklog.HdfsTaskLogs;
 import io.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;
@@ -41,7 +43,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -100,6 +105,8 @@ public class HdfsStorageDruidModule implements DruidModule
 
     final Configuration conf = new Configuration();
 
+    printConfig("PREHADOOP", conf);
+
     // Set explicit CL. Otherwise it'll try to use thread context CL, which may not have all of our dependencies.
     conf.setClassLoader(getClass().getClassLoader());
 
@@ -117,6 +124,8 @@ public class HdfsStorageDruidModule implements DruidModule
       Thread.currentThread().setContextClassLoader(currCtxCl);
     }
 
+    printConfig("POST", conf);
+
     if (props != null) {
       for (String propName : props.stringPropertyNames()) {
         if (propName.startsWith("hadoop.")) {
@@ -124,6 +133,9 @@ public class HdfsStorageDruidModule implements DruidModule
         }
       }
     }
+
+
+
 
     binder.bind(Configuration.class).toInstance(conf);
     JsonConfigProvider.bind(binder, "druid.storage", HdfsDataSegmentPusherConfig.class);
@@ -135,5 +147,23 @@ public class HdfsStorageDruidModule implements DruidModule
     binder.bind(HdfsStorageAuthentication.class).in(ManageLifecycle.class);
     LifecycleModule.register(binder, HdfsStorageAuthentication.class);
 
+  }
+
+  public static void printConfig(String tag, Configuration configuration)
+  {
+    Iterator<Map.Entry<String, String>> entryIterator = configuration.iterator();
+    List<String> configKeyValues = new ArrayList<>();
+    while (entryIterator.hasNext()) {
+      Map.Entry<String, String> ent = entryIterator.next();
+      String keyVal = StringUtils.format("%s[%s : %s]", tag, ent.getKey(), ent.getValue());
+      configKeyValues.add(keyVal);
+    }
+
+    String bigString = "";
+    configKeyValues.sort(Ordering.natural());
+    for (String keyVal : configKeyValues) {
+      log.error(keyVal);
+      bigString += "\n" + keyVal;
+    }
   }
 }
