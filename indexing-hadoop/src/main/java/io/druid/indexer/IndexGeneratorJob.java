@@ -25,6 +25,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
@@ -54,6 +55,7 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
 import io.druid.timeline.partition.ShardSpec;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -78,6 +80,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -165,6 +168,8 @@ public class IndexGeneratorJob implements Jobby
           StringUtils.format("%s-index-generator-%s", config.getDataSource(), config.getIntervals())
       );
 
+      printConfig("IndexGeneratorJob1", job.getConfiguration(), log);
+
       job.getConfiguration().set("io.sort.record.percent", "0.23");
 
       JobHelper.injectSystemProperties(job);
@@ -227,6 +232,28 @@ public class IndexGeneratorJob implements Jobby
     }
     catch (Exception e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  public static void printConfig(String tag, Configuration configuration, Logger loge)
+  {
+    Iterator<Map.Entry<String, String>> entryIterator = configuration.iterator();
+    List<String> configKeyValues = new ArrayList<>();
+    while (entryIterator.hasNext()) {
+      Map.Entry < String, String > ent = entryIterator.next();
+      String keyVal = StringUtils.format("%s[%s : %s]", tag, ent.getKey(), ent.getValue());
+      configKeyValues.add(keyVal);
+    }
+
+    String bigString = "";
+    configKeyValues.sort(Ordering.natural());
+    for (String keyVal : configKeyValues) {
+      if (loge != null) {
+        loge.error(keyVal);
+      } else {
+        System.out.println(keyVal);
+      }
+      bigString += "\n" + keyVal;
     }
   }
 
