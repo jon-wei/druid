@@ -55,7 +55,6 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
 import io.druid.timeline.partition.ShardSpec;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
