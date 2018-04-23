@@ -31,11 +31,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
+import io.druid.data.input.FiniteFirehoseFactory;
+import io.druid.data.input.InputSplit;
+import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.storage.s3.S3Utils;
 
@@ -44,6 +48,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -254,5 +259,30 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   protected Predicate<Throwable> getRetryCondition()
   {
     return S3Utils.S3RETRY;
+  }
+
+  @Override
+  public FiniteFirehoseFactory<StringInputRowParser, S3ObjectSummary> withSplit(InputSplit<S3ObjectSummary> split)
+  {
+    final String authority = split.get().getBucketName();
+    final String path = split.get().getKey();
+    final URI splitUri;
+    if (authority.endsWith("/") && path.startsWith("/")) {
+      splitUri = URI.create(StringUtils.format("s3://%s%s", authority, path.substring(1)));
+    } else if (!authority.endsWith("/") && !path.startsWith("/")) {
+      splitUri = URI.create(StringUtils.format("s3://%s/%s", authority, path));
+    } else {
+      splitUri = URI.create(StringUtils.format("s3://%s%s", authority, path));
+    }
+    return new StaticS3FirehoseFactory(
+        s3Client,
+        Collections.singletonList(splitUri),
+        null,
+        getMaxCacheCapacityBytes(),
+        getMaxFetchCapacityBytes(),
+        getPrefetchTriggerBytes(),
+        getFetchTimeout(),
+        getMaxFetchRetry()
+    );
   }
 }

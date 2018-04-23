@@ -76,9 +76,9 @@ import io.druid.segment.realtime.FireDepartmentMetricsTaskMetricsGetter;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.appenderator.AppenderatorConfig;
-import io.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import io.druid.segment.realtime.appenderator.Appenderators;
+import io.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import io.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import io.druid.segment.realtime.appenderator.SegmentAllocator;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
@@ -777,7 +777,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
           determinePartitionsFireDepartmentMetrics.incrementUnparseable();
           if (determinePartitionsFireDepartmentMetrics.unparseable() > ingestionSchema.getTuningConfig()
-                                                                                       .getMaxParseExceptions()) {
+                                                                                      .getMaxParseExceptions()) {
             throw new RuntimeException("Max parse exceptions exceeded, terminating task...");
           }
         }
@@ -830,7 +830,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       final TaskToolbox toolbox,
       final DataSchema dataSchema,
       final ShardSpecs shardSpecs,
-      Map<Interval, String> versions,
+      final Map<Interval, String> versions,
       final FirehoseFactory firehoseFactory,
       final File firehoseTempDir
   ) throws IOException, InterruptedException
@@ -1362,12 +1362,16 @@ public class IndexTask extends AbstractTask implements ChatHandler
         this.maxParseExceptions = 0;
         this.maxSavedParseExceptions = maxSavedParseExceptions == null ? 0 : Math.min(1, maxSavedParseExceptions);
       } else {
-        this.maxParseExceptions = maxParseExceptions == null ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS : maxParseExceptions;
+        this.maxParseExceptions = maxParseExceptions == null ?
+                                  TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS :
+                                  maxParseExceptions;
         this.maxSavedParseExceptions = maxSavedParseExceptions == null
                                         ? TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
                                         : maxSavedParseExceptions;
       }
-      this.logParseExceptions = logParseExceptions == null ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS : logParseExceptions;
+      this.logParseExceptions = logParseExceptions == null ?
+                                TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS :
+                                logParseExceptions;
     }
 
     private static Integer initializeTargetPartitionSize(Integer numShards, Integer targetPartitionSize)

@@ -51,7 +51,7 @@ public class TaskStatusPlus
       @JsonProperty("duration") @Nullable Long duration,
       @JsonProperty("location") TaskLocation location,
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("errorMsg") String errorMsg
+      @JsonProperty("errorMsg") @Nullable String errorMsg
   )
   {
     if (state != null && state.isComplete()) {
@@ -161,5 +161,20 @@ public class TaskStatusPlus
         getDataSource(),
         getErrorMsg()
     );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "TaskStatusPlus{" +
+           "id=" + id +
+           ", type=" + type +
+           ", createdTime=" + createdTime +
+           ", queueInsertionTime=" + queueInsertionTime +
+           ", state=" + state +
+           ", duration=" + duration +
+           ", location=" + location +
+           ", dataSource=" + dataSource +
+           "}";
   }
 }
