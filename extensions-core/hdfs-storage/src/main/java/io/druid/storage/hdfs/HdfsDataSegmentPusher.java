@@ -54,7 +54,8 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   private final HdfsDataSegmentPusherConfig config;
   private final Configuration hadoopConfig;
   private final ObjectMapper jsonMapper;
-  private final String fullyQualifiedStorageDirectory;
+  private String fullyQualifiedStorageDirectory;
+  private final Path storageDir;
 
   @Inject
   public HdfsDataSegmentPusher(
@@ -66,11 +67,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     this.config = config;
     this.hadoopConfig = hadoopConfig;
     this.jsonMapper = jsonMapper;
-    Path storageDir = new Path(config.getStorageDirectory());
-    this.fullyQualifiedStorageDirectory = FileSystem.newInstance(storageDir.toUri(), hadoopConfig)
-                                                    .makeQualified(storageDir)
-                                                    .toUri()
-                                                    .toString();
+    this.storageDir = new Path(config.getStorageDirectory());
 
     log.info("Configured HDFS as deep storage");
   }
@@ -85,12 +82,15 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   @Override
   public String getPathForHadoop()
   {
+    initFullyQualifiedStorageDirectory();
     return fullyQualifiedStorageDirectory;
   }
 
   @Override
   public DataSegment push(File inDir, DataSegment segment, boolean replaceExisting) throws IOException
   {
+    initFullyQualifiedStorageDirectory();
+
     final String storageDir = this.getStorageDir(segment);
 
     log.info(
@@ -231,5 +231,23 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
         dataSegment.getShardSpec().getPartitionNum(),
         indexName
     );
+  }
+
+  private void initFullyQualifiedStorageDirectory()
+  {
+    log.error("INITIALIZING FQSD");
+    try {
+      if (fullyQualifiedStorageDirectory != null) {
+        return;
+      }
+
+      fullyQualifiedStorageDirectory = FileSystem.newInstance(storageDir.toUri(), hadoopConfig)
+                                                 .makeQualified(storageDir)
+                                                 .toUri()
+                                                 .toString();
+    }
+    catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    }
   }
 }
