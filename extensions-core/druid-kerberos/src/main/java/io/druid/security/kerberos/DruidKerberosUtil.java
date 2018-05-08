@@ -93,37 +93,50 @@ public class DruidKerberosUtil
 
   public static void authenticateIfRequired(String internalClientPrincipal, String internalClientKeytab)
   {
-    if (!Strings.isNullOrEmpty(internalClientPrincipal) && !Strings.isNullOrEmpty(internalClientKeytab)) {
-      Configuration conf = new Configuration();
-      conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
-      UserGroupInformation.setConfiguration(conf);
-      try {
-        //login for the first time.
-        if (UserGroupInformation.getCurrentUser().hasKerberosCredentials() == false
-            || !UserGroupInformation.getCurrentUser().getUserName().equals(internalClientPrincipal)) {
-          log.info("trying to authenticate user [%s] with keytab [%s]", internalClientPrincipal, internalClientKeytab);
-          UserGroupInformation.loginUserFromKeytab(internalClientPrincipal, internalClientKeytab);
-          return;
+    ClassLoader prevLoader = Thread.currentThread().getContextClassLoader();
+
+    try {
+      Thread.currentThread().setContextClassLoader(DruidKerberosUtil.class.getClassLoader());
+
+      if (!Strings.isNullOrEmpty(internalClientPrincipal) && !Strings.isNullOrEmpty(internalClientKeytab)) {
+        Configuration conf = new Configuration();
+        conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+        UserGroupInformation.setConfiguration(conf);
+        try {
+          //login for the first time.
+          if (UserGroupInformation.getCurrentUser().hasKerberosCredentials() == false
+              || !UserGroupInformation.getCurrentUser().getUserName().equals(internalClientPrincipal)) {
+            log.info(
+                "trying to authenticate user [%s] with keytab [%s]",
+                internalClientPrincipal,
+                internalClientKeytab
+            );
+            UserGroupInformation.loginUserFromKeytab(internalClientPrincipal, internalClientKeytab);
+            return;
+          }
+          //try to relogin in case the TGT expired
+          if (UserGroupInformation.isLoginKeytabBased()) {
+            log.info("Re-Login from key tab [%s] with principal [%s]", internalClientKeytab, internalClientPrincipal);
+            UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
+            return;
+          } else if (UserGroupInformation.isLoginTicketBased()) {
+            log.info("Re-Login from Ticket cache");
+            UserGroupInformation.getLoginUser().reloginFromTicketCache();
+            return;
+          }
         }
-        //try to relogin in case the TGT expired
-        if (UserGroupInformation.isLoginKeytabBased()) {
-          log.info("Re-Login from key tab [%s] with principal [%s]", internalClientKeytab, internalClientPrincipal);
-          UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
-          return;
-        } else if (UserGroupInformation.isLoginTicketBased()) {
-          log.info("Re-Login from Ticket cache");
-          UserGroupInformation.getLoginUser().reloginFromTicketCache();
-          return;
+        catch (IOException e) {
+          throw new ISE(
+              e,
+              "Failed to authenticate user principal [%s] with keytab [%s]",
+              internalClientPrincipal,
+              internalClientKeytab
+          );
         }
       }
-      catch (IOException e) {
-        throw new ISE(
-            e,
-            "Failed to authenticate user principal [%s] with keytab [%s]",
-            internalClientPrincipal,
-            internalClientKeytab
-        );
-      }
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(prevLoader);
     }
   }
 
