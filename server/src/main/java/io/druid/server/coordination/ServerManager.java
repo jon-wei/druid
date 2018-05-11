@@ -39,6 +39,8 @@ import io.druid.query.DataSource;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.NoopQueryRunner;
+import io.druid.query.PerSegmentOptimizingQueryRunner;
+import io.druid.query.PerSegmentQueryOptimizationContext;
 import io.druid.query.Query;
 import io.druid.query.QueryMetrics;
 import io.druid.query.QueryRunner;
@@ -280,43 +282,59 @@ public class ServerManager implements QuerySegmentWalker
   {
     SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
     String segmentId = adapter.getIdentifier();
-    return new SetAndVerifyContextQueryRunner(
+
+    MetricsEmittingQueryRunner metricsEmittingQueryRunner = new MetricsEmittingQueryRunner<T>(
+        emitter,
+        toolChest,
+        new ReferenceCountingSegmentQueryRunner<T>(factory, adapter, segmentDescriptor),
+        QueryMetrics::reportSegmentTime,
+        queryMetrics -> queryMetrics.segment(segmentId)
+    );
+
+    CachingQueryRunner cachingQueryRunner = new CachingQueryRunner<T>(
+        segmentId,
+        segmentDescriptor,
+        objectMapper,
+        cache,
+        toolChest,
+        metricsEmittingQueryRunner,
+        cachingExec,
+        cacheConfig
+    );
+
+    MetricsEmittingQueryRunner metricsEmittingQueryRunner2 = new MetricsEmittingQueryRunner<T>(
+        emitter,
+        toolChest,
+        new BySegmentQueryRunner<T>(
+            segmentId,
+            adapter.getDataInterval().getStart(),
+            cachingQueryRunner
+        ),
+        QueryMetrics::reportSegmentAndCacheTime,
+        queryMetrics -> queryMetrics.segment(segmentId)
+    ).withWaitMeasuredFromNow();
+
+    SpecificSegmentQueryRunner specificSegmentQueryRunner = new SpecificSegmentQueryRunner<T>(
+        metricsEmittingQueryRunner2,
+        segmentSpec
+    );
+
+    PerSegmentOptimizingQueryRunner perSegmentOptimizingQueryRunner = new PerSegmentOptimizingQueryRunner<>(
+        specificSegmentQueryRunner,
+        new PerSegmentQueryOptimizationContext(segmentDescriptor)
+    );
+
+    SetAndVerifyContextQueryRunner setAndVerifyContextQueryRunner = new SetAndVerifyContextQueryRunner(
         serverConfig,
         CPUTimeMetricQueryRunner.safeBuild(
-            new SpecificSegmentQueryRunner<T>(
-                new MetricsEmittingQueryRunner<T>(
-                    emitter,
-                    toolChest,
-                    new BySegmentQueryRunner<T>(
-                        segmentId,
-                        adapter.getDataInterval().getStart(),
-                        new CachingQueryRunner<T>(
-                            segmentId,
-                            segmentDescriptor,
-                            objectMapper,
-                            cache,
-                            toolChest,
-                            new MetricsEmittingQueryRunner<T>(
-                                emitter,
-                                toolChest,
-                                new ReferenceCountingSegmentQueryRunner<T>(factory, adapter, segmentDescriptor),
-                                QueryMetrics::reportSegmentTime,
-                                queryMetrics -> queryMetrics.segment(segmentId)
-                            ),
-                            cachingExec,
-                            cacheConfig
-                        )
-                    ),
-                    QueryMetrics::reportSegmentAndCacheTime,
-                    queryMetrics -> queryMetrics.segment(segmentId)
-                ).withWaitMeasuredFromNow(),
-                segmentSpec
-            ),
+            perSegmentOptimizingQueryRunner,
             toolChest,
             emitter,
             cpuTimeAccumulator,
             false
         )
     );
+
+    return setAndVerifyContextQueryRunner;
   }
 }
