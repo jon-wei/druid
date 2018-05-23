@@ -16,11 +16,12 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package io.druid.data.input.parquet;
+package io.druid.data.input.parquet.tests;
 
 import com.google.common.collect.Lists;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.data.input.parquet.DruidParquetInputFormat;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.path.StaticPathSpec;
 import org.apache.avro.generic.GenericRecord;
@@ -92,7 +93,7 @@ public class DruidParquetInputTest
     }
   }
 
-  private GenericRecord getFirstRecord(Job job, String parquetPath) throws IOException, InterruptedException
+  GenericRecord getFirstRecord(Job job, String parquetPath) throws IOException, InterruptedException
   {
     File testFile = new File(parquetPath);
     Path path = new Path(testFile.getAbsoluteFile().toURI());
