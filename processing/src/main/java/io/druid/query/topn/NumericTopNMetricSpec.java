@@ -22,8 +22,6 @@ package io.druid.query.topn;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -38,6 +36,15 @@ import java.util.List;
  */
 public class NumericTopNMetricSpec implements TopNMetricSpec
 {
+  private static final Comparator ALWAYS_SAME_COMPARATOR = new Comparator()
+  {
+    @Override
+    public int compare(Object o1, Object o2)
+    {
+      return 0;
+    }
+  };
+
   private static final byte CACHE_TYPE_ID = 0x0;
 
   private final String metric;
@@ -60,6 +67,7 @@ public class NumericTopNMetricSpec implements TopNMetricSpec
         "Must have at least one AggregatorFactory or PostAggregator"
     );
 
+    /*
     final AggregatorFactory aggregator = Iterables.tryFind(
         aggregatorSpecs,
         new Predicate<AggregatorFactory>()
@@ -91,6 +99,7 @@ public class NumericTopNMetricSpec implements TopNMetricSpec
         aggregatorSpecs,
         postAggregatorSpecs
     );
+    */
   }
 
   @JsonProperty
@@ -114,6 +123,10 @@ public class NumericTopNMetricSpec implements TopNMetricSpec
         comp = pf.getComparator();
         break;
       }
+    }
+
+    if (comp == null) {
+      return ALWAYS_SAME_COMPARATOR;
     }
 
     return comp;

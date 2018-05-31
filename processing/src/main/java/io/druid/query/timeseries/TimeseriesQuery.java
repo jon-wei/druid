@@ -171,7 +171,11 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   {
     List<AggregatorFactory> optimizedAggs = new ArrayList<>();
     for (AggregatorFactory aggregatorFactory : aggregatorSpecs) {
-      optimizedAggs.add(aggregatorFactory.optimizeForSegment(optimizationContext));
+      AggregatorFactory optimizedAggregatorFactory = aggregatorFactory.optimizeForSegment(optimizationContext);
+      if (optimizedAggregatorFactory == null) {
+        continue;
+      }
+      optimizedAggs.add(optimizedAggregatorFactory);
     }
     return optimizedAggs;
   }

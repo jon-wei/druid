@@ -64,7 +64,15 @@ public class TimeseriesBinaryFn
 
     for (AggregatorFactory factory : aggregations) {
       final String metricName = factory.getName();
-      retVal.put(metricName, factory.combine(arg1Val.getMetric(metricName), arg2Val.getMetric(metricName)));
+      Object lhs = arg1Val.getMetric(metricName);
+      Object rhs = arg2Val.getMetric(metricName);
+      if (lhs == null) {
+        retVal.put(metricName, rhs);
+      } else if (rhs == null) {
+        retVal.put(metricName, lhs);
+      } else {
+        retVal.put(metricName, factory.combine(arg1Val.getMetric(metricName), arg2Val.getMetric(metricName)));
+      }
     }
 
     return (gran instanceof AllGranularity) ?
