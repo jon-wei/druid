@@ -170,6 +170,8 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
                 final Object value = resultValue.getValue().getMetric(aggregatorFactory.getName());
                 if (grandTotals[i] == null) {
                   grandTotals[i] = value;
+                } else if (value == null) {
+                  grandTotals[i] = grandTotals[i];
                 } else {
                   grandTotals[i] = aggregatorFactory.combine(grandTotals[i], value);
                 }

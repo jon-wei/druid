@@ -84,6 +84,7 @@ public class NumericTopNMetricSpec implements TopNMetricSpec
         }
     ).orNull();
 
+    /*
     Preconditions.checkArgument(
         aggregator != null || postAggregator != null,
         "Must have an AggregatorFactory or PostAggregator for metric[%s], gave[%s] and [%s]",
@@ -91,6 +92,7 @@ public class NumericTopNMetricSpec implements TopNMetricSpec
         aggregatorSpecs,
         postAggregatorSpecs
     );
+    */
   }
 
   @JsonProperty
@@ -114,6 +116,17 @@ public class NumericTopNMetricSpec implements TopNMetricSpec
         comp = pf.getComparator();
         break;
       }
+    }
+
+    if (comp == null) {
+      return new Comparator()
+      {
+        @Override
+        public int compare(Object o1, Object o2)
+        {
+          return 0;
+        }
+      };
     }
 
     return comp;

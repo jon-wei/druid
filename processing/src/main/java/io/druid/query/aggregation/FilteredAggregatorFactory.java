@@ -182,9 +182,10 @@ public class FilteredAggregatorFactory extends AggregatorFactory
         return delegate;
       }
 
-      // we can skip this filter, nothing in the segment would match
+      // we can skip this aggregator, the filter would match nothing in the segment
       if (excludedFilterIntervals.size() == filterIntervals.size()) {
-        return new SuppressedAggregatorFactory(delegate);
+        return null;
+        //return new SuppressedAggregatorFactory(delegate);
       }
 
       return new FilteredAggregatorFactory(
