@@ -33,12 +33,28 @@ public class LongSumAggregator implements Aggregator
     @Override
     public int compare(Object o, Object o1)
     {
+      /*
+      if (o == null) {
+        o = 0;
+      }
+      if (o1 == null) {
+        o1 = 0;
+      }
+      */
       return Longs.compare(((Number) o).longValue(), ((Number) o1).longValue());
     }
   };
 
   static long combineValues(Object lhs, Object rhs)
   {
+    /*
+    if (lhs == null) {
+      lhs = 0;
+    }
+    if (rhs == null) {
+      rhs = 0;
+    }
+    */
     return ((Number) lhs).longValue() + ((Number) rhs).longValue();
   }
 

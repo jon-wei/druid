@@ -100,15 +100,15 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
         retVal.put(dimension, dimensionValue);
         for (AggregatorFactory factory : aggregations) {
           final String metricName = factory.getName();
-          final Object arg1ValMetrics = arg1Val.getMetric(metricName);
-          final Object arg2ValMetrics = arg2Val.getMetric(metricName);
-          if (arg1ValMetrics == null) {
-            retVal.put(metricName, arg2ValMetrics);
-          } else if (arg2ValMetrics == null) {
-            retVal.put(metricName, arg1ValMetrics);
-          } else {
-            retVal.put(metricName, factory.combine(arg1Val.getMetric(metricName), arg2Val.getMetric(metricName)));
+          Object met1 = arg1Val.getMetric(metricName);
+          Object met2 = arg2Val.getMetric(metricName);
+          if (met1 == null) {
+            met1 = 0;
           }
+          if (met2 == null) {
+            met2 = 0;
+          }
+          retVal.put(metricName, factory.combine(met1, met2));
         }
 
         for (PostAggregator pf : postAggregations) {

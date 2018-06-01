@@ -169,6 +169,11 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     }
 
     Object topNMetricVal = metricValues.get(metricName);
+    /*
+    if (topNMetricVal == null) {
+      topNMetricVal = 0;
+    }
+    */
 
     if (shouldAdd(topNMetricVal)) {
       DimValHolder dimValHolder = new DimValHolder.Builder()
@@ -189,15 +194,19 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
   private boolean shouldAdd(Object topNMetricVal)
   {
     final boolean belowThreshold = pQueue.size() < this.threshold;
-    final boolean belowMax = belowThreshold
-                             || this.metricComparator.compare(pQueue.peek().getTopNMetricVal(), topNMetricVal) < 0;
+    final boolean belowMax = belowThreshold || this.metricComparator.compare(pQueue.peek().getTopNMetricVal(), topNMetricVal) < 0;
     return belowMax;
   }
 
   @Override
   public TopNResultBuilder addEntry(DimensionAndMetricValueExtractor dimensionAndMetricValueExtractor)
   {
-    final Object dimValue = dimensionAndMetricValueExtractor.getDimensionValue(metricName);
+    Object dimValue = dimensionAndMetricValueExtractor.getDimensionValue(metricName);
+
+    if (dimValue == null) {
+      dimValue = 0;
+    }
+
 
     if (shouldAdd(dimValue)) {
       final DimValHolder valHolder = new DimValHolder.Builder()

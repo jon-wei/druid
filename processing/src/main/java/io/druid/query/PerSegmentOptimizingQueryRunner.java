@@ -56,7 +56,7 @@ public class PerSegmentOptimizingQueryRunner<T> implements QueryRunner<T>
   {
     Query<T> query = input.getQuery();
     if (query.getContextBoolean("enableSegmentOptimize", false)) {
-      log.info("Running query with optimizeForSegment()");
+      //log.info("Running query with optimizeForSegment()");
       final QueryPlus<T> optimizedQuery = input.optimizeForSegment(optimizationContext);
       return base.run(optimizedQuery, responseContext);
     } else {
