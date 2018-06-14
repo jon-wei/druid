@@ -53,7 +53,10 @@ public class SQLServerMetadataStorageActionHandler<EntryType, StatusType, LogTyp
 
     sql += StringUtils.format(
         "    id, "
-        + "  status_payload "
+        + "  status_payload, "
+        + " created_date, "
+        + " datasource, "
+        + " payload "
         + "FROM "
         + "  %s "
         + "WHERE "
@@ -69,4 +72,5 @@ public class SQLServerMetadataStorageActionHandler<EntryType, StatusType, LogTyp
     }
     return query;
   }
+
 }

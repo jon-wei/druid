@@ -28,9 +28,9 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.indexer.TaskInfo;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskLock;
-import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
@@ -39,6 +39,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.metadata.EntryExistsException;
 import io.druid.metadata.MetadataStorageActionHandler;
 import io.druid.metadata.MetadataStorageActionHandlerFactory;
@@ -46,6 +47,7 @@ import io.druid.metadata.MetadataStorageActionHandlerTypes;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -213,17 +215,39 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskStatus> getRecentlyFinishedTaskStatuses(@Nullable Integer maxTaskStatuses)
+  public List<TaskInfo<Task>> getActiveTaskInfo()
+  {
+    return ImmutableList.copyOf(
+        handler.getActiveTaskInfo()
+    );
+  }
+
+  @Override
+  public List<TaskStatus> getRecentlyFinishedTaskStatuses(@Nullable Integer maxTaskStatuses, @Nullable Duration duration)
   {
     return ImmutableList.copyOf(
         handler
             .getInactiveStatusesSince(
-                DateTimes.nowUtc().minus(config.getRecentlyFinishedThreshold()),
+                DateTimes.nowUtc().minus(duration == null ? config.getRecentlyFinishedThreshold() : duration),
                 maxTaskStatuses
             )
             .stream()
             .filter(TaskStatus::isComplete)
             .collect(Collectors.toList())
+    );
+  }
+
+  @Override
+  public List<TaskInfo<Task>> getRecentlyFinishedTaskInfo(
+      @Nullable Integer maxTaskStatuses,
+      @Nullable Duration duration
+  )
+  {
+    return ImmutableList.copyOf(
+        handler.getCompletedTaskInfo(
+                DateTimes.nowUtc().minus(duration == null ? config.getRecentlyFinishedThreshold() : duration),
+                maxTaskStatuses
+            )
     );
   }
 

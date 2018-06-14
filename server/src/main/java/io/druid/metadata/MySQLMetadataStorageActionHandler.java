@@ -52,7 +52,10 @@ public class MySQLMetadataStorageActionHandler<EntryType, StatusType, LogType, L
     String sql = StringUtils.format(
         "SELECT "
         + "  id, "
-        + "  status_payload "
+        + "  status_payload, "
+        + " created_date, "
+        + " datasource, "
+        + " payload "
         + "FROM "
         + "  %s "
         + "WHERE "
@@ -72,4 +75,5 @@ public class MySQLMetadataStorageActionHandler<EntryType, StatusType, LogType, L
     }
     return query;
   }
+
 }
