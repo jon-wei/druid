@@ -44,6 +44,7 @@ import io.druid.server.security.Access;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.AuthorizationUtils;
 import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.ForbiddenException;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -129,7 +130,7 @@ public class QueryLifecycle
     try {
       final Access access = authorize(authenticationResult);
       if (!access.isAllowed()) {
-        throw new ISE("Unauthorized");
+        throw new ForbiddenException();
       }
 
       final QueryLifecycle.QueryResponse queryResponse = execute();
