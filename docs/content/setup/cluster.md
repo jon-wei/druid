@@ -2,7 +2,7 @@
 layout: doc_page
 ---
 
-# Clustering
+# Building a cluster
 
 Druid is designed to be deployed as a scalable, fault-tolerant cluster.
 

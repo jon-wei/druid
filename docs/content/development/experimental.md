@@ -17,3 +17,13 @@ druid.extensions.loadList=["druid-histogram"]
 ```
 
 The configuration files for all the indexer and query nodes need to be updated with this.
+
+## Current experimental features
+
+[Approximate Histograms and Quantiles](/docs/VERSION/development/extensions-core/approximate-histograms.html)
+
+[Datasketches](/docs/VERSION/development/extensions-core/datasketches-extension.html)
+
+[Geographic Queries](/docs/VERSION/development/geo.html)
+
+[Router](/docs/VERSION/development/router.html)
