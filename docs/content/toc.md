@@ -2,6 +2,50 @@
 layout: toc
 ---
 
+## Getting started
+  * [Design](/docs/VERSION/design/index.html)
+    * [What is Druid?](/docs/VERSION/design/index.html#what-is-druid)
+    * [Architecture](/docs/VERSION/design/index.html#architecture)
+    * [Query processing](/docs/VERSION/design/index.html#query-processing)
+  * [Tutorial: Loading from Kafka](/docs/VERSION/tutorials/index.html)
+  * [Tutorial: Loading from Hadoop](/docs/VERSION/tutorials/index.html)
+  * [Tutorial: Loading from flat files](/docs/VERSION/tutorials/index.html)
+
+## Setup
+  * [Building a cluster](/docs/VERSION/setup/cluster.html)
+    * [Choosing hardware](/docs/VERSION/setup/cluster.html#hardware)
+    * [Starting processes](/docs/VERSION/setup/cluster.html#services)
+    * [High availability](/docs/VERSION/setup/cluster.html#ha)
+    * [Backup](/docs/VERSION/setup/cluster.html#backup)
+    * [Metadata store](/docs/VERSION/setup/metadata-store.html)
+    * [Deep storage](/docs/VERSION/setup/deep-storage.html)
+  * [Configuration reference](/docs/VERSION/setup/configuration.html)
+
+## Ingestion
+  * [Overview](/docs/VERSION/ingest/index.html)
+    * [Ingestion methods](/docs/VERSION/ingest/index.html#ingestion-methods)
+    * [Partitioning](/docs/VERSION/ingest/index.html#partitioning)
+    * [Rollup](/docs/VERSION/ingest/index.html#rollup)
+    * [Inserts, overwrites, and deletes](/docs/VERSION/ingest/index.html#inserts-overwrites-and-deletes)
+    * [Performance tips](/docs/VERSION/ingest/index.html#performance-tips)
+  * [Ingestion specs](/docs/VERSION/ingest/specs.html)
+    * [Parser](/docs/VERSION/ingest/specs.html#parser)
+    * [Dimensions](/docs/VERSION/ingest/specs.html#dimensions)
+    * [Metrics](/docs/VERSION/ingest/specs.html#metrics)
+    * [Granularity](/docs/VERSION/ingest/specs.html#granularity)
+  * Ingestion methods
+    * [Hadoop](/docs/VERSION/ingest/hadoop.html)
+    * [Native batch](/docs/VERSION/ingest/native-batch.html)
+    * [Kafka](/docs/VERSION/ingest/kafka.html)
+    * [Tranquility](/docs/VERSION/ingest/tranquility.html)
+  * [Data management](/docs/VERSION/ingest/manage.html)
+    * [Tiers](/docs/VERSION/ingest/manage.html#tiers)
+    * [Retention rules](/docs/VERSION/ingest/manage.html#rules)
+    * [Reindexing](/docs/VERSION/ingest/manage.html#reindex)
+    * [Compaction](/docs/VERSION/ingest/manage.html#compact)
+    * [Dropping data](/docs/VERSION/ingest/manage.html#drop)
+  * [Ingestion FAQ](/docs/VERSION/ingest/faq.html)
+
 ## Getting Started
   * [Concepts](/docs/VERSION/design/)
   * [Quickstart](/docs/VERSION/tutorials/quickstart.html)
@@ -25,46 +69,38 @@ layout: toc
   * [FAQ](/docs/VERSION/ingestion/faq.html)
 
 ## Querying
-  * [Overview](/docs/VERSION/querying/querying.html)
-  * [Timeseries](/docs/VERSION/querying/timeseriesquery.html)
-  * [TopN](/docs/VERSION/querying/topnquery.html)
-  * [GroupBy](/docs/VERSION/querying/groupbyquery.html)
-  * [Time Boundary](/docs/VERSION/querying/timeboundaryquery.html)
-  * [Segment Metadata](/docs/VERSION/querying/segmentmetadataquery.html)
-  * [DataSource Metadata](/docs/VERSION/querying/datasourcemetadataquery.html)
-  * [Search](/docs/VERSION/querying/searchquery.html)
-  * [Select](/docs/VERSION/querying/select-query.html)
-  * [Scan](/docs/VERSION/querying/scan-query.html)
-  * Components
-    * [Datasources](/docs/VERSION/querying/datasource.html)
-    * [Filters](/docs/VERSION/querying/filters.html)
-    * [Aggregations](/docs/VERSION/querying/aggregations.html)
-    * [Post Aggregations](/docs/VERSION/querying/post-aggregations.html)
-    * [Granularities](/docs/VERSION/querying/granularities.html)
-    * [DimensionSpecs](/docs/VERSION/querying/dimensionspecs.html)
-    * [Context](/docs/VERSION/querying/query-context.html)
-  * [Multi-value dimensions](/docs/VERSION/querying/multi-value-dimensions.html)
   * [SQL](/docs/VERSION/querying/sql.html)
+    * [Query syntax](/docs/VERSION/querying/sql.html#query-syntax)
+    * [Functions and operators](/docs/VERSION/querying/sql.html#functions-and-operators)
+    * [Data types and casts](/docs/VERSION/querying/sql.html#data-types-and-casts)
+    * [Query execution](/docs/VERSION/querying/sql.html#query-execution)
+    * [Client APIs](/docs/VERSION/querying/sql.html#client-apis)
+    * [System tables](/docs/VERSION/querying/sql.html#system-tables)
+    * [Unsupported features](/docs/VERSION/querying/sql.html#unsupported-features)
+  * [Native queries](/docs/VERSION/querying/native.html)
+    * [Timeseries](/docs/VERSION/querying/timeseriesquery.html)
+    * [TopN](/docs/VERSION/querying/topnquery.html)
+    * [GroupBy](/docs/VERSION/querying/groupbyquery.html)
+    * [Time Boundary](/docs/VERSION/querying/timeboundaryquery.html)
+    * [Scan](/docs/VERSION/querying/scan-query.html)
+    * [Select](/docs/VERSION/querying/select-query.html)
+    * [Search](/docs/VERSION/querying/searchquery.html)
+    * [Segment Metadata](/docs/VERSION/querying/segmentmetadataquery.html)
+    * [DataSource Metadata](/docs/VERSION/querying/datasourcemetadataquery.html)
+    * Components
+      * [Datasources](/docs/VERSION/querying/datasource.html)
+      * [Filters](/docs/VERSION/querying/filters.html)
+      * [Granularities](/docs/VERSION/querying/granularities.html)
+      * [DimensionSpecs](/docs/VERSION/querying/dimensionspecs.html)
+      * [Aggregations](/docs/VERSION/querying/aggregations.html)
+      * [Post Aggregations](/docs/VERSION/querying/post-aggregations.html)
+      * [Sorting Orders](/docs/VERSION/querying/sorting-orders.html)
+  * [Multi-value dimensions](/docs/VERSION/querying/multi-value-dimensions.html)
   * [Lookups](/docs/VERSION/querying/lookups.html)
   * [Joins](/docs/VERSION/querying/joins.html)
   * [Multitenancy](/docs/VERSION/querying/multitenancy.html)
   * [Caching](/docs/VERSION/querying/caching.html)
-  * [Sorting Orders](/docs/VERSION/querying/sorting-orders.html)
-
-## Design
-  * [Overview](/docs/VERSION/design/design.html)
-  * Storage
-    * [Segments](/docs/VERSION/design/segments.html)
-  * Node Types
-    * [Historical](/docs/VERSION/design/historical.html)
-    * [Broker](/docs/VERSION/design/broker.html)
-    * [Coordinator](/docs/VERSION/design/coordinator.html)
-    * [Indexing Service](/docs/VERSION/design/indexing-service.html)
-    * [Realtime](/docs/VERSION/design/realtime.html)
-  * Dependencies
-    * [Deep Storage](/docs/VERSION/dependencies/deep-storage.html)
-    * [Metadata Storage](/docs/VERSION/dependencies/metadata-storage.html)
-    * [ZooKeeper](/docs/VERSION/dependencies/zookeeper.html)
+  * [Query contexts](/docs/VERSION/querying/query-context.html)
 
 ## Operations
   * [Good Practices](/docs/VERSION/operations/recommendations.html)
@@ -82,16 +118,6 @@ layout: toc
   * [TLS Support](/docs/VERSION/operations/tls-support.html)
   * [Password Provider](/docs/VERSION/operations/password-provider.html)
 
-## Configuration
-  * [Common Configuration](/docs/VERSION/configuration/index.html)
-  * [Indexing Service](/docs/VERSION/configuration/indexing-service.html)
-  * [Coordinator](/docs/VERSION/configuration/coordinator.html)
-  * [Historical](/docs/VERSION/configuration/historical.html)
-  * [Broker](/docs/VERSION/configuration/broker.html)
-  * [Realtime](/docs/VERSION/configuration/realtime.html)
-  * [Configuring Logging](/docs/VERSION/configuration/logging.html)
-  * [Configuring Authentication and Authorization](/docs/VERSION/configuration/auth.html)
-  
 ## Development
   * [Overview](/docs/VERSION/development/overview.html)
   * [Libraries](/docs/VERSION/development/libraries.html)
@@ -107,7 +133,6 @@ layout: toc
     * [Geographic Queries](/docs/VERSION/development/geo.html)
     * [Router](/docs/VERSION/development/router.html)
     * [Kafka Indexing Service](/docs/VERSION/development/extensions-core/kafka-ingestion.html)
-
 
 ## Misc
   * [Papers & Talks](/docs/VERSION/misc/papers-and-talks.html)
