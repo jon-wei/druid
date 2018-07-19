@@ -14,6 +14,7 @@ layout: toc
     * [Tutorial: Loading a file using Hadoop](/docs/VERSION/tutorials/tutorial-batch-hadoop.html) -> TODO: rewrite based on imply hadoop indexing tutorial
     * [Tutorial: Loading stream data from Kafka](/docs/VERSION/tutorials/tutorial-kafka.html) -> TODO: do new tutorial based on KIS instead of tranquility kafka
     * [Tutorial: Loading stream data using Tranquility](/docs/VERSION/tutorials/tutorial-streams.html)
+    * [Tutorial: Querying your data](/docs/VERSION/tutorials/queries.html)
   * [Further tutorials](/docs/VERSION/tutorials/advanced.md)
     * [Tutorial: Rollup](/docs/VERSION/tutorials/rollup.html)
     * [Tutorial: Writing your own ingestion specs](/docs/VERSION/tutorials/ingestion-spec.html)
@@ -22,6 +23,7 @@ layout: toc
     * [Tutorial: Compacting segments](/docs/VERSION/tutorials/compaction.html)
     * [Tutorial: Deleting data](/docs/VERSION/tutorials/deletes.html)
     * [Tutorial: Configuring tiers](/docs/VERSION/tutorials/retention.html)
+    * [Tutorial: Writing queries (advanced) name TBD](/docs/VERSION/tutorials/queries-advanced.html)
     ???
 
 ## Cluster setup
@@ -100,6 +102,7 @@ layout: toc
       * [Aggregations](/docs/VERSION/querying/aggregations.html)
       * [Post Aggregations](/docs/VERSION/querying/post-aggregations.html)
       * [Sorting Orders](/docs/VERSION/querying/sorting-orders.html)
+  * TODO: DOCUMENT THE EXPRESSIONS, VIRTUAL COLUMNS???
   * [Multi-value dimensions](/docs/VERSION/querying/multi-value-dimensions.html)
   * [Caching](/docs/VERSION/querying/caching.html)
   * [Lookups](/docs/VERSION/querying/lookups.html)
@@ -108,15 +111,6 @@ layout: toc
   * [Querying FAQ](/docs/VERSION/querying/faq.html)
 
 ## Operations
-  * [API Reference](/docs/VERSION/operations/api.html) --> big superpage that documents all APIs for all node types
-    * [Common](/docs/VERSION/setup/configuration.html#common)
-    * [Coordinator](/docs/VERSION/setup/configuration.html#coordinator)
-    * [Overlord](/docs/VERSION/setup/configuration.html#overlord)
-    * [MiddleManager](/docs/VERSION/setup/configuration.html#middlemanager)
-      * [Worker tasks](/docs/VERSION/setup/configuration.html#workers)
-    * [Historical](/docs/VERSION/setup/configuration.html#historical)
-    * [Broker](/docs/VERSION/setup/configuration.html#broker)
-    * [Router](/docs/VERSION/setup/configuration.html#router)
   * [Good Practices](/docs/VERSION/operations/recommendations.html)
   * [Performance FAQ](/docs/VERSION/operations/performance-faq.html)
   * [Updating the Cluster](/docs/VERSION/operations/rolling-updates.html)
@@ -130,6 +124,15 @@ layout: toc
     * [Pull Dependencies Tool](/docs/VERSION/operations/tools#pull-deps.html)
   * [Working with Different Hadoop Versions](/docs/VERSION/operations/other-hadoop.html)
   * [Including Extensions](/docs/VERSION/operations/including-extensions.html)
+  * [API Reference](/docs/VERSION/operations/api.html) --> big superpage that documents all APIs for all node types
+    * [Common](/docs/VERSION/setup/configuration.html#common)
+    * [Coordinator](/docs/VERSION/setup/configuration.html#coordinator)
+    * [Overlord](/docs/VERSION/setup/configuration.html#overlord)
+    * [MiddleManager](/docs/VERSION/setup/configuration.html#middlemanager)
+      * [Worker tasks](/docs/VERSION/setup/configuration.html#workers)
+    * [Historical](/docs/VERSION/setup/configuration.html#historical)
+    * [Broker](/docs/VERSION/setup/configuration.html#broker)
+    * [Router](/docs/VERSION/setup/configuration.html#router)
 
 ## Development
   * [Overview](/docs/VERSION/development/overview.html)
@@ -144,6 +147,9 @@ layout: toc
     * [Datasketches](/docs/VERSION/development/extensions-core/datasketches-extension.html)
     * [Geographic Queries](/docs/VERSION/development/geo.html)
     * [Router](/docs/VERSION/development/router.html)
+
+## TBD (Doc section that guides readers based on their role to appropriate docs, e.g. cluster admin, data analyst)  
+  * lorem ipsum lol
     
 ## Extension docs
   * [Core extensions](/docs/VERSION/development/extensions.html#core-extensions)
