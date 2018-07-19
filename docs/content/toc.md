@@ -8,23 +8,42 @@ layout: toc
     * [Architecture](/docs/VERSION/design/index.html#architecture)
     * [Query processing](/docs/VERSION/design/index.html#query-processing)
     * [External dependencies](/docs/VERSION/design/index.html#external-dependencies)
-  * [Quickstart](/docs/VERSION/tutorials/index.md)
-    * [Tutorial: Loading a file](/docs/VERSION/tutorials/batch.html) -> TODO: rewrite based on imply local indexing tutorial
-    * [Tutorial: Loading a file using Hadoop](/docs/VERSION/tutorials/hadoop.html) -> TODO: rewrite based on imply hadoop indexing tutorial
-    * [Tutorial: Loading stream data from Kafka](/docs/VERSION/tutorials/kafka.html) -> TODO: do new tutorial based on KIS instead of tranq
+    * [Ingestion Overview](/docs/VERSION/ingest/index.html)
+  * [Quickstart](/docs/VERSION/tutorials/index.md) --> TODO: port imply startup scripts to official druid, use them in tutorials
+    * [Tutorial: Loading a file](/docs/VERSION/tutorials/tutorial-batch.html) -> TODO: rewrite based on imply local indexing tutorial
+    * [Tutorial: Loading a file using Hadoop](/docs/VERSION/tutorials/tutorial-batch-hadoop.html) -> TODO: rewrite based on imply hadoop indexing tutorial
+    * [Tutorial: Loading stream data from Kafka](/docs/VERSION/tutorials/tutorial-kafka.html) -> TODO: do new tutorial based on KIS instead of tranquility kafka
+    * [Tutorial: Loading stream data using Tranquility](/docs/VERSION/tutorials/tutorial-streams.html)
+  * [Further tutorials](/docs/VERSION/tutorials/advanced.md)
+    * [Tutorial: Rollup](/docs/VERSION/tutorials/rollup.html)
+    * [Tutorial: Writing your own ingestion specs](/docs/VERSION/tutorials/ingestion-spec.html)
+    * [Tutorial: Configuring retention](/docs/VERSION/tutorials/retention.html)
+    * [Tutorial: Updating existing data](/docs/VERSION/tutorials/updates.html)
+    * [Tutorial: Compacting segments](/docs/VERSION/tutorials/compaction.html)
+    * [Tutorial: Deleting data](/docs/VERSION/tutorials/deletes.html)
+    * [Tutorial: Configuring tiers](/docs/VERSION/tutorials/retention.html)
+    ???
 
-## Setup
+## Cluster setup
   * [Building a cluster](/docs/VERSION/setup/cluster.html)
     * [Choosing hardware](/docs/VERSION/setup/cluster.html#hardware)
-    * [Starting processes](/docs/VERSION/setup/cluster.html#services)
+    * [Starting processes](/docs/VERSION/setup/cluster.html#services) --> could be made easier with Imply startup scripts
     * [High availability](/docs/VERSION/setup/cluster.html#ha)
     * [Metadata store](/docs/VERSION/setup/metadata-store.html)
     * [Deep storage](/docs/VERSION/setup/deep-storage.html)
     * [Backups](/docs/VERSION/setup/cluster.html#backup)
     * [Security](/docs/VERSION/setup/security.html)
       * [TLS](/docs/VERSION/setup/security#tls.html)
-      * [Authentication and Authorization](/docs/VERSION/setup/security#auth.html)
-  * [Configuration reference](/docs/VERSION/setup/configuration.html)
+      * [Authentication and Authorization](/docs/VERSION/setup/security.html#auth)
+  * [Configuration reference](/docs/VERSION/setup/configuration.html) --> one big superpage with all configuration options for all node types
+    * [Common](/docs/VERSION/setup/configuration.html#common)
+    * [Coordinator](/docs/VERSION/setup/configuration.html#coordinator)
+    * [Overlord](/docs/VERSION/setup/configuration.html#overlord)
+    * [MiddleManager](/docs/VERSION/setup/configuration.html#middlemanager)
+      * [Worker tasks](/docs/VERSION/setup/configuration.html#workers)
+    * [Historical](/docs/VERSION/setup/configuration.html#historical)
+    * [Broker](/docs/VERSION/setup/configuration.html#broker)
+    * [Router](/docs/VERSION/setup/configuration.html#router)
 
 ## Ingestion
   * [Overview](/docs/VERSION/ingest/index.html)
@@ -86,9 +105,18 @@ layout: toc
   * [Lookups](/docs/VERSION/querying/lookups.html)
   * [Query contexts](/docs/VERSION/querying/query-context.html)
   * [Joins](/docs/VERSION/querying/joins.html)
+  * [Querying FAQ](/docs/VERSION/querying/faq.html)
 
 ## Operations
-  * [API Reference](/docs/VERSION/operations/api.html)
+  * [API Reference](/docs/VERSION/operations/api.html) --> big superpage that documents all APIs for all node types
+    * [Common](/docs/VERSION/setup/configuration.html#common)
+    * [Coordinator](/docs/VERSION/setup/configuration.html#coordinator)
+    * [Overlord](/docs/VERSION/setup/configuration.html#overlord)
+    * [MiddleManager](/docs/VERSION/setup/configuration.html#middlemanager)
+      * [Worker tasks](/docs/VERSION/setup/configuration.html#workers)
+    * [Historical](/docs/VERSION/setup/configuration.html#historical)
+    * [Broker](/docs/VERSION/setup/configuration.html#broker)
+    * [Router](/docs/VERSION/setup/configuration.html#router)
   * [Good Practices](/docs/VERSION/operations/recommendations.html)
   * [Performance FAQ](/docs/VERSION/operations/performance-faq.html)
   * [Updating the Cluster](/docs/VERSION/operations/rolling-updates.html)
@@ -108,6 +136,7 @@ layout: toc
   * [Building From Source](/docs/VERSION/development/build.html)
   * [Versioning](/docs/VERSION/development/versioning.html)
   * [Developing Extensions](/docs/VERSION/development/modules.html)
+    * [Password Provider (maybe doesn't need to be a top level TOC page...)](/docs/VERSION/operations/password-provider.html)
   * [Extending Druid with JavaScript](/docs/VERSION/development/javascript.html)
   * [Libraries, Tools, and UIs](/docs/VERSION/development/libraries.html)
   * [Experimental Features](/docs/VERSION/development/experimental.html)
@@ -115,7 +144,6 @@ layout: toc
     * [Datasketches](/docs/VERSION/development/extensions-core/datasketches-extension.html)
     * [Geographic Queries](/docs/VERSION/development/geo.html)
     * [Router](/docs/VERSION/development/router.html)
-  * [Password Provider (this doesn't need to be a top-level page, where to put it though...)](/docs/VERSION/operations/password-provider.html)
     
 ## Extension docs
   * [Core extensions](/docs/VERSION/development/extensions.html#core-extensions)
