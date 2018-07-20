@@ -247,7 +247,10 @@ public class TaskQueue
               }
               catch (Exception e) {
                 log.warn(e, "Exception thrown during isReady for task: %s", task.getId());
-                notifyStatus(task, TaskStatus.failure(task.getId()));
+                notifyStatus(
+                    task,
+                    TaskStatus.failure(task.getId(), "Exception thrown during isReady: " + e.toString())
+                );
                 continue;
               }
               if (taskIsReady) {
@@ -355,7 +358,7 @@ public class TaskQueue
       Preconditions.checkNotNull(taskId, "taskId");
       for (final Task task : tasks) {
         if (task.getId().equals(taskId)) {
-          notifyStatus(task, TaskStatus.failure(taskId));
+          notifyStatus(task, TaskStatus.failure(taskId, "Task was shutdown."));
           break;
         }
       }
@@ -471,7 +474,7 @@ public class TaskQueue
                .addData("type", task.getType())
                .addData("dataSource", task.getDataSource())
                .emit();
-            handleStatus(TaskStatus.failure(task.getId()));
+            handleStatus(TaskStatus.failure(task.getId(), "Failed to run task"));
           }
 
           private void handleStatus(final TaskStatus status)

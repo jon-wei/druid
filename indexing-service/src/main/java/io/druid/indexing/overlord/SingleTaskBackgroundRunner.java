@@ -210,11 +210,19 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
              .emit();
           log.warn(e, "Graceful shutdown of task[%s] aborted with exception.", task.getId());
           error = true;
-          TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.failure(task.getId()));
+          TaskRunnerUtils.notifyStatusChanged(
+              listeners,
+              task.getId(),
+              TaskStatus.failure(task.getId(), "Graceful shutdown failed.")
+          );
         }
       } else {
         graceful = false;
-        TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.failure(task.getId()));
+        TaskRunnerUtils.notifyStatusChanged(
+            listeners,
+            task.getId(),
+            TaskStatus.failure(task.getId(), "Non-graceful shutdown")
+        );
       }
 
       elapsed = System.currentTimeMillis() - start;

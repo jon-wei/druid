@@ -347,13 +347,14 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       if (specVersion.compareTo(version) < 0) {
         version = specVersion;
       } else {
-        log.error(
+        String errorMsg = StringUtils.format(
             "Spec version can not be greater than or equal to the lock version, Spec version: [%s] Lock version: [%s].",
             specVersion,
             version
         );
+        log.error(errorMsg);
         toolbox.getTaskReportFileWriter().write(null);
-        return TaskStatus.failure(getId());
+        return TaskStatus.failure(getId(), errorMsg);
       }
     }
 

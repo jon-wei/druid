@@ -382,13 +382,14 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           if (remaining > 0) {
             statusLock.wait(remaining);
           } else {
-            log.makeAlert(
+            String alertMsg = StringUtils.format(
                 "Task assignment timed out on worker [%s], never ran task [%s] in timeout[%s]!",
                 workerHost,
                 taskId,
                 config.getTaskAssignmentTimeout()
-            ).emit();
-            taskComplete(workItem, workerHolder, TaskStatus.failure(taskId));
+            );
+            log.makeAlert(alertMsg).emit();
+            taskComplete(workItem, workerHolder, TaskStatus.failure(taskId, alertMsg));
             return true;
           }
         }
@@ -578,13 +579,14 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
               for (HttpRemoteTaskRunnerWorkItem taskItem : tasksToFail) {
                 if (!taskItem.getResult().isDone()) {
-                  log.info(
+                  String errorMsg = StringUtils.format(
                       "Failing task[%s] because worker[%s] disappeared and did not report within cleanup timeout[%s].",
                       workerHostAndPort,
                       taskItem.getTaskId(),
                       config.getTaskCleanupTimeout()
                   );
-                  taskComplete(taskItem, null, TaskStatus.failure(taskItem.getTaskId()));
+                  log.info(errorMsg);
+                  taskComplete(taskItem, null, TaskStatus.failure(taskItem.getTaskId(), errorMsg));
                 }
               }
             }
@@ -1024,7 +1026,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                  .emit();
 
               if (taskItem != null) {
-                taskComplete(taskItem, null, TaskStatus.failure(taskId));
+                taskComplete(taskItem, null, TaskStatus.failure(taskId, th.toString()));
               }
 
               return;

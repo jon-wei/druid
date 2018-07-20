@@ -225,8 +225,9 @@ public class CompactionTask extends AbstractTask
     }
 
     if (indexTaskSpec == null) {
-      log.warn("Failed to generate compaction spec");
-      return TaskStatus.failure(getId());
+      String errorMsg = "Failed to generate compaction spec";
+      log.warn(errorMsg);
+      return TaskStatus.failure(getId(), errorMsg);
     } else {
       final String json = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(indexTaskSpec);
       log.info("Generated compaction task details: " + json);

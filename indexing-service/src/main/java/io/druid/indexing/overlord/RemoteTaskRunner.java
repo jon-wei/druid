@@ -296,7 +296,11 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                     final String workerStatusPath = JOINER.join(indexerZkConfig.getStatusPath(), workerId);
                     if (!zkWorkers.containsKey(workerId) && cf.checkExists().forPath(workerAnnouncePath) == null) {
                       try {
-                        scheduleTasksCleanupForWorker(workerId, cf.getChildren().forPath(workerStatusPath));
+                        scheduleTasksCleanupForWorker(
+                            workerId,
+                            cf.getChildren().forPath(workerStatusPath),
+                            "Worker cleanup during startup."
+                        );
                       }
                       catch (Exception e) {
                         log.warn(
@@ -674,7 +678,11 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                        .emit();
                     RemoteTaskRunnerWorkItem workItem = pendingTasks.remove(taskId);
                     if (workItem != null) {
-                      taskComplete(workItem, null, TaskStatus.failure(taskId));
+                      taskComplete(
+                          workItem,
+                          null,
+                          TaskStatus.failure(taskId, "Exception while trying to assign task: " + e.toString())
+                      );
                     }
                   }
                   finally {
@@ -879,14 +887,15 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         statusLock.wait(waitMs);
         long elapsed = timeoutStopwatch.elapsed(TimeUnit.MILLISECONDS);
         if (elapsed >= waitMs) {
-          log.makeAlert(
+          String alertMsg = StringUtils.format(
               "Task assignment timed out on worker [%s], never ran task [%s]! Timeout: (%s >= %s)!",
               worker,
               task.getId(),
               elapsed,
               config.getTaskAssignmentTimeout()
-          ).emit();
-          taskComplete(taskRunnerWorkItem, theZkWorker, TaskStatus.failure(task.getId()));
+          );
+          log.makeAlert(alertMsg).emit();
+          taskComplete(taskRunnerWorkItem, theZkWorker, TaskStatus.failure(task.getId(), alertMsg));
           break;
         }
       }
@@ -1001,8 +1010,9 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                       taskRunnerWorkItem = runningTasks.remove(taskId);
                       if (taskRunnerWorkItem != null) {
                         log.info("Task[%s] just disappeared!", taskId);
-                        taskRunnerWorkItem.setResult(TaskStatus.failure(taskId));
-                        TaskRunnerUtils.notifyStatusChanged(listeners, taskId, TaskStatus.failure(taskId));
+                        TaskStatus failureStatus = TaskStatus.failure(taskId, "Task just disappeared!");
+                        taskRunnerWorkItem.setResult(failureStatus);
+                        TaskRunnerUtils.notifyStatusChanged(listeners, taskId, failureStatus);
                       } else {
                         log.info("Task[%s] went bye bye.", taskId);
                       }
@@ -1079,7 +1089,11 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     final ZkWorker zkWorker = zkWorkers.get(worker.getHost());
     if (zkWorker != null) {
       try {
-        scheduleTasksCleanupForWorker(worker.getHost(), getAssignedTasks(worker));
+        scheduleTasksCleanupForWorker(
+            worker.getHost(),
+            getAssignedTasks(worker),
+            "Ephemeral worker node disappeared in ZK."
+        );
       }
       catch (Exception e) {
         throw Throwables.propagate(e);
@@ -1102,7 +1116,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
    * Schedule a task that will, at some point in the future, clean up znodes and issue failures for "tasksToFail"
    * if they are being run by "worker".
    */
-  private void scheduleTasksCleanupForWorker(final String worker, final List<String> tasksToFail)
+  private void scheduleTasksCleanupForWorker(final String worker, final List<String> tasksToFail, String failReason)
   {
     // This method is only called from the PathChildrenCache event handler, so this may look like a race,
     // but is actually not.
@@ -1130,8 +1144,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                 log.info("Failing task[%s]", assignedTask);
                 RemoteTaskRunnerWorkItem taskRunnerWorkItem = runningTasks.remove(assignedTask);
                 if (taskRunnerWorkItem != null) {
-                  taskRunnerWorkItem.setResult(TaskStatus.failure(assignedTask));
-                  TaskRunnerUtils.notifyStatusChanged(listeners, assignedTask, TaskStatus.failure(assignedTask));
+                  taskRunnerWorkItem.setResult(TaskStatus.failure(assignedTask, failReason));
+                  TaskRunnerUtils.notifyStatusChanged(listeners, assignedTask, TaskStatus.failure(assignedTask, failReason));
                 } else {
                   log.warn("RemoteTaskRunner has no knowledge of task[%s]", assignedTask);
                 }

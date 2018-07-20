@@ -480,7 +480,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               status = jsonMapper.readValue(statusFile, TaskStatus.class);
                             } else {
                               // Process exited unsuccessfully
-                              status = TaskStatus.failure(task.getId());
+                              status = TaskStatus.failure(task.getId(), "Process exited unsuccessfully.");
                             }
 
                             TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);

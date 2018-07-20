@@ -386,7 +386,14 @@ public class WorkerHolder
                 announcement.getTaskId(),
                 announcement.getTaskType(),
                 announcement.getTaskResource(),
-                TaskStatus.failure(announcement.getTaskId()),
+                TaskStatus.failure(
+                    announcement.getTaskId(),
+                    StringUtils.format(
+                        "Task in state[%s] suddenly disappeared on worker[%s]",
+                        announcement.getStatus(),
+                        worker.getHost()
+                    )
+                ),
                 announcement.getTaskLocation(),
                 announcement.getTaskDataSource()
             ));
@@ -423,7 +430,14 @@ public class WorkerHolder
                   announcement.getTaskId(),
                   announcement.getTaskType(),
                   announcement.getTaskResource(),
-                  TaskStatus.failure(announcement.getTaskId()),
+                  TaskStatus.failure(
+                      announcement.getTaskId(),
+                      StringUtils.format(
+                          "Task in state[%s] suddenly disappeared on worker[%s]",
+                          announcement.getStatus(),
+                          worker.getHost()
+                      )
+                  ),
                   announcement.getTaskLocation(),
                   announcement.getTaskDataSource()
               ));

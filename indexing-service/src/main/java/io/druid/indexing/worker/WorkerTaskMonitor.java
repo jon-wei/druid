@@ -122,7 +122,7 @@ public class WorkerTaskMonitor extends WorkerTaskManager
           if (completedAnnouncement != null) {
             completionStatus = completedAnnouncement.getTaskStatus();
           } else if (!runningTasks.containsKey(announcement.getTaskStatus().getId())) {
-            completionStatus = TaskStatus.failure(announcement.getTaskStatus().getId());
+            completionStatus = TaskStatus.failure(announcement.getTaskStatus().getId(), "Stale announcement cleanup");
           }
 
           if (completionStatus != null) {

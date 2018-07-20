@@ -246,7 +246,10 @@ public abstract class WorkerTaskManager
           @Override
           public void onFailure(Throwable t)
           {
-            submitNoticeToExec(new StatusNotice(task, TaskStatus.failure(task.getId())));
+            submitNoticeToExec(new StatusNotice(
+                task,
+                TaskStatus.failure(task.getId(), "addRunningTask failure callback")
+            ));
           }
         }
     );
