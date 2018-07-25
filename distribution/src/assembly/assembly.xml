@@ -50,21 +50,13 @@
             </includes>
             <outputDirectory>quickstart</outputDirectory>
         </fileSet>
-        
+
         <fileSet>
             <directory>../examples/quickstart/bin</directory>
             <includes>
                 <include>*</include>
             </includes>
-            <outputDirectory>quickstart</outputDirectory>
-        </fileSet>
-
-        <fileSet>
-            <directory>../examples/quickstart/conf-quickstart</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>quickstart</outputDirectory>
+            <outputDirectory>quickstart/bin</outputDirectory>
         </fileSet>
 
         <fileSet>
@@ -72,7 +64,7 @@
             <includes>
                 <include>*</include>
             </includes>
-            <outputDirectory>quickstart</outputDirectory>
+            <outputDirectory>quickstart/hadoop</outputDirectory>
         </fileSet>
 
         <fileSet>
@@ -80,71 +72,71 @@
             <includes>
                 <include>*</include>
             </includes>
-            <outputDirectory>quickstart</outputDirectory>
+            <outputDirectory>quickstart/hadoop/docker</outputDirectory>
         </fileSet>
 
         <fileSet>
-            <directory>../examples/conf-quickstart</directory>
+            <directory>../examples/quickstart/conf-quickstart</directory>
             <includes>
                 <include>*</include>
             </includes>
-            <outputDirectory>conf-quickstart</outputDirectory>
+            <outputDirectory>quickstart/conf-quickstart</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>../examples/conf-quickstart/druid</directory>
+            <directory>../examples/quickstart/conf-quickstart/druid</directory>
             <includes>
                 <include>*</include>
             </includes>
-            <outputDirectory>conf-quickstart/druid</outputDirectory>
+            <outputDirectory>quickstart/conf-quickstart/druid</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>../examples/conf-quickstart/druid/_common</directory>
+            <directory>../examples/quickstart/conf-quickstart/druid/_common</directory>
             <includes>
                 <include>*</include>
             </includes>
-            <outputDirectory>conf-quickstart/druid/_common/</outputDirectory>
+            <outputDirectory>quickstart/conf-quickstart/druid/_common/</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>../examples/conf-quickstart/druid/broker</directory>
+            <directory>../examples/quickstart/conf-quickstart/druid/broker</directory>
             <includes>
                 <include>*</include>
             </includes>
-            <outputDirectory>conf-quickstart/druid/broker</outputDirectory>
+            <outputDirectory>quickstart/conf-quickstart/druid/broker</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>../examples/conf-quickstart/druid/coordinator</directory>
+            <directory>../examples/quickstart/conf-quickstart/druid/coordinator</directory>
             <includes>
                 <include>*</include>
             </includes>
-            <outputDirectory>conf-quickstart/druid/coordinator</outputDirectory>
+            <outputDirectory>quickstart/conf-quickstart/druid/coordinator</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>../examples/conf-quickstart/druid/historical</directory>
+            <directory>../examples/quickstart/conf-quickstart/druid/historical</directory>
             <includes>
                 <include>*</include>
             </includes>
-            <outputDirectory>conf-quickstart/druid/historical</outputDirectory>
+            <outputDirectory>quickstart/conf-quickstart/druid/historical</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>../examples/conf-quickstart/druid/overlord</directory>
+            <directory>../examples/quickstart/conf-quickstart/druid/overlord</directory>
             <includes>
                 <include>*</include>
             </includes>
-            <outputDirectory>conf-quickstart/druid/overlord</outputDirectory>
+            <outputDirectory>quickstart/conf-quickstart/druid/overlord</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>../examples/conf-quickstart/druid/middleManager</directory>
+            <directory>../examples/quickstart/conf-quickstart/druid/middleManager</directory>
             <includes>
                 <include>*</include>
             </includes>
-            <outputDirectory>conf-quickstart/druid/middleManager</outputDirectory>
+            <outputDirectory>quickstart/conf-quickstart/druid/middleManager</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>../examples/conf-quickstart/tranquility</directory>
+            <directory>../examples/quickstart/conf-quickstart/tranquility</directory>
             <includes>
                 <include>*</include>
             </includes>
-            <outputDirectory>conf-quickstart/tranquility</outputDirectory>
+            <outputDirectory>quickstart/conf-quickstart/tranquility</outputDirectory>
         </fileSet>
         <fileSet>
             <directory>../examples/quickstart/protobuf</directory>

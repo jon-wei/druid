@@ -149,7 +149,12 @@ layout: toc
 
 ## TBD (Doc section that guides readers based on their role to appropriate docs, e.g. cluster admin, data analyst)  
   * lorem ipsum lol
-    
+
+## TODO
+  * expressions (note that this is not performance optimized)
+  * virtual columns
+  * transform specs
+
 ## Extension docs
   * [Core extensions](/docs/VERSION/development/extensions.html#core-extensions)
   * [Community extensions](/docs/VERSION/development/extensions.html#community-extensions)
