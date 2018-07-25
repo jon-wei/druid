@@ -24,7 +24,6 @@ layout: toc
     * [Tutorial: Deleting data](/docs/VERSION/tutorials/deletes.html)
     * [Tutorial: Configuring tiers](/docs/VERSION/tutorials/retention.html)
     * [Tutorial: Writing queries (advanced) name TBD](/docs/VERSION/tutorials/queries-advanced.html)
-    ???
 
 ## Cluster setup
   * [Building a cluster](/docs/VERSION/setup/cluster.html)
