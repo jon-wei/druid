@@ -52,14 +52,6 @@
         </fileSet>
 
         <fileSet>
-            <directory>../examples/quickstart/bin</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>quickstart/bin</outputDirectory>
-        </fileSet>
-
-        <fileSet>
             <directory>../examples/quickstart/hadoop</directory>
             <includes>
                 <include>*</include>
