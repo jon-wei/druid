@@ -50,6 +50,38 @@
             </includes>
             <outputDirectory>quickstart</outputDirectory>
         </fileSet>
+        
+        <fileSet>
+            <directory>../examples/quickstart/bin</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>quickstart</outputDirectory>
+        </fileSet>
+
+        <fileSet>
+            <directory>../examples/quickstart/conf-quickstart</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>quickstart</outputDirectory>
+        </fileSet>
+
+        <fileSet>
+            <directory>../examples/quickstart/hadoop</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>quickstart</outputDirectory>
+        </fileSet>
+
+        <fileSet>
+            <directory>../examples/quickstart/hadoop/docker</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>quickstart</outputDirectory>
+        </fileSet>
 
         <fileSet>
             <directory>../examples/conf-quickstart</directory>
