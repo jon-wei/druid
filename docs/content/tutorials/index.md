@@ -29,7 +29,7 @@ OSes](http://www.webupd8.org/2012/09/install-oracle-java-8-in-ubuntu-via-ppa.htm
 
 ## Getting started
 
-To install Druid, issue the following commands in your terminal:
+To install Druid, run the following commands in your terminal:
 
 ```bash
 curl -O http://static.druid.io/artifacts/releases/druid-#{DRUIDVERSION}-bin.tar.gz
@@ -84,7 +84,7 @@ bin/supervise -c quickstart/conf-quickstart/quickstart.conf
 
 ```
 
-All state created by the services will be stored in the `var` directory under the druid-#{DRUIDVERSION} package root. Logs for the services are located at `var/sv`.
+All persistent state such as the cluster metadata store and segments for the services will be kept in the `var` directory under the druid-#{DRUIDVERSION} package root. Logs for the services are located at `var/sv`.
 
 Later on, if you'd like to stop the services, CTRL-C to exit the `bin/supervise` script, which will terminate the processes. 
 
