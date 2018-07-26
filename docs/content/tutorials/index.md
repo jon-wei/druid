@@ -86,7 +86,7 @@ bin/supervise -c quickstart/conf-quickstart/quickstart.conf
 
 All persistent state such as the cluster metadata store and segments for the services will be kept in the `var` directory under the druid-#{DRUIDVERSION} package root. Logs for the services are located at `var/sv`.
 
-Later on, if you'd like to stop the services, CTRL-C to exit the `bin/supervise` script, which will terminate the processes. 
+Later on, if you'd like to stop the services, CTRL-C to exit the `bin/supervise` script, which will terminate the Druid processes. 
 
 If you want a clean start after stopping the services, delete the `var` directory and run the `bin/supervise` script again.
 
@@ -160,13 +160,13 @@ The following tutorials demonstrate various methods of loading data into Druid, 
 
 This tutorial demonstrates how to perform a batch file load, using Druid's native batch ingestion.
 
-### [Tutorial: Loading a file using Hadoop](../tutorial-batch-hadoop.html)
-
-This tutorial demonstrates how to perform a batch file load, using a remote Hadoop cluster.
-
 ### [Tutorial: Loading stream data from Kafka](../tutorial-kafka.html)
 
 This tutorial demonstrates how to load streaming data from a Kafka topic.
+
+### [Tutorial: Loading a file using Hadoop](../tutorial-batch-hadoop.html)
+
+This tutorial demonstrates how to perform a batch file load, using a remote Hadoop cluster.
 
 ### [Tutorial: Loading data using Tranquility](../tutorial-tranquility.html)
 

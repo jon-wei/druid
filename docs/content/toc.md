@@ -10,9 +10,9 @@ layout: toc
     * [External dependencies](/docs/VERSION/design/index.html#external-dependencies)
     * [Ingestion Overview](/docs/VERSION/ingest/index.html)
   * [Quickstart](/docs/VERSION/tutorials/index.md)
-    * [Tutorial: Loading a file](/docs/VERSION/tutorials/tutorial-batch.html) -> TODO: rewrite based on imply local indexing tutorial
-    * [Tutorial: Loading a file using Hadoop](/docs/VERSION/tutorials/tutorial-batch-hadoop.html) -> TODO: rewrite based on imply hadoop indexing tutorial
+    * [Tutorial: Loading a file](/docs/VERSION/tutorials/tutorial-batch.html)
     * [Tutorial: Loading stream data from Kafka](/docs/VERSION/tutorials/tutorial-kafka.html) -> TODO: do new tutorial based on KIS instead of tranquility kafka
+    * [Tutorial: Loading a file using Hadoop](/docs/VERSION/tutorials/tutorial-batch-hadoop.html) -> TODO: rewrite based on imply hadoop indexing tutorial
     * [Tutorial: Loading stream data using Tranquility](/docs/VERSION/tutorials/tutorial-streams.html)
     * [Tutorial: Querying your data](/docs/VERSION/tutorials/queries.html)
   * [Further tutorials](/docs/VERSION/tutorials/advanced.md)
