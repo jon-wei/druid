@@ -42,49 +42,53 @@ In the package, you should find:
 * `LICENSE` - the license files.
 * `bin/` - scripts useful for this quickstart.
 * `conf/*` - template configurations for a clustered setup.
-* `conf-quickstart/*` - configurations for this quickstart.
 * `extensions/*` - all Druid extensions.
 * `hadoop-dependencies/*` - Druid Hadoop dependencies.
 * `lib/*` - all included software packages for core Druid.
-* `quickstart/*` - files useful for this quickstart.
+* `quickstart/*` - configuration files, sample data, and other files for the quickstart tutorials
 
-## Start up Zookeeper
+## Download Zookeeper
 
 Druid currently has a dependency on [Apache ZooKeeper](http://zookeeper.apache.org/) for distributed coordination. You'll
 need to download and run Zookeeper.
 
+In the package root, run the following commands:
+
 ```bash
 curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/zookeeper-3.4.11/zookeeper-3.4.11.tar.gz -o zookeeper-3.4.11.tar.gz
 tar -xzf zookeeper-3.4.11.tar.gz
-cd zookeeper-3.4.11
-cp conf/zoo_sample.cfg conf/zoo.cfg
-./bin/zkServer.sh start
+mv zookeeper-3.4.11 zk
 ```
+
+The startup scripts for the tutorial will expect the contents of the Zookeeper tarball to be located at `zk` under the druid-#{DRUIDVERSION} package root.
 
 ## Start up Druid services
 
-With Zookeeper running, return to the druid-#{DRUIDVERSION} directory. In that directory, issue the command:
+From the druid-#{DRUIDVERSION} package root, run the following command:
 
 ```bash
-bin/init
+bin/supervise -c quickstart/conf-quickstart/quickstart.conf
 ```
 
-This will setup up some directories for you. Next, you can start up the Druid processes in different terminal windows.
-This tutorial runs every Druid process on the same system. In a large distributed production cluster,
-many of these Druid processes can still be co-located together.
 
-```bash
-java `cat conf-quickstart/druid/historical/jvm.config | xargs` -cp "conf-quickstart/druid/_common:conf-quickstart/druid/historical:lib/*" io.druid.cli.Main server historical
-java `cat conf-quickstart/druid/broker/jvm.config | xargs` -cp "conf-quickstart/druid/_common:conf-quickstart/druid/broker:lib/*" io.druid.cli.Main server broker
-java `cat conf-quickstart/druid/coordinator/jvm.config | xargs` -cp "conf-quickstart/druid/_common:conf-quickstart/druid/coordinator:lib/*" io.druid.cli.Main server coordinator
-java `cat conf-quickstart/druid/overlord/jvm.config | xargs` -cp "conf-quickstart/druid/_common:conf-quickstart/druid/overlord:lib/*" io.druid.cli.Main server overlord
-java `cat conf-quickstart/druid/middleManager/jvm.config | xargs` -cp "conf-quickstart/druid/_common:conf-quickstart/druid/middleManager:lib/*" io.druid.cli.Main server middleManager
+This will bring up instances of Zookeeper and the Druid services, all running on the local machine, e.g.:
+
+```
+bin/supervise -c quickstart/conf-quickstart/quickstart.conf 
+[Thu Jul 26 12:16:23 2018] Running command[zk], logging to[/stage/druid-#{DRUIDVERSION}/var/sv/zk.log]: bin/run-zk quickstart/conf-quickstart
+[Thu Jul 26 12:16:23 2018] Running command[coordinator], logging to[/stage/druid-#{DRUIDVERSION}/var/sv/coordinator.log]: bin/run-druid coordinator quickstart/conf-quickstart
+[Thu Jul 26 12:16:23 2018] Running command[broker], logging to[//stage/druid-#{DRUIDVERSION}/var/sv/broker.log]: bin/run-druid broker quickstart/conf-quickstart
+[Thu Jul 26 12:16:23 2018] Running command[historical], logging to[/stage/druid-#{DRUIDVERSION}/var/sv/historical.log]: bin/run-druid historical quickstart/conf-quickstart
+[Thu Jul 26 12:16:23 2018] Running command[overlord], logging to[/stage/druid-#{DRUIDVERSION}/var/sv/overlord.log]: bin/run-druid overlord quickstart/conf-quickstart
+[Thu Jul 26 12:16:23 2018] Running command[middleManager], logging to[/stage/druid-#{DRUIDVERSION}/var/sv/middleManager.log]: bin/run-druid middleManager quickstart/conf-quickstart
+
 ```
 
-You should see a log message printed out for each service that starts up.
+All state created by the services will be stored in the `var` directory under the druid-#{DRUIDVERSION} package root. Logs for the services are located at `var/sv`.
 
-Later on, if you'd like to stop the services, CTRL-C to exit from the running java processes. If you
-want a clean start after stopping the services, delete the `var` directory and run the `init` script again.
+Later on, if you'd like to stop the services, CTRL-C to exit the `bin/supervise` script, which will terminate the processes. 
+
+If you want a clean start after stopping the services, delete the `var` directory and run the `bin/supervise` script again.
 
 Once every service has started, you are now ready to load data.
 
@@ -94,7 +98,7 @@ Once every service has started, you are now ready to load data.
 
 For the following data loading tutorials, we have included a sample data file containing Wikipedia page edit events that occurred on 2017-06-27.
 
-This sample data is located at `quickstart/wikipedia-2016-06-27-sampled.json.gz` from the Druid package root. The page edit events are stored as JSON objects in text file.
+This sample data is located at `quickstart/wikipedia-2016-06-27-sampled.json.gz` from the Druid package root. The page edit events are stored as JSON objects in a text file.
 
 The sample data has the following columns, and an example event is shown below:
 
