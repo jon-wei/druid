@@ -119,7 +119,7 @@ querying within a minute or two. You can monitor the progress of loading your da
 coordinator console, by checking whether there is a datasource "wikipedia" with a blue circle
 indicating "fully available": [http://localhost:8081/#/](http://localhost:8081/#/).
 
-![Coordinator console](../tutorials/img/tutorial-batch-01.png "Logo Title Text 1")
+![Coordinator console](../tutorials/img/tutorial-batch-01.png "Wikipedia 100% loaded")
 
 ## Querying your data
 

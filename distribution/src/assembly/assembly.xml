@@ -89,6 +89,13 @@
             <outputDirectory>quickstart/conf-quickstart/druid/_common/</outputDirectory>
         </fileSet>
         <fileSet>
+            <directory>../examples/quickstart/conf-quickstart/druid/_common/hadoop-xml</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>quickstart/conf-quickstart/druid/_common/hadoop-xml</outputDirectory>
+        </fileSet>
+        <fileSet>
             <directory>../examples/quickstart/conf-quickstart/druid/broker</directory>
             <includes>
                 <include>*</include>
