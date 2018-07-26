@@ -38,6 +38,6 @@ WHEREAMI="$(cd "$WHEREAMI" && pwd)"
 
 cd "$WHEREAMI/.."
 exec java `cat "$CONFDIR"/jvm.config | xargs` \
-  -cp "$WHEREAMI/../dist/zk/lib/*:$WHEREAMI/../dist/zk/*:$CONFDIR" \
+  -cp "$WHEREAMI/../zk/lib/*:$WHEREAMI/../zk/*:$CONFDIR" \
   org.apache.zookeeper.server.quorum.QuorumPeerMain \
   "$CONFDIR"/zoo.cfg

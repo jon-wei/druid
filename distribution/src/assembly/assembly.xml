@@ -131,6 +131,13 @@
             <outputDirectory>quickstart/conf-quickstart/tranquility</outputDirectory>
         </fileSet>
         <fileSet>
+            <directory>../examples/quickstart/conf-quickstart/zk</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>quickstart/conf-quickstart/zk</outputDirectory>
+        </fileSet>
+        <fileSet>
             <directory>../examples/quickstart/protobuf</directory>
             <includes>
                 <include>*</include>
