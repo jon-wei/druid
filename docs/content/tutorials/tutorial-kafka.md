@@ -2,7 +2,7 @@
 layout: doc_page
 ---
 
-# Tutorial: Load from Kafka
+# Tutorial: Load streaming data from Kafka
 
 ## Getting started
 

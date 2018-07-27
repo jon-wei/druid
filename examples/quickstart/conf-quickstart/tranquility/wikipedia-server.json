@@ -1,0 +1,75 @@
+{
+  "dataSources" : {
+    "metrics" : {
+      "spec" : {
+        "dataSchema" : {
+          "dataSource" : "wikipedia-tranquility",
+          "parser" : {
+            "type" : "string",
+            "parseSpec" : {
+              "format" : "json",
+              "dimensionsSpec" : {
+                "dimensions" : [
+                  "channel",
+                  "cityName",
+                  "comment",
+                  "countryIsoCode",
+                  "countryName",
+                  "isAnonymous",
+                  "isMinor",
+                  "isNew",
+                  "isRobot",
+                  "isUnpatrolled",
+                  "metroCode",
+                  "namespace",
+                  "page",
+                  "regionIsoCode",
+                  "regionName",
+                  "user",
+                  { "name" : "commentLength", "type" : "long" },
+                  { "name" : "deltaBucket", "type" : "long" },
+                  "flags",
+                  "diffUrl",
+                  { "name": "added", "type": "long" },
+                  { "name": "deleted", "type": "long" },
+                  { "name": "delta", "type": "long" }
+                ]
+              },
+              "timestampSpec": {
+                "column": "timestamp",
+                "format": "iso"
+              }
+            }
+          },
+          "metricsSpec" : [],
+          "granularitySpec" : {
+            "type" : "uniform",
+            "segmentGranularity" : "day",
+            "queryGranularity" : "none",
+            "intervals" : ["2016-06-27/2016-06-28"],
+            "rollup" : false
+          }
+        },
+        "ioConfig" : {
+          "type" : "realtime"
+        },
+        "tuningConfig" : {
+          "type" : "realtime",
+          "intermediatePersistPeriod" : "PT10M",
+          "windowPeriod" : "PT10M"
+        }
+      },
+      "properties" : {
+        "task.partitions" : "1",
+        "task.replicants" : "1"
+      }
+    }
+  },
+  "properties" : {
+    "zookeeper.connect" : "localhost",
+    "druid.discovery.curator.path" : "/druid/discovery",
+    "druid.selectors.indexing.serviceName" : "druid/overlord",
+    "http.port" : "8200",
+    "http.threads" : "9"
+  }
+}

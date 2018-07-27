@@ -2,9 +2,9 @@
 layout: doc_page
 ---
 
-# Tutorial: Load your own batch data using Hadoop
+# Tutorial: Load batch data using Hadoop
 
-This tutorial shows you how to load your own data files into Druid using a remote Hadoop cluster.
+This tutorial shows you how to load data files into Druid using a remote Hadoop cluster.
 
 For this tutorial, we'll assume that you've already completed the previous [batch ingestion tutorial](tutorial-batch.html).
 using Druid's native batch ingestion system.
