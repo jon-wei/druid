@@ -21,6 +21,7 @@ In the Druid package root, run the following commands:
 ```
 curl http://static.druid.io/tranquility/releases/tranquility-distribution-0.8.2.tgz -o tranquility-distribution-0.8.2.tgz
 tar -xzf tranquility-distribution-0.8.2.tgz
+mv tranquility-distribution-0.8.2 tranquility
 ```
 
 The startup scripts for the tutorial will expect the contents of the Tranquility tarball to be located at `tranquility` under the druid-#{DRUIDVERSION} package root.
@@ -59,3 +60,11 @@ may also take a few seconds to finish the first time you run it, during which ti
 allocated to the ingestion task. Subsequent POSTs will complete quickly once this is done.
 
 Once the data is sent to Druid, you can immediately query it.
+
+## Querying your data
+
+Please follow the [query tutorial](../tutorial/query.html) to run some example queries on the newly loaded data.
+
+## Further reading
+
+For more information on Tranquility, please see [the Tranquility documentation](https://github.com/druid-io/tranquility).

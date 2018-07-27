@@ -193,7 +193,7 @@ indicating "fully available": [http://localhost:8081/#/](http://localhost:8081/#
 
 ## Querying your data
 
-Your data should become fully available within a minute or two. You can monitor this process on 
+Your data should become fully available within a minute or two after the task completes. You can monitor this process on 
 your Coordinator console at [http://localhost:8081/#/](http://localhost:8081/#/).
 
 Once the data is loaded, please follow the [query tutorial](../tutorial/query.html) to run some example queries on the newly loaded data.
