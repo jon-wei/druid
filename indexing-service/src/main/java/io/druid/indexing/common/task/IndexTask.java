@@ -86,7 +86,6 @@ import io.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import io.druid.segment.realtime.firehose.ChatHandler;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.segment.realtime.firehose.CombiningFirehoseFactory;
-import io.druid.segment.realtime.firehose.IngestSegmentFirehose;
 import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthorizerMapper;
