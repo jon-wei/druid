@@ -121,6 +121,24 @@ indicating "fully available": [http://localhost:8081/#/](http://localhost:8081/#
 
 ![Coordinator console](../tutorials/img/tutorial-batch-01.png "Wikipedia 100% loaded")
 
+For convenience, the Druid package includes a batch ingestion helper script at `bin/post-index-task`.
+
+This script will POST an ingestion task to the Druid overlord and poll Druid until the data is available for querying.
+
+```
+$ bin/post-index-task --file quickstart/wikipedia-index.json 
+Beginning indexing data for wikipedia
+Task started: index_wikipedia_2018-07-27T06:37:44.323Z
+Task log:     http://localhost:8090/druid/indexer/v1/task/index_wikipedia_2018-07-27T06:37:44.323Z/log
+Task status:  http://localhost:8090/druid/indexer/v1/task/index_wikipedia_2018-07-27T06:37:44.323Z/status
+Task index_wikipedia_2018-07-27T06:37:44.323Z still running...
+Task index_wikipedia_2018-07-27T06:37:44.323Z still running...
+Task finished with status: SUCCESS
+Completed indexing data for wikipedia. Now loading indexed data onto the cluster...
+wikipedia loading complete! You may now query your data
+```
+
+
 ## Querying your data
 
 Your data should become fully available within a minute or two. You can monitor this process on 
