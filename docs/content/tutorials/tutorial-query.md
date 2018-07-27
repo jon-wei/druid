@@ -4,7 +4,7 @@ layout: doc_page
 
 # Tutorial: Querying data
 
-This tutorial will demonstrate various methods of querying data in Druid.
+This tutorial will demonstrate how to query data in Druid, with examples for Druid's native query format and Druid SQL.
 
 The tutorial assumes that you've already completed one of the 4 ingestion tutorials, as we will be querying the sample Wikipedia edits data.
 

@@ -4,13 +4,12 @@ layout: doc_page
 
 # Tutorial: Roll-up
 
-Druid summarizes raw data at ingestion time using a process we refer to as "roll-up". Roll-up is a first-level aggregation operation over a selected set of columns that reduces the size of stored segments.
+Druid can summarize raw data at ingestion time using a process we refer to as "roll-up". Roll-up is a first-level aggregation operation over a selected set of columns that reduces the size of stored segments.
 
 This tutorial will demonstrate the effects of roll-up on an example dataset.
 
 For this tutorial, we'll assume you've already downloaded Druid as described in 
-the [single-machine quickstart](index.html) and have it running on your local machine. You 
-don't need to have loaded any data yet.
+the [single-machine quickstart](index.html) and have it running on your local machine.
 
 It will also be helpful to have finished [Tutorial: Loading a file](/docs/VERSION/tutorials/tutorial-batch.html) and [Tutorial: Querying data](/docs/VERSION/tutorials/tutorial-query.html).
 
@@ -88,9 +87,11 @@ We'll ingest this data using the following ingestion task spec, located at `quic
 }
 ```
 
+Roll-up has been enabled by setting `"rollup" : true` in the `granularitySpec`.
+
 Note that we have `srcIP` and `dstIP` defined as dimensions, a longSum metric is defined for the `packets` and `bytes` columns, and the `queryGranularity` has been defined as `minute`. 
 
-We will see the effects of these defintions after we load this data.
+We will see how these definitions are used after we load this data.
 
 ## Load the example data
 
@@ -104,7 +105,7 @@ After the script completes, we will query the data.
 
 ## Query the example data
 
-Let's run `bin/dsql` and run a `select * from "rollup-tutorial";` query to see what data was ingested.
+Let's run `bin/dsql` and issue a `select * from "rollup-tutorial";` query to see what data was ingested.
 
 ```
 $ bin/dsql
@@ -125,7 +126,7 @@ Retrieved 5 rows in 1.18s.
 dsql> 
 ```
 
-Let's look again at the three events in the original input data that occurred during `2018-01-01T01:01`:
+Let's look at the three events in the original input data that occurred during `2018-01-01T01:01`:
 
 ```
 {"timestamp":"2018-01-01T01:01:35Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":20,"bytes":9024}
@@ -143,7 +144,7 @@ These three rows have been "rolled up" into the following row:
 └──────────────────────────┴────────┴───────┴─────────┴─────────┴─────────┘
 ```
 
-These rows have been grouped by the timestamp and dimension columns `{timestamp, srcIP, dstIP}` with sum aggregations on the metric columns `packets` and `bytes`. 
+The input rows have been grouped by the timestamp and dimension columns `{timestamp, srcIP, dstIP}` with sum aggregations on the metric columns `packets` and `bytes`.
 
 Before the grouping occurs, the timestamps of the original input data are bucketed/floored by minute, due to the `"queryGranularity":"minute"` setting in the ingestion spec.
 
@@ -162,7 +163,7 @@ Likewise, these two events that occurred during `2018-01-01T01:02` have been rol
 └──────────────────────────┴────────┴───────┴─────────┴─────────┴─────────┘
 ```
 
-For the last event recording traffic between 1.1.1.1 and 2.2.2.2, no roll-up took place, because this was the only event that occurred during `2018-01-01T01:03`
+For the last event recording traffic between 1.1.1.1 and 2.2.2.2, no roll-up took place, because this was the only event that occurred during `2018-01-01T01:03`:
 
 ```
 {"timestamp":"2018-01-01T01:03:29Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":49,"bytes":10204}

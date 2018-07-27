@@ -8,22 +8,23 @@ layout: toc
     * [Architecture](/docs/VERSION/design/index.html#architecture)
     * [Query processing](/docs/VERSION/design/index.html#query-processing)
     * [External dependencies](/docs/VERSION/design/index.html#external-dependencies)
-    * [Ingestion Overview](/docs/VERSION/ingest/index.html)
+    * [Ingestion overview](/docs/VERSION/ingest/index.html)
   * [Quickstart](/docs/VERSION/tutorials/index.html)
     * [Tutorial: Loading a file](/docs/VERSION/tutorials/tutorial-batch.html)
     * [Tutorial: Loading stream data from Kafka](/docs/VERSION/tutorials/tutorial-kafka.html)
     * [Tutorial: Loading a file using Hadoop](/docs/VERSION/tutorials/tutorial-batch-hadoop.html)
-    * [Tutorial: Loading stream data using Tranquility](/docs/VERSION/tutorials/tutorial-tranquility.html)
+    * [Tutorial: Loading stream data using HTTP push](/docs/VERSION/tutorials/tutorial-tranquility.html)
     * [Tutorial: Querying data](/docs/VERSION/tutorials/tutorial-query.html)
   * [Further tutorials](/docs/VERSION/tutorials/advanced.html)
     * [Tutorial: Rollup](/docs/VERSION/tutorials/rollup.html)
-    * [Tutorial: Writing your own ingestion specs](/docs/VERSION/tutorials/ingestion-spec.html)
-    * [Tutorial: Configuring retention](/docs/VERSION/tutorials/retention.html)
-    * [Tutorial: Updating existing data](/docs/VERSION/tutorials/updates.html)
-    * [Tutorial: Compacting segments](/docs/VERSION/tutorials/compaction.html)
-    * [Tutorial: Deleting data](/docs/VERSION/tutorials/deletes.html)
-    * [Tutorial: Configuring tiers](/docs/VERSION/tutorials/retention.html)
-    * [Tutorial: Advanced query features](/docs/VERSION/tutorials/queries-advanced.html)
+    * [Tutorial: Configuring retention](/docs/VERSION/tutorials/tutorial-retention.html)
+    * [Tutorial: Updating existing data](/docs/VERSION/tutorials/tutorial-update-data.html)
+    * [Tutorial: Compacting segments](/docs/VERSION/tutorials/tutorial-compaction.html)
+    * [Tutorial: Deleting data](/docs/VERSION/tutorials/tutorial-delete-data.html)
+    
+    * [Tutorial: Writing your own ingestion specs](/docs/VERSION/tutorials/tutorial-ingestion-spec.html) TODO, existing page needs improvement (based on old "pageviews" quickstart)
+    * [Tutorial: Configuring tiers](/docs/VERSION/tutorials/tiers.html) TODO
+    * [Tutorial: Advanced query features](/docs/VERSION/tutorials/queries-advanced.html) TODO
 
 ## Cluster setup
   * [Building a cluster](/docs/VERSION/setup/cluster.html)
