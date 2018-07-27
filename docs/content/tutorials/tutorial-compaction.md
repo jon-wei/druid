@@ -93,7 +93,7 @@ dsql> select count(*) from "compaction-tutorial";
 Retrieved 1 row in 1.30s.
 ```
 
-After 15 minutes, the http://localhost:8081/#/datasources/compaction-tutorial page should show there is only 1 segment:
+After the coordinator has been running for at least 15 minutes, the http://localhost:8081/#/datasources/compaction-tutorial page should show there is only 1 segment:
 
 ![Compacted segments final state](../tutorials/img/tutorial-compaction-02.png "Compacted segments final state")
 
