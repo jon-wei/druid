@@ -4,11 +4,7 @@ layout: doc_page
 
 ## Writing an ingestion spec
 
-When loading files into Druid, you will use Druid's [batch loading](../ingestion/native-batch.html) process.
-There's an example batch ingestion spec in `quickstart/wikipedia-index.json` that you can modify
-for your own needs.
-
-The most important questions are:
+When writing an ingestion spec, the most important questions are:
 
   * What should the dataset be called? This is the "dataSource" field of the "dataSchema".
   * Where is the dataset located? This configuration belongs in the "ioConfig". The specific configuration

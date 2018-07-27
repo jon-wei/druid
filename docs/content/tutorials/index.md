@@ -70,7 +70,6 @@ From the druid-#{DRUIDVERSION} package root, run the following command:
 bin/supervise -c quickstart/conf-quickstart/quickstart.conf
 ```
 
-
 This will bring up instances of Zookeeper and the Druid services, all running on the local machine, e.g.:
 
 ```
