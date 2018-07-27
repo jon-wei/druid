@@ -23,12 +23,12 @@ layout: toc
     * [Tutorial: Compacting segments](/docs/VERSION/tutorials/compaction.html)
     * [Tutorial: Deleting data](/docs/VERSION/tutorials/deletes.html)
     * [Tutorial: Configuring tiers](/docs/VERSION/tutorials/retention.html)
-    * [Tutorial: Writing queries (advanced) name TBD](/docs/VERSION/tutorials/queries-advanced.html)
+    * [Tutorial: Advanced query features](/docs/VERSION/tutorials/queries-advanced.html)
 
 ## Cluster setup
   * [Building a cluster](/docs/VERSION/setup/cluster.html)
     * [Choosing hardware](/docs/VERSION/setup/cluster.html#hardware)
-    * [Starting processes](/docs/VERSION/setup/cluster.html#services) --> could be made easier with Imply startup scripts
+    * [Starting processes](/docs/VERSION/setup/cluster.html#services) --> TODO: could be made easier with Imply startup scripts
     * [High availability](/docs/VERSION/setup/cluster.html#ha)
     * [Metadata store](/docs/VERSION/setup/metadata-store.html)
     * [Deep storage](/docs/VERSION/setup/deep-storage.html)
