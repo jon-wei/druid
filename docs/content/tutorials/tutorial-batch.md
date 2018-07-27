@@ -101,7 +101,7 @@ a task that loads the `wikipedia-2016-06-27-sampled.json.gz` file included in th
 this task, POST it to Druid in a new terminal window from the druid-#{DRUIDVERSION} directory:
 
 ```bash
-curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/wikiticker-index.json http://localhost:8090/druid/indexer/v1/task
+curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/wikipedia-index.json http://localhost:8090/druid/indexer/v1/task
 ```
 
 Which will print the ID of the task if the submission was successful:

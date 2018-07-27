@@ -44,7 +44,7 @@ You can check the log file in `var/sv/tranquility-server.log` to confirm that th
 Let's send the sample Wikipedia edits data to Tranquility:
 
 ```
-tar -xz quickstart/wikipedia-2016-06-27-sampled.json.gz | curl -XPOST -H'Content-Type: application/json' --data-binary @- http://localhost:8200/v1/post/tutorial-tranquility-server
+tar -xz quickstart/wikipedia-2016-06-27-sampled.json.gz | curl -XPOST -H'Content-Type: application/json' --data-binary @- http://localhost:8200/v1/post/wikipedia-tranquility
 ```
 
 Which will print something like:

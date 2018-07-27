@@ -5,7 +5,7 @@
   "granularity" : "all",
   "dimension" : "page",
   "metric" : "count",
-  "threshold" : 25,
+  "threshold" : 10,
   "aggregations" : [
     {
       "type" : "count",
