@@ -23,7 +23,6 @@ bin/post-index-task --file quickstart/deletion-index.json
 
 When the load finishes, open http://localhost:8081/#/datasources/deletion-tutorial in a browser.
 
-
 ## How to permanently delete data
 
 Permanent deletion of a Druid segment has two steps:

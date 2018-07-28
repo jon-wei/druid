@@ -187,28 +187,45 @@ real-time load will take priority.)
 
 ## Rollup
 
-TODO: update this section
+Druid is able to summarize raw data at ingestion time using a process we refer to as "roll-up".
+Roll-up is a first-level aggregation operation over a selected set of dimensions. 
 
-The individual events in our example data set are not very interesting because there may be trillions of such events. 
-However, summarizations of this type of data can yield many useful insights.
-Druid summarizes this raw data at ingestion time using a process we refer to as "roll-up".
-Roll-up is a first-level aggregation operation over a selected set of dimensions, equivalent to (in pseudocode):
+Suppose we have the following raw data, representing total packet/byte counts in particular seconds for traffic between a source and destination.
 
-    GROUP BY timestamp, publisher, advertiser, gender, country
-      :: impressions = COUNT(1),  clicks = SUM(click),  revenue = SUM(price)
+```
+timestamp                 srcIP         dstIP          packets     bytes
+2018-01-01T01:01:35Z      1.1.1.1       2.2.2.2            100      1000
+2018-01-01T01:01:51Z      1.1.1.1       2.2.2.2            200      2000
+2018-01-01T01:01:59Z      1.1.1.1       2.2.2.2            300      3000
+2018-01-01T01:02:14Z      1.1.1.1       2.2.2.2            400      4000
+2018-01-01T01:02:29Z      1.1.1.1       2.2.2.2            500      5000
+2018-01-01T01:03:29Z      1.1.1.1       2.2.2.2            600      6000
+2018-01-02T21:33:14Z      7.7.7.7       8.8.8.8            100      1000
+2018-01-02T21:33:45Z      7.7.7.7       8.8.8.8            200      2000
+2018-01-02T21:35:45Z      7.7.7.7       8.8.8.8            300      3000
+```
 
-The compacted version of our original raw data looks something like this:
+If we ingest this data into Druid with a `queryGranularity` of `minute` (which will floor timestamps to minutes), the roll-up operation is equivalent to the following pseudocode:
 
-     timestamp             publisher          advertiser  gender country impressions clicks revenue
-     2011-01-01T01:00:00Z  ultratrimfast.com  google.com  Male   USA     1800        25     15.70
-     2011-01-01T01:00:00Z  bieberfever.com    google.com  Male   USA     2912        42     29.18
-     2011-01-01T02:00:00Z  ultratrimfast.com  google.com  Male   UK      1953        17     17.31
-     2011-01-01T02:00:00Z  bieberfever.com    google.com  Male   UK      3194        170    34.01
+```
+GROUP BY TRUNCATE(timestamp, MINUTE), srcIP, dstIP :: SUM(packets), SUM(bytes)
+```
+
+After the data above is aggregated during roll-up, the following rows will be ingested:
+
+```
+2018-01-01T01:01:00Z      1.1.1.1       2.2.2.2            600      6000
+2018-01-01T01:02:00Z      1.1.1.1       2.2.2.2            900      9000
+2018-01-01T01:03:00Z      1.1.1.1       2.2.2.2            600      6000
+2018-01-02T21:33:00Z      7.7.7.7       8.8.8.8            100      1000
+2018-01-02T21:33:00Z      7.7.7.7       8.8.8.8            500      5000
+```
 
 In practice, we see that rolling up data can dramatically reduce the size of data that needs to be stored (up to a factor of 100).
-Druid will roll up data as it is ingested to minimize the amount of raw data that needs to be stored. 
-This storage reduction does come at a cost; as we roll up data, we lose the ability to query individual events. Phrased another way,
-the rollup granularity is the minimum granularity you will be able to explore data at and events are floored to this granularity. 
+Druid can roll up data as it is ingested to minimize the amount of raw data that needs to be stored. 
+This storage reduction does come at a cost; as we roll up data, we lose the ability to query individual events. 
+
+The rollup granularity is the minimum granularity you will be able to explore data at and events are floored to this granularity. 
 Hence, Druid ingestion specs define this granularity as the `queryGranularity` of the data. The lowest supported `queryGranularity` is millisecond.
 
 ### Roll-up modes
@@ -217,17 +234,42 @@ Druid supports two roll-up modes, i.e., _perfect roll-up_ and _best-effort roll-
 
 The perfect roll-up mode encompasses an additional preprocessing step to determine intervals and shardSpecs before actual data ingestion if they are not specified in the ingestionSpec. This preprocessing step usually scans the entire input data which might increase the ingestion time. The [Hadoop indexing task](../ingestion/batch-ingestion.html) always runs with this perfect roll-up mode.
 
-On the contrary, the best-effort roll-up mode doesn't require any preprocessing step, but the size of ingested data might be larger than that of the perfect roll-up. All types of [streaming indexing (i.e., realtime index task, kafka indexing service, ...)](../ingestion/stream-ingestion.html) run with this mode.
+On the contrary, the best-effort roll-up mode doesn't require any preprocessing step, but the size of ingested data might be larger than that of the perfect roll-up. All types of [streaming indexing (e.g., kafka indexing service)](../ingestion/stream-ingestion.html) run with this mode.
 
 Finally, the [native index task](../ingestion/tasks.html) supports both modes and you can choose either one which fits to your application.
 
-
 ## Data maintenance
 
-TODO: Describe data maintenance operations such as:
-- Inserts, overwrites, and deletes
-- Compaction
-- Retention (load/drop rules)
-- Tiers
+### Inserts and overwrites
 
-And what they are useful for.
+Druid can insert new data to an existing datasource by appending new segments to existing segment sets. It can also add new data by merging an existing set of segments with new data and overwriting the original set. 
+
+Druid does not support single-record updates by primary key.
+
+Updates are described further at [update existing data](../ingestion/update-existing-data.html).
+
+### Compaction
+
+Compaction is a type of overwrite operation, which reads an existing set of segments, combines them into a new set with larger but fewer segments, and overwrites the original set with the new compacted set, without changing the data that is stored.
+
+For performance reasons, it is sometimes beneficial to compact a set of segments into a set of larger but fewer segments; there is some per-segment processing and memory overhead in both the ingestion and querying paths.
+
+For compaction documentation, please see [tasks](../ingestion/tasks.html).
+
+### Retention and Tiering
+
+Druid supports retention rules, which are used to define intervals of time where data should be preserved, and intervals where data should be discarded.
+
+Druid also supports separating historical nodes into tiers, and the retention rules can be configured to assign data for specific intervals to specific tiers.
+
+These features are useful for performance/cost management; a common use case is separating historical nodes into a "hot" tier and a "cold" tier.
+
+For more information, please see [Load rules](../operations/rule-configuration.html).
+
+### Deletes
+
+Druid supports permanent deletion of segments that are in an "unused" state (see the [Segment states](#segment-states) section above).
+
+The Kill Task deletes unused segments within a specified interval from metadata storage and deep storage.
+
+For more information, please see [Kill Task](../ingestion/tasks.html#kill-task).

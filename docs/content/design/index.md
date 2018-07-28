@@ -62,7 +62,7 @@ than one smaller "lookup" table.
 
 Situations where you would likely _not_ want to use Druid include:
 
-- You need low-latency updates. Druid supports streaming inserts, but not streaming updates (updates are done using
+- You need low-latency updates of _existing_ records using a primary key. Druid supports streaming inserts, but not streaming updates (updates are done using
 background batch jobs).
 - You are building an offline reporting system where query latency is not very important.
 - You want to do "big" joins (joining one big fact table to another big fact table).
