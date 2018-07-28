@@ -214,6 +214,7 @@ GROUP BY TRUNCATE(timestamp, MINUTE), srcIP, dstIP :: SUM(packets), SUM(bytes)
 After the data above is aggregated during roll-up, the following rows will be ingested:
 
 ```
+timestamp                 srcIP         dstIP          packets     bytes
 2018-01-01T01:01:00Z      1.1.1.1       2.2.2.2            600      6000
 2018-01-01T01:02:00Z      1.1.1.1       2.2.2.2            900      9000
 2018-01-01T01:03:00Z      1.1.1.1       2.2.2.2            600      6000
