@@ -1,0 +1,11 @@
+{
+  "type": "compact",
+  "dataSource": "compaction-tutorial",
+  "interval": "2016-06-27/2016-06-28",
+  "tuningConfig" : {
+    "type" : "index",
+    "targetPartitionSize" : 5000000,
+    "maxRowsInMemory" : 25000,
+    "forceExtendableShardSpecs" : true
+  }
+}

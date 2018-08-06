@@ -2,7 +2,11 @@
 layout: doc_page
 ---
 
-This expression language supports the following operators (listed in decreasing order of precedence).
+# Druid Expressions
+
+NOTE: This feature is still experimental. It has not been optimized for performance yet, and its implementation is known to have significant inefficiencies.
+
+Druid's expression language supports the following operators (listed in decreasing order of precedence).
 
 |Operators|Description|
 |---------|-----------|

@@ -87,7 +87,8 @@ An example dataSchema is shown below:
     "segmentGranularity" : "DAY",
     "queryGranularity" : "NONE",
     "intervals" : [ "2013-08-31/2013-09-01" ]
-  }
+  },
+  "transformSpec" : null
 }
 ```
 
@@ -97,6 +98,7 @@ An example dataSchema is shown below:
 | parser | JSON Object | Specifies how ingested data can be parsed. | yes |
 | metricsSpec | JSON Object array | A list of [aggregators](../querying/aggregations.html). | yes |
 | granularitySpec | JSON Object | Specifies how to create segments and roll up data. | yes |
+| transformSpec | JSON Object | Specifes how to filter and transform input data. See [transform specs](../ingestion/transform-spec.html).| no |
 
 ## Parser
 
@@ -244,6 +246,10 @@ for the `comment` column.
 }
 ```
 
+## metricsSpec
+
+The `metricsSpec` is a list of [aggregators](../querying/aggregations.html). If `rollup` is false in the granularity spec, the metrics spec can be an empty list and all columns can be defined in the dimensionsSpec instead.
+
 ## GranularitySpec
 
 The default granularity spec is `uniform`, and can be changed by setting the `type` field.
@@ -281,6 +287,12 @@ Batch Ingestion: See [Batch ingestion](../ingestion/batch-ingestion.html)
 Stream Push Ingestion: See [Stream push ingestion](../ingestion/stream-push.html).
 Stream Pull Ingestion: See [Stream pull ingestion](../ingestion/stream-pull.html).
 Batch Ingestion: See [Batch ingestion](../ingestion/batch-ingestion.html)
+
+# Transform Spec
+
+Transform specs allow Druid to transform and filter input data during ingestion.
+
+See [Transform specs](../ingestion/transform-spec.html)
 
 # Evaluating Timestamp, Dimensions and Metrics
 

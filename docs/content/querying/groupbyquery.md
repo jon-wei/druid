@@ -273,7 +273,7 @@ Supported query contexts:
 
 #### Advanced configurations
 
-##### Common configuragions for all groupBy strategies
+##### Common configurations for all groupBy strategies
 
 Supported runtime properties:
 

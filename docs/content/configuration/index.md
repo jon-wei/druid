@@ -389,7 +389,6 @@ This config is used to find the [Coordinator](../design/coordinator.html) using 
 |--------|-----------|-------|
 |`druid.selectors.coordinator.serviceName`|The druid.service name of the coordinator node. To start the Coordinator with a different name, set it with this property. |druid/coordinator|
 
-
 ### Announcing Segments
 
 You can configure how to announce and unannounce Znodes in ZooKeeper (using Curator). For normal operations you do not need to override any of these configs.

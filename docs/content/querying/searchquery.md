@@ -108,6 +108,7 @@ The following runtime properties apply:
 
 |Property|Description|Default|
 |--------|-----------|-------|
+|`druid.query.search.maxSearchLimit`|Maximum number of search results to return.|1000|
 |`druid.query.search.searchStrategy`|Default search query strategy.|useIndexes|
 
 #### Query context
