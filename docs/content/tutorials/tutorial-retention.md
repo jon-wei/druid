@@ -9,13 +9,13 @@ This tutorial demonstrates how to configure retention rules on a datasource to s
 For this tutorial, we'll assume you've already downloaded Druid as described in 
 the [single-machine quickstart](index.html) and have it running on your local machine. 
 
-It will also be helpful to have finished [Tutorial: Loading a file](/docs/VERSION/tutorials/tutorial-batch.html) and [Tutorial: Querying data](/docs/VERSION/tutorials/tutorial-query.html).
+It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.html) and [Tutorial: Querying data](../tutorials/tutorial-query.html).
 
 ## Load the example data
 
 For this tutorial, we'll be using the Wikipedia edits sample data, with an ingestion task spec that will create a separate segment for each hour in the input data.
 
-The ingestion spec can be found at `quickstart/retention-index.json`. Let's submit that spec, which will create a datasource called `retention-tutorial`:
+The ingestion spec can be found at `quickstart/tutorial/retention-index.json`. Let's submit that spec, which will create a datasource called `retention-tutorial`:
 
 ```
 bin/post-index-task --file quickstart/tutorial/retention-index.json 
@@ -89,4 +89,4 @@ If instead you want to retain data based on how old it is (e.g., retain data tha
 
 ## Further reading
 
-* [Load rules](/docs/VERSION/operations/rule-configuration.html)
+* [Load rules](../operations/rule-configuration.html)

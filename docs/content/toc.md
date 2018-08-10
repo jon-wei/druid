@@ -17,7 +17,7 @@ layout: toc
     * [Tutorial: Loading a file using Hadoop](/docs/VERSION/tutorials/tutorial-batch-hadoop.html)
     * [Tutorial: Loading stream data using HTTP push](/docs/VERSION/tutorials/tutorial-tranquility.html)
     * [Tutorial: Querying data](/docs/VERSION/tutorials/tutorial-query.html)
-  * [Further tutorials](/docs/VERSION/tutorials/advanced.html)
+  * Further tutorials
     * [Tutorial: Rollup](/docs/VERSION/tutorials/rollup.html)
     * [Tutorial: Configuring retention](/docs/VERSION/tutorials/tutorial-retention.html)
     * [Tutorial: Updating existing data](/docs/VERSION/tutorials/tutorial-update-data.html)

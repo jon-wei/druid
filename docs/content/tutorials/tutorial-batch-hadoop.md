@@ -20,7 +20,7 @@ For this tutorial, we've provided a Dockerfile for a Hadoop 2.8.3 cluster, which
 
 This Dockerfile and related files are located at `quickstart/tutorial/hadoop/docker`.
 
-From the druid-${DRUIDVERSION} package root, run the following commands to build a Docker image named "druid-hadoop-demo" with version tag "2.8.3":
+From the druid-#{DRUIDVERSION} package root, run the following commands to build a Docker image named "druid-hadoop-demo" with version tag "2.8.3":
 
 ```
 cd quickstart/tutorial/hadoop/docker
@@ -80,7 +80,7 @@ The `Unable to load native-hadoop library for your platform... using builtin-jav
 
 ### Copy input data to the Hadoop container
 
-From the druid-${DRUIDVERSION} package root on the host, copy the `quickstart/wikiticker-2015-09-12-sampled.json.gz` sample data to the shared folder:
+From the druid-#{DRUIDVERSION} package root on the host, copy the `quickstart/wikiticker-2015-09-12-sampled.json.gz` sample data to the shared folder:
 
 ```
 cp quickstart/wikiticker-2015-09-12-sampled.json.gz /tmp/shared/wikiticker-2015-09-12-sampled.json.gz
@@ -183,11 +183,11 @@ bin/post-index-task --file quickstart/tutorial/wikipedia-index-hadoop.json
 
 ## Querying your data
 
-After the data load is complete, please follow the [query tutorial](../tutorial/tutorial-query.html) to run some example queries on the newly loaded data.
+After the data load is complete, please follow the [query tutorial](../tutorials/tutorial-query.html) to run some example queries on the newly loaded data.
 
 ## Cleanup
 
-This tutorial is only meant to be used together with the [query tutorial](../tutorial/tutorial-query.html). 
+This tutorial is only meant to be used together with the [query tutorial](../tutorials/tutorial-query.html). 
 
 If you wish to go through any of the other tutorials, you will need to:
 * Shut down the cluster and reset the cluster state by removing the contents of the `var` directory under the druid package.

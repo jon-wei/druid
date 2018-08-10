@@ -34,7 +34,7 @@ The startup scripts for the tutorial will expect the contents of the Tranquility
 As part of the output of *supervise* you should see something like:
 
 ```
-Running command[tranquility-server], logging to[/stage/druid-{DRUIDVERSION}/var/sv/tranquility-server.log]: tranquility/bin/tranquility server -configFile quickstart/tutorial/conf/tranquility/server.json -Ddruid.extensions.loadList=[]
+Running command[tranquility-server], logging to[/stage/druid-#{DRUIDVERSION}/var/sv/tranquility-server.log]: tranquility/bin/tranquility server -configFile quickstart/tutorial/conf/tranquility/server.json -Ddruid.extensions.loadList=[]
 ```
 
 You can check the log file in `var/sv/tranquility-server.log` to confirm that the server is starting up properly.
@@ -70,7 +70,7 @@ If you see a `sent` count of 0, retry the send command until the `sent` count al
 
 ## Querying your data
 
-Please follow the [query tutorial](../tutorial/tutorial-query.html) to run some example queries on the newly loaded data.
+Please follow the [query tutorial](../tutorials/tutorial-query.html) to run some example queries on the newly loaded data.
 
 ## Cleanup
 

@@ -16,7 +16,7 @@ don't need to have loaded any data yet.
 
 A data load is initiated by submitting an *ingestion task* spec to the Druid overlord. For this tutorial, we'll be loading the sample Wikipedia page edits data.
 
-The Druid package includes the following sample native batch ingestion task spec at `quickstart/wikipedia-index.json`, shown here for convenience,
+The Druid package includes the following sample native batch ingestion task spec at `quickstart/tutorial/wikipedia-index.json`, shown here for convenience,
 which has been configured to read the `quickstart/wikiticker-2015-09-12-sampled.json.gz` input file:
 
 ```
@@ -121,7 +121,7 @@ wikipedia loading complete! You may now query your data
 
 ## Querying your data
 
-Once the data is loaded, please follow the [query tutorial](../tutorial/tutorial-query.html) to run some example queries on the newly loaded data.
+Once the data is loaded, please follow the [query tutorial](../tutorials/tutorial-query.html) to run some example queries on the newly loaded data.
 
 ## Cleanup
 
