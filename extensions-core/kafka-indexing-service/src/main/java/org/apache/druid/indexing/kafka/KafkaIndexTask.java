@@ -51,6 +51,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.DatasourceGroup;
+import org.apache.druid.segment.indexing.HackDatasourceDemux;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.Appenderators;
@@ -123,14 +124,17 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   )
   {
     super(
-        id == null ? makeTaskId(dataSchema.getDataSource(), RANDOM.nextInt()) : id,
-        StringUtils.format("%s_%s", TYPE, datasourceGroup.getName()),
+        id == null ? makeTaskId("many-wikipedias", RANDOM.nextInt()) : id,
+        StringUtils.format("%s_%s", TYPE, "many-wikipedias"),
         taskResource,
-        datasourceGroup.getName(),
+        "many-wikipedias",
         context
     );
 
-    this.datasourceGroup = datasourceGroup;
+    this.datasourceGroup = new DatasourceGroup(
+        "many-wikipedias",
+        new HackDatasourceDemux()
+    );
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
     this.parser = Preconditions.checkNotNull((InputRowParser<ByteBuffer>) dataSchema.getParser(), "parser");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
@@ -268,6 +272,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
   public class HackSAAG implements SegmentAllocateActionGenerator
   {
+    private final DatasourceGroup myDg = datasourceGroup;
+
     @Override
     public TaskAction<SegmentIdentifier> generate(
         DataSchema dataSchema,
@@ -279,7 +285,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     )
     {
       return new SegmentAllocateAction(
-          datasourceGroup.getDemux().chooseDatasource(row),
+          myDg.getDemux().chooseDatasource(row),
           row.getTimestamp(),
           dataSchema.getGranularitySpec().getQueryGranularity(),
           dataSchema.getGranularitySpec().getSegmentGranularity(),

@@ -20,19 +20,25 @@
 package org.apache.druid.segment.indexing;
 
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import java.util.List;
 
 public class HackDatasourceDemux implements DatasourceDemux
 {
+  private static final EmittingLogger log = new EmittingLogger(HackDatasourceDemux.class);
+
   @Override
   public String chooseDatasource(InputRow inputRow)
   {
     List<String> channel = inputRow.getDimension("channel");
     if (channel == null || channel.size() != 1) {
+      log.info("Demuxed datasource: Null channel");
       return "null.wikipedia";
     }
 
-    return channel.get(0).replace("#", "");
+    String mychannel = channel.get(0).replace("#", "");
+    log.info("Demuxed datasource: " + mychannel);
+    return mychannel;
   }
 }

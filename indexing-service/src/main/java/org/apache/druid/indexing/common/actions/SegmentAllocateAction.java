@@ -28,7 +28,6 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.LockResult;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -150,7 +149,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
       attempt++;
 
       if (!task.getDataSource().equals(dataSource)) {
-        throw new IAE("Task dataSource must match action dataSource, [%s] != [%s].", task.getDataSource(), dataSource);
+        //throw new IAE("Task dataSource must match action dataSource, [%s] != [%s].", task.getDataSource(), dataSource);
       }
 
       final IndexerMetadataStorageCoordinator msc = toolbox.getIndexerMetadataStorageCoordinator();

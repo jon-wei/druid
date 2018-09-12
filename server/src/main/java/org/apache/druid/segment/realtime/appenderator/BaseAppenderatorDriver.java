@@ -318,7 +318,8 @@ public abstract class BaseAppenderatorDriver implements Closeable
   private SegmentIdentifier getSegment(
       final InputRow row,
       final String sequenceName,
-      final boolean skipSegmentLineageCheck
+      final boolean skipSegmentLineageCheck,
+      final DatasourceGroup datasourceGroup
   ) throws IOException
   {
     synchronized (segments) {
@@ -398,7 +399,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
     Preconditions.checkNotNull(row, "row");
     Preconditions.checkNotNull(sequenceName, "sequenceName");
 
-    final SegmentIdentifier identifier = getSegment(row, sequenceName, skipSegmentLineageCheck);
+    final SegmentIdentifier identifier = getSegment(row, sequenceName, skipSegmentLineageCheck, datasourceGroup);
 
     if (identifier != null) {
       try {

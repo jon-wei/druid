@@ -181,7 +181,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       final boolean allowIncrementalPersists
   ) throws IOException
   {
-    return append(row, sequenceName, committerSupplier, skipSegmentLineageCheck, allowIncrementalPersists, null);
+    return append(row, sequenceName, committerSupplier, skipSegmentLineageCheck, allowIncrementalPersists, datasourceGroup);
   }
 
   /**
