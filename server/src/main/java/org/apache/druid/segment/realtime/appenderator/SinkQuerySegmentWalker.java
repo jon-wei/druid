@@ -53,6 +53,7 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.indexing.DatasourceGroup;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -62,6 +63,8 @@ import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -79,6 +82,9 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
+  private final DatasourceGroup datasourceGroup;
+
+  private final Map<String, VersionedIntervalTimeline<String, Sink>> sinkTimelines;
 
   public SinkQuerySegmentWalker(
       String dataSource,
@@ -89,7 +95,9 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
       ExecutorService queryExecutorService,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats
+      CachePopulatorStats cachePopulatorStats,
+      DatasourceGroup datasourceGroup,
+      Map<String, VersionedIntervalTimeline<String, Sink>> sinkTimelines
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
@@ -105,11 +113,18 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     if (!cache.isLocal()) {
       log.warn("Configured cache[%s] is not local, caching will not be enabled.", cache.getClass().getName());
     }
+
+    this.datasourceGroup = datasourceGroup;
+
+    this.sinkTimelines = sinkTimelines;
   }
 
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
+    final String datasource = query.getDataSource().getNames().get(0);
+    final VersionedIntervalTimeline<String, Sink> datasourceSinkTimeline = sinkTimelines.get(datasource);
+
     final Iterable<SegmentDescriptor> specs = FunctionalIterable
         .create(intervals)
         .transformCat(
@@ -118,7 +133,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
               @Override
               public Iterable<TimelineObjectHolder<String, Sink>> apply(final Interval interval)
               {
-                return sinkTimeline.lookup(interval);
+                return datasourceSinkTimeline.lookup(interval);
               }
             }
         )
@@ -154,6 +169,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {
+    /*
     // We only handle one particular dataSource. Make sure that's what we have, then ignore from here on out.
     if (!(query.getDataSource() instanceof TableDataSource)
         || !dataSource.equals(((TableDataSource) query.getDataSource()).getName())) {
@@ -162,6 +178,10 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
          .emit();
       return new NoopQueryRunner<>();
     }
+    */
+
+    String datasource = query.getDataSource().getNames().get(0);
+    final VersionedIntervalTimeline<String, Sink> datasourceSinkTimeline = sinkTimelines.get(datasource);
 
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     if (factory == null) {
@@ -184,7 +204,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                           @Override
                           public QueryRunner<T> apply(final SegmentDescriptor descriptor)
                           {
-                            final PartitionHolder<Sink> holder = sinkTimeline.findEntry(
+                            final PartitionHolder<Sink> holder = datasourceSinkTimeline.findEntry(
                                 descriptor.getInterval(),
                                 descriptor.getVersion()
                             );

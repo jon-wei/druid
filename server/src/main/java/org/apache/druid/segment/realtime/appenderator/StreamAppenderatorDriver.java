@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.concurrent.ListenableFutures;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.indexing.DatasourceGroup;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
@@ -76,6 +77,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
   private final SegmentHandoffNotifier handoffNotifier;
   private final FireDepartmentMetrics metrics;
   private final ObjectMapper objectMapper;
+  private final DatasourceGroup datasourceGroup;
 
   /**
    * Create a driver.
@@ -94,7 +96,8 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       UsedSegmentChecker usedSegmentChecker,
       DataSegmentKiller dataSegmentKiller,
       ObjectMapper objectMapper,
-      FireDepartmentMetrics metrics
+      FireDepartmentMetrics metrics,
+      DatasourceGroup datasourceGroup
   )
   {
     super(appenderator, segmentAllocator, usedSegmentChecker, dataSegmentKiller);
@@ -103,6 +106,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                                         .createSegmentHandoffNotifier(appenderator.getDataSource());
     this.metrics = Preconditions.checkNotNull(metrics, "metrics");
     this.objectMapper = Preconditions.checkNotNull(objectMapper, "objectMapper");
+    this.datasourceGroup = datasourceGroup;
   }
 
   @Override
@@ -150,7 +154,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       final Supplier<Committer> committerSupplier
   ) throws IOException
   {
-    return append(row, sequenceName, committerSupplier, false, true);
+    return append(row, sequenceName, committerSupplier, false, true, null);
   }
 
   /**
@@ -177,7 +181,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       final boolean allowIncrementalPersists
   ) throws IOException
   {
-    return append(row, sequenceName, committerSupplier, skipSegmentLineageCheck, allowIncrementalPersists);
+    return append(row, sequenceName, committerSupplier, skipSegmentLineageCheck, allowIncrementalPersists, null);
   }
 
   /**

@@ -329,6 +329,8 @@ public class AppenderatorTest
     }
   }
 
+
+  /*
   @Test
   public void testMaxRowsInMemoryDisallowIncrementalPersists() throws Exception
   {
@@ -374,6 +376,7 @@ public class AppenderatorTest
       appenderator.close();
     }
   }
+  */
 
   @Test
   public void testRestoreFromDisk() throws Exception

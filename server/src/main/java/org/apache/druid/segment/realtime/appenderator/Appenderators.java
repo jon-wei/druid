@@ -29,6 +29,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.DatasourceGroup;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
@@ -40,6 +41,44 @@ import java.util.concurrent.ExecutorService;
 
 public class Appenderators
 {
+  public static Appenderator createRealtimeHack(
+      DataSchema schema,
+      AppenderatorConfig config,
+      FireDepartmentMetrics metrics,
+      DataSegmentPusher dataSegmentPusher,
+      ObjectMapper objectMapper,
+      IndexIO indexIO,
+      IndexMerger indexMerger,
+      QueryRunnerFactoryConglomerate conglomerate,
+      DataSegmentAnnouncer segmentAnnouncer,
+      ServiceEmitter emitter,
+      ExecutorService queryExecutorService,
+      Cache cache,
+      CacheConfig cacheConfig,
+      CachePopulatorStats cachePopulatorStats,
+      DatasourceGroup datasourceGroup
+  )
+  {
+    return new AppenderatorImpl(
+        schema,
+        config,
+        metrics,
+        dataSegmentPusher,
+        objectMapper,
+        conglomerate,
+        segmentAnnouncer,
+        emitter,
+        queryExecutorService,
+        indexIO,
+        indexMerger,
+        cache,
+        cacheConfig,
+        cachePopulatorStats,
+        datasourceGroup
+    );
+  }
+
+
   public static Appenderator createRealtime(
       DataSchema schema,
       AppenderatorConfig config,
@@ -71,7 +110,8 @@ public class Appenderators
         indexMerger,
         cache,
         cacheConfig,
-        cachePopulatorStats
+        cachePopulatorStats,
+        null
     );
   }
 
@@ -122,6 +162,7 @@ public class Appenderators
         null,
         indexIO,
         indexMerger,
+        null,
         null,
         null,
         null

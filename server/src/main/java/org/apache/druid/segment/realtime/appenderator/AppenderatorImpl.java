@@ -69,6 +69,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.DatasourceGroup;
 import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
@@ -90,6 +91,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -139,6 +141,9 @@ public class AppenderatorImpl implements Appenderator
 
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
+  private final DatasourceGroup datasourceGroup;
+  private final Map<String, VersionedIntervalTimeline<String, Sink>> sinkTimelines;
+
   private volatile ListeningExecutorService persistExecutor = null;
   private volatile ListeningExecutorService pushExecutor = null;
   // use intermediate executor so that deadlock conditions can be prevented
@@ -165,7 +170,8 @@ public class AppenderatorImpl implements Appenderator
       IndexMerger indexMerger,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats
+      CachePopulatorStats cachePopulatorStats,
+      DatasourceGroup datasourceGroup
   )
   {
     this.schema = Preconditions.checkNotNull(schema, "schema");
@@ -177,6 +183,8 @@ public class AppenderatorImpl implements Appenderator
     this.indexIO = Preconditions.checkNotNull(indexIO, "indexIO");
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "indexMerger");
     this.cache = cache;
+    this.datasourceGroup = datasourceGroup;
+    this.sinkTimelines = new HashMap<>();
     this.texasRanger = conglomerate == null ? null : new SinkQuerySegmentWalker(
         schema.getDataSource(),
         sinkTimeline,
@@ -186,7 +194,9 @@ public class AppenderatorImpl implements Appenderator
         queryExecutorService,
         Preconditions.checkNotNull(cache, "cache"),
         cacheConfig,
-        cachePopulatorStats
+        cachePopulatorStats,
+        datasourceGroup,
+        sinkTimelines
     );
     maxBytesTuningConfig = TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory());
     log.info("Created Appenderator for dataSource[%s].", schema.getDataSource());
@@ -221,20 +231,21 @@ public class AppenderatorImpl implements Appenderator
       final SegmentIdentifier identifier,
       final InputRow row,
       @Nullable final Supplier<Committer> committerSupplier,
-      final boolean allowIncrementalPersists
+      final boolean allowIncrementalPersists,
+      final DatasourceGroup datasourceGroup
   ) throws IndexSizeExceededException, SegmentNotWritableException
   {
     throwPersistErrorIfExists();
 
-    if (!identifier.getDataSource().equals(schema.getDataSource())) {
+    if (!identifier.getDataSource().equals(datasourceGroup.getDemux().chooseDatasource(row))) {
       throw new IAE(
           "Expected dataSource[%s] but was asked to insert row for dataSource[%s]?!",
-          schema.getDataSource(),
+          datasourceGroup.getDemux().chooseDatasource(row),
           identifier.getDataSource()
       );
     }
 
-    final Sink sink = getOrCreateSink(identifier);
+    final Sink sink = getOrCreateSink(identifier, datasourceGroup);
     metrics.reportMessageMaxTimestamp(row.getTimestampFromEpoch());
     final int sinkRowsInMemoryBeforeAdd = sink.getNumRowsInMemory();
     final int sinkRowsInMemoryAfterAdd;
@@ -372,7 +383,7 @@ public class AppenderatorImpl implements Appenderator
     }
   }
 
-  private Sink getOrCreateSink(final SegmentIdentifier identifier)
+  private Sink getOrCreateSink(final SegmentIdentifier identifier, final DatasourceGroup datasourceGroup)
   {
     Sink retVal = sinks.get(identifier);
 
@@ -399,7 +410,15 @@ public class AppenderatorImpl implements Appenderator
 
       sinks.put(identifier, retVal);
       metrics.setSinkCount(sinks.size());
-      sinkTimeline.add(retVal.getInterval(), retVal.getVersion(), identifier.getShardSpec().createChunk(retVal));
+
+      if (sinkTimelines.get(identifier.getDataSource()) == null) {
+        sinkTimelines.put(identifier.getDataSource(), new VersionedIntervalTimeline<>(
+            String.CASE_INSENSITIVE_ORDER
+        ));
+      }
+
+      VersionedIntervalTimeline<String, Sink> datasourceTimeline = sinkTimelines.get(identifier.getDataSource());
+      datasourceTimeline.add(retVal.getInterval(), retVal.getVersion(), identifier.getShardSpec().createChunk(retVal));
     }
 
     return retVal;

@@ -171,7 +171,9 @@ public class RealtimePlumber implements Plumber
         queryExecutorService,
         cache,
         cacheConfig,
-        cachePopulatorStats
+        cachePopulatorStats,
+        null,
+        null
     );
 
     log.info("Creating plumber using rejectionPolicy[%s]", getRejectionPolicy());

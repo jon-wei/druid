@@ -75,6 +75,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.segment.indexing.DatasourceGroup;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -246,6 +247,7 @@ public class KafkaSupervisor implements Supervisor
   private final TaskInfoProvider taskInfoProvider;
   private final long futureTimeoutInSeconds; // how long to wait for async operations to complete
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
+  private final DatasourceGroup datasourceGroup;
 
   private final ExecutorService exec;
   private final ScheduledExecutorService scheduledExec;
@@ -273,7 +275,8 @@ public class KafkaSupervisor implements Supervisor
       final KafkaIndexTaskClientFactory taskClientFactory,
       final ObjectMapper mapper,
       final KafkaSupervisorSpec spec,
-      final RowIngestionMetersFactory rowIngestionMetersFactory
+      final RowIngestionMetersFactory rowIngestionMetersFactory,
+      final DatasourceGroup datasourceGroup
   )
   {
     this.taskStorage = taskStorage;
@@ -284,12 +287,13 @@ public class KafkaSupervisor implements Supervisor
     this.emitter = spec.getEmitter();
     this.monitorSchedulerConfig = spec.getMonitorSchedulerConfig();
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
+    this.datasourceGroup = datasourceGroup;
 
     this.dataSource = spec.getDataSchema().getDataSource();
     this.ioConfig = spec.getIoConfig();
     this.tuningConfig = spec.getTuningConfig();
     this.taskTuningConfig = KafkaTuningConfig.copyOf(this.tuningConfig);
-    this.supervisorId = StringUtils.format("KafkaSupervisor-%s", dataSource);
+    this.supervisorId = StringUtils.format("KafkaSupervisor-%s", datasourceGroup.getName());
     this.exec = Execs.singleThreaded(supervisorId);
     this.scheduledExec = Execs.scheduledSingleThreaded(supervisorId + "-Scheduler-%d");
     this.reportingExec = Execs.scheduledSingleThreaded(supervisorId + "-Reporting-%d");
@@ -298,7 +302,7 @@ public class KafkaSupervisor implements Supervisor
                          ? this.tuningConfig.getWorkerThreads()
                          : Math.min(10, this.ioConfig.getTaskCount()));
     this.workerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(workerThreads, supervisorId + "-Worker-%d"));
-    log.info("Created worker pool with [%d] threads for dataSource [%s]", workerThreads, this.dataSource);
+    log.info("Created worker pool with [%d] threads for dataSource [%s]", workerThreads, datasourceGroup.getName());
 
     this.taskInfoProvider = new TaskInfoProvider()
     {
@@ -347,14 +351,14 @@ public class KafkaSupervisor implements Supervisor
                        : Math.min(10, this.ioConfig.getTaskCount() * this.ioConfig.getReplicas()));
     this.taskClient = taskClientFactory.build(
         taskInfoProvider,
-        dataSource,
+        datasourceGroup.getName(),
         chatThreads,
         this.tuningConfig.getHttpTimeout(),
         this.tuningConfig.getChatRetries()
     );
     log.info(
         "Created taskClient with dataSource[%s] chatThreads[%d] httpTimeout[%s] chatRetries[%d]",
-        dataSource,
+        datasourceGroup.getName(),
         chatThreads,
         this.tuningConfig.getHttpTimeout(),
         this.tuningConfig.getChatRetries()
@@ -385,14 +389,14 @@ public class KafkaSupervisor implements Supervisor
                       notice.handle();
                     }
                     catch (Throwable e) {
-                      log.makeAlert(e, "KafkaSupervisor[%s] failed to handle notice", dataSource)
+                      log.makeAlert(e, "KafkaSupervisor[%s] failed to handle notice", datasourceGroup.getName())
                          .addData("noticeClass", notice.getClass().getSimpleName())
                          .emit();
                     }
                   }
                 }
                 catch (InterruptedException e) {
-                  log.info("KafkaSupervisor[%s] interrupted, exiting", dataSource);
+                  log.info("KafkaSupervisor[%s] interrupted, exiting", datasourceGroup.getName());
                 }
               }
             }
@@ -424,7 +428,7 @@ public class KafkaSupervisor implements Supervisor
         started = true;
         log.info(
             "Started KafkaSupervisor[%s], first run in [%s], with spec: [%s]",
-            dataSource,
+            datasourceGroup.getName(),
             ioConfig.getStartDelay(),
             spec.toString()
         );
@@ -433,7 +437,7 @@ public class KafkaSupervisor implements Supervisor
         if (consumer != null) {
           consumer.close();
         }
-        log.makeAlert(e, "Exception starting KafkaSupervisor[%s]", dataSource)
+        log.makeAlert(e, "Exception starting KafkaSupervisor[%s]", datasourceGroup.getName())
            .emit();
         throw Throwables.propagate(e);
       }
@@ -446,7 +450,7 @@ public class KafkaSupervisor implements Supervisor
     synchronized (stateChangeLock) {
       Preconditions.checkState(started, "not started");
 
-      log.info("Beginning shutdown of KafkaSupervisor[%s]", dataSource);
+      log.info("Beginning shutdown of KafkaSupervisor[%s]", datasourceGroup.getName());
 
       try {
         scheduledExec.shutdownNow(); // stop recurring executions
@@ -489,10 +493,10 @@ public class KafkaSupervisor implements Supervisor
         exec.shutdownNow();
         started = false;
 
-        log.info("KafkaSupervisor[%s] has stopped", dataSource);
+        log.info("KafkaSupervisor[%s] has stopped", datasourceGroup.getName());
       }
       catch (Exception e) {
-        log.makeAlert(e, "Exception stopping KafkaSupervisor[%s]", dataSource)
+        log.makeAlert(e, "Exception stopping KafkaSupervisor[%s]", datasourceGroup.getName())
            .emit();
       }
     }
@@ -768,8 +772,8 @@ public class KafkaSupervisor implements Supervisor
   {
     if (dataSourceMetadata == null) {
       // Reset everything
-      boolean result = indexerMetadataStorageCoordinator.deleteDataSourceMetadata(dataSource);
-      log.info("Reset dataSource[%s] - dataSource metadata entry deleted? [%s]", dataSource, result);
+      boolean result = indexerMetadataStorageCoordinator.deleteDataSourceMetadata(datasourceGroup.getName());
+      log.info("Reset dataSource[%s] - dataSource metadata entry deleted? [%s]", datasourceGroup.getName(), result);
       taskGroups.values().forEach(this::killTasksInGroup);
       taskGroups.clear();
       partitionGroups.clear();
@@ -781,7 +785,7 @@ public class KafkaSupervisor implements Supervisor
 
       if (resetKafkaMetadata.getKafkaPartitions().getTopic().equals(ioConfig.getTopic())) {
         // metadata can be null
-        final DataSourceMetadata metadata = indexerMetadataStorageCoordinator.getDataSourceMetadata(dataSource);
+        final DataSourceMetadata metadata = indexerMetadataStorageCoordinator.getDataSourceMetadata(datasourceGroup.getName());
         if (metadata != null && !(metadata instanceof KafkaDataSourceMetadata)) {
           throw new IAE(
               "Expected KafkaDataSourceMetadata from metadata store but found instance of [%s]",
@@ -824,7 +828,7 @@ public class KafkaSupervisor implements Supervisor
         } else {
           final DataSourceMetadata newMetadata = currentMetadata.minus(resetKafkaMetadata);
           try {
-            metadataUpdateSuccess = indexerMetadataStorageCoordinator.resetDataSourceMetadata(dataSource, newMetadata);
+            metadataUpdateSuccess = indexerMetadataStorageCoordinator.resetDataSourceMetadata(datasourceGroup.getName(), newMetadata);
           }
           catch (IOException e) {
             log.error("Resetting DataSourceMetadata failed [%s]", e.getMessage());
@@ -939,7 +943,7 @@ public class KafkaSupervisor implements Supervisor
                                           + maxMsgTimeStr)
                                  .substring(0, 15);
 
-    return Joiner.on("_").join("index_kafka", dataSource, hashCode);
+    return Joiner.on("_").join("index_kafka", datasourceGroup.getName(), hashCode);
   }
 
   private static String getRandomId()
@@ -1034,7 +1038,7 @@ public class KafkaSupervisor implements Supervisor
     final Map<Integer, TaskGroup> taskGroupsToVerify = new HashMap<>();
 
     for (Task task : tasks) {
-      if (!(task instanceof KafkaIndexTask) || !dataSource.equals(task.getDataSource())) {
+      if (!(task instanceof KafkaIndexTask) || !datasourceGroup.getName().equals(((KafkaIndexTask) task).getDatasourceGroup().getName())) {
         continue;
       }
 
@@ -1180,7 +1184,7 @@ public class KafkaSupervisor implements Supervisor
         killTask(taskId);
       }
     }
-    log.debug("Found [%d] Kafka indexing tasks for dataSource [%s]", taskCount, dataSource);
+    log.debug("Found [%d] Kafka indexing tasks for dataSource [%s]", taskCount, datasourceGroup.getName());
 
     // make sure the checkpoints are consistent with each other and with the metadata store
     taskGroupsToVerify.values().forEach(this::verifyAndMergeCheckpoints);
@@ -1239,7 +1243,7 @@ public class KafkaSupervisor implements Supervisor
     }
 
     final KafkaDataSourceMetadata latestDataSourceMetadata = (KafkaDataSourceMetadata) indexerMetadataStorageCoordinator
-        .getDataSourceMetadata(dataSource);
+        .getDataSourceMetadata(datasourceGroup.getName());
     final boolean hasValidOffsetsFromDb = latestDataSourceMetadata != null &&
                                           latestDataSourceMetadata.getKafkaPartitions() != null &&
                                           ioConfig.getTopic().equals(
@@ -1876,6 +1880,7 @@ public class KafkaSupervisor implements Supervisor
           taskTuningConfig,
           kafkaIOConfig,
           context,
+          datasourceGroup,
           null,
           null,
           rowIngestionMetersFactory
@@ -1935,7 +1940,7 @@ public class KafkaSupervisor implements Supervisor
             offset,
             latestKafkaOffset,
             partition,
-            dataSource
+            datasourceGroup.getName()
         );
       }
 
@@ -1949,7 +1954,7 @@ public class KafkaSupervisor implements Supervisor
 
   private Map<Integer, Long> getOffsetsFromMetadataStorage()
   {
-    final DataSourceMetadata dataSourceMetadata = indexerMetadataStorageCoordinator.getDataSourceMetadata(dataSource);
+    final DataSourceMetadata dataSourceMetadata = indexerMetadataStorageCoordinator.getDataSourceMetadata(datasourceGroup.getName());
     if (dataSourceMetadata instanceof KafkaDataSourceMetadata) {
       KafkaPartitions partitions = ((KafkaDataSourceMetadata) dataSourceMetadata).getKafkaPartitions();
       if (partitions != null) {
@@ -2088,7 +2093,7 @@ public class KafkaSupervisor implements Supervisor
 
     Map<Integer, Long> partitionLag = getLagPerPartition(getHighestCurrentOffsets());
     final KafkaSupervisorReportPayload payload = new KafkaSupervisorReportPayload(
-        dataSource,
+        datasourceGroup.getName(),
         ioConfig.getTopic(),
         numPartitions,
         ioConfig.getReplicas(),
@@ -2099,7 +2104,7 @@ public class KafkaSupervisor implements Supervisor
         includeOffsets ? offsetsLastUpdated : null
     );
     SupervisorReport<KafkaSupervisorReportPayload> report = new SupervisorReport<>(
-        dataSource,
+        datasourceGroup.getName(),
         DateTimes.nowUtc(),
         payload
     );
@@ -2248,7 +2253,7 @@ public class KafkaSupervisor implements Supervisor
             .sum();
 
         emitter.emit(
-            ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kafka/lag", lag)
+            ServiceMetricEvent.builder().setDimension("dataSource", datasourceGroup.getName()).build("ingest/kafka/lag", lag)
         );
       }
       catch (Exception e) {

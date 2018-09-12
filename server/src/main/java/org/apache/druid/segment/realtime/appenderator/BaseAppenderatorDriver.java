@@ -39,6 +39,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.indexing.DatasourceGroup;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import org.joda.time.DateTime;
@@ -390,7 +391,8 @@ public abstract class BaseAppenderatorDriver implements Closeable
       final String sequenceName,
       @Nullable final Supplier<Committer> committerSupplier,
       final boolean skipSegmentLineageCheck,
-      final boolean allowIncrementalPersists
+      final boolean allowIncrementalPersists,
+      final DatasourceGroup datasourceGroup
   ) throws IOException
   {
     Preconditions.checkNotNull(row, "row");
@@ -404,7 +406,8 @@ public abstract class BaseAppenderatorDriver implements Closeable
             identifier,
             row,
             committerSupplier == null ? null : wrapCommitterSupplier(committerSupplier),
-            allowIncrementalPersists
+            allowIncrementalPersists,
+            datasourceGroup
         );
         return AppenderatorDriverAddResult.ok(
             identifier,

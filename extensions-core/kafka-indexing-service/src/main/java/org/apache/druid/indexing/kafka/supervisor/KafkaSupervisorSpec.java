@@ -35,6 +35,8 @@ import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.DatasourceGroup;
+import org.apache.druid.segment.indexing.HackDatasourceDemux;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 
 import java.util.List;
@@ -56,6 +58,8 @@ public class KafkaSupervisorSpec implements SupervisorSpec
   private final DruidMonitorSchedulerConfig monitorSchedulerConfig;
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
 
+  private final DatasourceGroup datasourceGroup;
+
   @JsonCreator
   public KafkaSupervisorSpec(
       @JsonProperty("dataSchema") DataSchema dataSchema,
@@ -69,7 +73,8 @@ public class KafkaSupervisorSpec implements SupervisorSpec
       @JacksonInject @Json ObjectMapper mapper,
       @JacksonInject ServiceEmitter emitter,
       @JacksonInject DruidMonitorSchedulerConfig monitorSchedulerConfig,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
+      @JsonProperty("datasourceGroup") DatasourceGroup datasourceGroup
   )
   {
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
@@ -111,6 +116,11 @@ public class KafkaSupervisorSpec implements SupervisorSpec
     this.emitter = emitter;
     this.monitorSchedulerConfig = monitorSchedulerConfig;
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
+
+    this.datasourceGroup = new DatasourceGroup(
+        "many-wikipedias",
+        new HackDatasourceDemux()
+    );
   }
 
   @JsonProperty
@@ -142,10 +152,16 @@ public class KafkaSupervisorSpec implements SupervisorSpec
     return emitter;
   }
 
+  public DatasourceGroup getDatasourceGroup()
+  {
+    return datasourceGroup;
+  }
+
   @Override
   public String getId()
   {
-    return dataSchema.getDataSource();
+    return datasourceGroup.getName();
+    //return dataSchema.getDataSource();
   }
 
   public DruidMonitorSchedulerConfig getMonitorSchedulerConfig()
@@ -163,7 +179,8 @@ public class KafkaSupervisorSpec implements SupervisorSpec
         kafkaIndexTaskClientFactory,
         mapper,
         this,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        datasourceGroup
     );
   }
 

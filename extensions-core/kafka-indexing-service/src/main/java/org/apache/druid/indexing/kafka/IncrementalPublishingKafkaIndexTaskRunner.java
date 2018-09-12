@@ -63,6 +63,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.collect.Utils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.indexing.DatasourceGroup;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
@@ -184,6 +185,8 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
   private final List<ListenableFuture<SegmentsAndMetadata>> publishWaitList = new LinkedList<>();
   private final List<ListenableFuture<SegmentsAndMetadata>> handOffWaitList = new LinkedList<>();
 
+  private final DatasourceGroup datasourceGroup;
+
   private volatile DateTime startTime;
   private volatile Status status = Status.NOT_STARTED; // this is only ever set by the task runner thread (runThread)
   private volatile TaskToolbox toolbox;
@@ -205,7 +208,8 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
       AuthorizerMapper authorizerMapper,
       Optional<ChatHandlerProvider> chatHandlerProvider,
       CircularBuffer<Throwable> savedParseExceptions,
-      RowIngestionMetersFactory rowIngestionMetersFactory
+      RowIngestionMetersFactory rowIngestionMetersFactory,
+      DatasourceGroup datasourceGroup
   )
   {
     this.task = task;
@@ -221,6 +225,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
     this.endOffsets = new ConcurrentHashMap<>(ioConfig.getEndPartitions().getPartitionOffsetMap());
     this.sequences = new CopyOnWriteArrayList<>();
     this.ingestionState = IngestionState.NOT_STARTED;
+    this.datasourceGroup = datasourceGroup;
 
     resetNextCheckpointTime();
   }

@@ -53,7 +53,7 @@ public class ActionBasedSegmentAllocator implements SegmentAllocator
   ) throws IOException
   {
     return taskActionClient.submit(
-        actionGenerator.generate(dataSchema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck)
+        actionGenerator.generate(dataSchema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck, null)
     );
   }
 }

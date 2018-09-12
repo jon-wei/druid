@@ -241,7 +241,7 @@ public class ParallelIndexSubTask extends AbstractTask
       return new ActionBasedSegmentAllocator(
           toolbox.getTaskActionClient(),
           dataSchema,
-          (schema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> new SurrogateAction<>(
+          (schema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck, x) -> new SurrogateAction<>(
               supervisorTaskId,
               new SegmentAllocateAction(
                   schema.getDataSource(),

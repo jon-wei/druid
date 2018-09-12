@@ -32,8 +32,10 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
+import org.apache.druid.indexing.appenderator.SegmentAllocateActionGenerator;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
+import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.AbstractTask;
@@ -48,9 +50,11 @@ import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.DatasourceGroup;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.Appenderators;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdentifier;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -94,6 +98,13 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private final Optional<ChatHandlerProvider> chatHandlerProvider;
   private final KafkaIndexTaskRunner runner;
 
+  public DatasourceGroup getDatasourceGroup()
+  {
+    return datasourceGroup;
+  }
+
+  private final DatasourceGroup datasourceGroup;
+
   // This value can be tuned in some tests
   private long pollRetryMs = 30000;
 
@@ -105,6 +116,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       @JsonProperty("tuningConfig") KafkaTuningConfig tuningConfig,
       @JsonProperty("ioConfig") KafkaIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("datasourceGroup") DatasourceGroup datasourceGroup,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject AuthorizerMapper authorizerMapper,
       @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
@@ -112,12 +124,13 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   {
     super(
         id == null ? makeTaskId(dataSchema.getDataSource(), RANDOM.nextInt()) : id,
-        StringUtils.format("%s_%s", TYPE, dataSchema.getDataSource()),
+        StringUtils.format("%s_%s", TYPE, datasourceGroup.getName()),
         taskResource,
-        dataSchema.getDataSource(),
+        datasourceGroup.getName(),
         context
     );
 
+    this.datasourceGroup = datasourceGroup;
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
     this.parser = Preconditions.checkNotNull((InputRowParser<ByteBuffer>) dataSchema.getParser(), "parser");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
@@ -138,7 +151,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           authorizerMapper,
           this.chatHandlerProvider,
           savedParseExceptions,
-          rowIngestionMetersFactory
+          rowIngestionMetersFactory,
+          datasourceGroup
       );
     } else {
       runner = new LegacyKafkaIndexTaskRunner(
@@ -202,8 +216,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     return ioConfig;
   }
 
-
-
   @Override
   public TaskStatus run(final TaskToolbox toolbox)
   {
@@ -235,7 +247,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
   Appenderator newAppenderator(FireDepartmentMetrics metrics, TaskToolbox toolbox)
   {
-    return Appenderators.createRealtime(
+    return Appenderators.createRealtimeHack(
         dataSchema,
         tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
         metrics,
@@ -249,8 +261,33 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         toolbox.getQueryExecutorService(),
         toolbox.getCache(),
         toolbox.getCacheConfig(),
-        toolbox.getCachePopulatorStats()
+        toolbox.getCachePopulatorStats(),
+        datasourceGroup
     );
+  }
+
+  public class HackSAAG implements SegmentAllocateActionGenerator
+  {
+    @Override
+    public TaskAction<SegmentIdentifier> generate(
+        DataSchema dataSchema,
+        InputRow row,
+        String sequenceName,
+        String previousSegmentId,
+        boolean skipSegmentLineageCheck,
+        DatasourceGroup datasourceGroup
+    )
+    {
+      return new SegmentAllocateAction(
+          datasourceGroup.getDemux().chooseDatasource(row),
+          row.getTimestamp(),
+          dataSchema.getGranularitySpec().getQueryGranularity(),
+          dataSchema.getGranularitySpec().getSegmentGranularity(),
+          sequenceName,
+          previousSegmentId,
+          skipSegmentLineageCheck
+      );
+    }
   }
 
   StreamAppenderatorDriver newDriver(
@@ -264,21 +301,14 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         new ActionBasedSegmentAllocator(
             toolbox.getTaskActionClient(),
             dataSchema,
-            (schema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> new SegmentAllocateAction(
-                schema.getDataSource(),
-                row.getTimestamp(),
-                schema.getGranularitySpec().getQueryGranularity(),
-                schema.getGranularitySpec().getSegmentGranularity(),
-                sequenceName,
-                previousSegmentId,
-                skipSegmentLineageCheck
-            )
+            new HackSAAG()
         ),
         toolbox.getSegmentHandoffNotifierFactory(),
         new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
         toolbox.getDataSegmentKiller(),
         toolbox.getObjectMapper(),
-        metrics
+        metrics,
+        datasourceGroup
     );
   }
 

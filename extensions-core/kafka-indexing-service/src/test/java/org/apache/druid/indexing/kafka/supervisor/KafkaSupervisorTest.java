@@ -2375,7 +2375,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             objectMapper,
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
-            rowIngestionMetersFactory
+            rowIngestionMetersFactory,
+            null
         ),
         rowIngestionMetersFactory
     );
@@ -2445,6 +2446,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         Collections.emptyMap(),
         null,
         null,
+        null,
         rowIngestionMetersFactory
     );
   }
@@ -2502,7 +2504,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
           taskClientFactory,
           mapper,
           spec,
-          rowIngestionMetersFactory
+          rowIngestionMetersFactory,
+          null
       );
     }
 

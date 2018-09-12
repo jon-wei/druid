@@ -723,7 +723,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         new ActionBasedSegmentAllocator(
             toolbox.getTaskActionClient(),
             dataSchema,
-            (schema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> new SegmentAllocateAction(
+            (schema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck, x) -> new SegmentAllocateAction(
                 schema.getDataSource(),
                 row.getTimestamp(),
                 schema.getGranularitySpec().getQueryGranularity(),
@@ -737,7 +737,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
         toolbox.getDataSegmentKiller(),
         toolbox.getObjectMapper(),
-        metrics
+        metrics,
+        null
     );
   }
 

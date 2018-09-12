@@ -26,6 +26,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
+import org.apache.druid.segment.indexing.DatasourceGroup;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -61,7 +62,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
   default AppenderatorAddResult add(SegmentIdentifier identifier, InputRow row, Supplier<Committer> committerSupplier)
       throws IndexSizeExceededException, SegmentNotWritableException
   {
-    return add(identifier, row, committerSupplier, true);
+    return add(identifier, row, committerSupplier, true, null);
   }
 
 
@@ -98,9 +99,9 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
       SegmentIdentifier identifier,
       InputRow row,
       @Nullable Supplier<Committer> committerSupplier,
-      boolean allowIncrementalPersists
-  )
-      throws IndexSizeExceededException, SegmentNotWritableException;
+      boolean allowIncrementalPersists,
+      DatasourceGroup datasourceGroup
+  ) throws IndexSizeExceededException, SegmentNotWritableException;
 
   /**
    * Returns a list of all currently active segments.

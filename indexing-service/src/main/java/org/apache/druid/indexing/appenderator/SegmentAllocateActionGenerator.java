@@ -22,6 +22,7 @@ package org.apache.druid.indexing.appenderator;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.DatasourceGroup;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdentifier;
 
 /**
@@ -39,6 +40,7 @@ public interface SegmentAllocateActionGenerator
       InputRow row,
       String sequenceName,
       String previousSegmentId,
-      boolean skipSegmentLineageCheck
+      boolean skipSegmentLineageCheck,
+      DatasourceGroup datasourceGroup
   );
 }

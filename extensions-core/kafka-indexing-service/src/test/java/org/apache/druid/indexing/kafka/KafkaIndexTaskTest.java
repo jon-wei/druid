@@ -2026,6 +2026,7 @@ public class KafkaIndexTaskTest
         context,
         null,
         null,
+        null,
         rowIngestionMetersFactory
     );
     task.setPollRetryMs(POLL_RETRY_MS);
@@ -2070,6 +2071,7 @@ public class KafkaIndexTaskTest
         tuningConfig,
         ioConfig,
         context,
+        null,
         null,
         null,
         rowIngestionMetersFactory
