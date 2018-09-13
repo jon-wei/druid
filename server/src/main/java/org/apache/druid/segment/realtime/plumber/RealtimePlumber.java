@@ -741,7 +741,8 @@ public class RealtimePlumber implements Plumber
           TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
           config.isReportParseExceptions(),
           config.getDedupColumn(),
-          hydrants
+          hydrants,
+          null
       );
       addSink(currSink);
     }

@@ -237,15 +237,17 @@ public class AppenderatorImpl implements Appenderator
   {
     throwPersistErrorIfExists();
 
-    if (!identifier.getDataSource().equals(datasourceGroup.getDemux().chooseDatasource(row))) {
+    String datasourceForRow = datasourceGroup.getDemux().chooseDatasource(row);
+
+    if (!identifier.getDataSource().equals(datasourceForRow)) {
       throw new IAE(
           "Expected dataSource[%s] but was asked to insert row for dataSource[%s]?!",
-          datasourceGroup.getDemux().chooseDatasource(row),
+          datasourceForRow,
           identifier.getDataSource()
       );
     }
 
-    final Sink sink = getOrCreateSink(identifier, datasourceGroup);
+    final Sink sink = getOrCreateSink(identifier, datasourceForRow);
     metrics.reportMessageMaxTimestamp(row.getTimestampFromEpoch());
     final int sinkRowsInMemoryBeforeAdd = sink.getNumRowsInMemory();
     final int sinkRowsInMemoryAfterAdd;
@@ -383,7 +385,7 @@ public class AppenderatorImpl implements Appenderator
     }
   }
 
-  private Sink getOrCreateSink(final SegmentIdentifier identifier, final DatasourceGroup datasourceGroup)
+  private Sink getOrCreateSink(final SegmentIdentifier identifier, final String datasourceName)
   {
     Sink retVal = sinks.get(identifier);
 
@@ -396,7 +398,8 @@ public class AppenderatorImpl implements Appenderator
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
           tuningConfig.isReportParseExceptions(),
-          null
+          null,
+          datasourceName
       );
 
       try {
@@ -1073,7 +1076,8 @@ public class AppenderatorImpl implements Appenderator
             maxBytesTuningConfig,
             tuningConfig.isReportParseExceptions(),
             null,
-            hydrants
+            hydrants,
+            identifier.getDataSource()
         );
         rowsSoFar += currSink.getNumRows();
         sinks.put(identifier, currSink);

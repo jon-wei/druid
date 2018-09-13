@@ -212,7 +212,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  sequence_name_prev_id_sha1 VARCHAR(255) NOT NULL,\n"
                 + "  payload %2$s NOT NULL,\n"
                 + "  PRIMARY KEY (id),\n"
-                + "  UNIQUE (sequence_name_prev_id_sha1)\n"
+                + "  UNIQUE (datasource, sequence_name_prev_id_sha1)\n"
                 + ")",
                 tableName, getPayloadType(), getQuoteString()
             )

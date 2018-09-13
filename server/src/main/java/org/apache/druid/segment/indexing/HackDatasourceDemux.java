@@ -33,12 +33,12 @@ public class HackDatasourceDemux implements DatasourceDemux
   {
     List<String> channel = inputRow.getDimension("channel");
     if (channel == null || channel.size() != 1) {
-      log.info("Demuxed datasource: Null channel");
+      //log.info("Demuxed datasource: Null channel");
       return "null.wikipedia";
     }
 
     String mychannel = channel.get(0).replace("#", "");
-    log.info("Demuxed datasource: " + mychannel);
+    //log.info("Demuxed datasource: " + mychannel);
     return mychannel;
   }
 }

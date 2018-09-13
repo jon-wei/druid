@@ -183,7 +183,8 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
 
   private void checkSegmentStates(int expectedNumSegmentsInState, SegmentState expectedState)
   {
-    final SegmentsForSequence segmentsForSequence = driver.getSegments().get("dummy");
+    //final SegmentsForSequence segmentsForSequence = driver.getSegments().get("dummy");
+    final SegmentsForSequence segmentsForSequence = null;
     Assert.assertNotNull(segmentsForSequence);
     final List<SegmentWithState> segmentWithStates = segmentsForSequence
         .allSegmentStateStream()

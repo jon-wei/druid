@@ -73,6 +73,32 @@ public class Sink implements Iterable<FireHydrant>
   private volatile boolean writable = true;
   private final String dedupColumn;
   private final Set<Long> dedupSet = new HashSet<>();
+  private final String datasourceName;
+
+  public Sink(
+      Interval interval,
+      DataSchema schema,
+      ShardSpec shardSpec,
+      String version,
+      int maxRowsInMemory,
+      long maxBytesInMemory,
+      boolean reportParseExceptions,
+      String dedupColumn,
+      String datasourceName
+  )
+  {
+    this.schema = schema;
+    this.shardSpec = shardSpec;
+    this.interval = interval;
+    this.version = version;
+    this.maxRowsInMemory = maxRowsInMemory;
+    this.maxBytesInMemory = maxBytesInMemory;
+    this.reportParseExceptions = reportParseExceptions;
+    this.dedupColumn = dedupColumn;
+    this.datasourceName = datasourceName;
+
+    makeNewCurrIndex(interval.getStartMillis(), schema);
+  }
 
   public Sink(
       Interval interval,
@@ -93,6 +119,7 @@ public class Sink implements Iterable<FireHydrant>
     this.maxBytesInMemory = maxBytesInMemory;
     this.reportParseExceptions = reportParseExceptions;
     this.dedupColumn = dedupColumn;
+    this.datasourceName = null;
 
     makeNewCurrIndex(interval.getStartMillis(), schema);
   }
@@ -106,7 +133,8 @@ public class Sink implements Iterable<FireHydrant>
       long maxBytesInMemory,
       boolean reportParseExceptions,
       String dedupColumn,
-      List<FireHydrant> hydrants
+      List<FireHydrant> hydrants,
+      String datasourceName
   )
   {
     this.schema = schema;
@@ -117,6 +145,7 @@ public class Sink implements Iterable<FireHydrant>
     this.maxBytesInMemory = maxBytesInMemory;
     this.reportParseExceptions = reportParseExceptions;
     this.dedupColumn = dedupColumn;
+    this.datasourceName = datasourceName;
 
     int maxCount = -1;
     for (int i = 0; i < hydrants.size(); ++i) {
@@ -242,7 +271,7 @@ public class Sink implements Iterable<FireHydrant>
   public DataSegment getSegment()
   {
     return new DataSegment(
-        schema.getDataSource(),
+        datasourceName, //schema.getDataSource(),
         interval,
         version,
         ImmutableMap.of(),
