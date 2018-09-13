@@ -492,6 +492,43 @@ public abstract class BaseAppenderatorDriver implements Closeable
     */
   }
 
+
+  /**
+   * Returns a list of {@link SegmentIdentifier} for the given sequenceNames.
+   */
+  List<SegmentIdentifier> getSegmentIdentifiers(Collection<String> sequenceNames)
+  {
+    List<SegmentIdentifier> segmentIdentifiers = new ArrayList<>();
+
+    for (Map<String, SegmentsForSequence> datasourceSegments : segments.values()) {
+      Stream<SegmentWithState> datasourceStream = sequenceNames
+          .stream()
+          .map(datasourceSegments::get)
+          .filter(Objects::nonNull)
+          .flatMap(segmentsForSequence -> segmentsForSequence.intervalToSegmentStates.values().stream())
+          .flatMap(segmentsOfInterval -> segmentsOfInterval.getAllSegments().stream());
+
+      datasourceStream.forEach(
+          segmentWithState -> {
+            segmentIdentifiers.add(segmentWithState.getSegmentIdentifier());
+          }
+      );
+    }
+
+    return segmentIdentifiers;
+
+    /*
+    synchronized (segments) {
+      return sequenceNames
+          .stream()
+          .map(segments::get)
+          .filter(Objects::nonNull)
+          .flatMap(segmentsForSequence -> segmentsForSequence.intervalToSegmentStates.values().stream())
+          .flatMap(segmentsOfInterval -> segmentsOfInterval.getAllSegments().stream());
+    }
+    */
+  }
+
   Stream<SegmentWithState> getAppendingSegments(Collection<String> sequenceNames)
   {
     List<Stream<SegmentWithState>> datasourceStreams = new ArrayList<>();
@@ -603,7 +640,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
           final Object metadata = segmentsAndMetadata.getCommitMetadata();
           return new SegmentsAndMetadata(
               segmentsAndMetadata.getSegments(),
-              metadata == null ? null : ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
+              metadata == null ? null : ((AppenderatorDriverMetadataNew) metadata).getCallerMetadata()
           );
         }
     );
@@ -638,7 +675,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
               final Object metadata = segmentsAndMetadata.getCommitMetadata();
               final boolean published = publisher.publishSegments(
                   ImmutableSet.copyOf(segmentsAndMetadata.getSegments()),
-                  metadata == null ? null : ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
+                  metadata == null ? null : ((AppenderatorDriverMetadataNew) metadata).getCallerMetadata()
               ).isSuccess();
 
               if (published) {

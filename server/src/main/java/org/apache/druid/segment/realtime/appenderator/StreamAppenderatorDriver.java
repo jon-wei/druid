@@ -295,9 +295,13 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       final Collection<String> sequenceNames
   )
   {
+    /*
     final List<SegmentIdentifier> theSegments = getSegmentWithStates(sequenceNames)
         .map(SegmentWithState::getSegmentIdentifier)
         .collect(Collectors.toList());
+    */
+
+    final List<SegmentIdentifier> theSegments = getSegmentIdentifiers(sequenceNames);
 
     final ListenableFuture<SegmentsAndMetadata> publishFuture = ListenableFutures.transformAsync(
         // useUniquePath=true prevents inconsistencies in segment data when task failures or replicas leads to a second
@@ -345,7 +349,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         return Futures.immediateFuture(
             new SegmentsAndMetadata(
                 segmentsAndMetadata.getSegments(),
-                ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
+                ((AppenderatorDriverMetadataNew) metadata).getCallerMetadata()
             )
         );
       }
@@ -360,7 +364,8 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
             new SegmentDescriptor(
                 segmentIdentifier.getInterval(),
                 segmentIdentifier.getVersion(),
-                segmentIdentifier.getShardSpec().getPartitionNum()
+                segmentIdentifier.getShardSpec().getPartitionNum(),
+                segmentIdentifier.getDataSource()
             ),
             MoreExecutors.sameThreadExecutor(),
             () -> {
@@ -380,7 +385,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                         resultFuture.set(
                             new SegmentsAndMetadata(
                                 segmentsAndMetadata.getSegments(),
-                                ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
+                                ((AppenderatorDriverMetadataNew) metadata).getCallerMetadata()
                             )
                         );
                       }

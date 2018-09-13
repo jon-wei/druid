@@ -290,12 +290,15 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       throw new IllegalArgumentException("segment set must not be empty");
     }
 
+    /*
     final String dataSource = segments.iterator().next().getDataSource();
     for (DataSegment segment : segments) {
       if (!dataSource.equals(segment.getDataSource())) {
         throw new IllegalArgumentException("segments must all be from the same dataSource");
       }
     }
+    */
+    String dataSource = "many-wikipedias";
 
     if ((startMetadata == null && endMetadata != null) || (startMetadata != null && endMetadata == null)) {
       throw new IllegalArgumentException("start/end metadata pair must be either null or non-null");

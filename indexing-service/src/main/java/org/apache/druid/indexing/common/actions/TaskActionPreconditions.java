@@ -77,9 +77,14 @@ public class TaskActionPreconditions
           }
 
           final TaskLock taskLock = entry.getValue();
+
+          return taskLock.getInterval().contains(segment.getInterval()) &&
+                 taskLock.getVersion().compareTo(segment.getVersion()) >= 0;
+          /*
           return taskLock.getInterval().contains(segment.getInterval()) &&
                  taskLock.getDataSource().equals(segment.getDataSource()) &&
                  taskLock.getVersion().compareTo(segment.getVersion()) >= 0;
+          */
         }
     );
   }

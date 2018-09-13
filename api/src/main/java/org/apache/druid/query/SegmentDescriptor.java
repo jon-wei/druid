@@ -30,17 +30,32 @@ public class SegmentDescriptor
   private final Interval interval;
   private final String version;
   private final int partitionNumber;
+  private final String datasource;
 
-  @JsonCreator
   public SegmentDescriptor(
-      @JsonProperty("itvl") Interval interval,
-      @JsonProperty("ver") String version,
-      @JsonProperty("part") int partitionNumber
+      Interval interval,
+      String version,
+      int partitionNumber
   )
   {
     this.interval = interval;
     this.version = version;
     this.partitionNumber = partitionNumber;
+    this.datasource = null;
+  }
+
+  @JsonCreator
+  public SegmentDescriptor(
+      @JsonProperty("itvl") Interval interval,
+      @JsonProperty("ver") String version,
+      @JsonProperty("part") int partitionNumber,
+      @JsonProperty("datasource") String datasource
+  )
+  {
+    this.interval = interval;
+    this.version = version;
+    this.partitionNumber = partitionNumber;
+    this.datasource = datasource;
   }
 
   @JsonProperty("itvl")
@@ -59,6 +74,12 @@ public class SegmentDescriptor
   public int getPartitionNumber()
   {
     return partitionNumber;
+  }
+
+  @JsonProperty("datasource")
+  public String getDatasource()
+  {
+    return datasource;
   }
 
   @Override
@@ -104,4 +125,6 @@ public class SegmentDescriptor
            ", partitionNumber=" + partitionNumber +
            '}';
   }
+
+
 }
