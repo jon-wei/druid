@@ -157,7 +157,8 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
 
     synchronized (segments) {
       for (String sequenceName : sequenceNames) {
-        final SegmentsForSequence segmentsForSequence = segments.get(sequenceName);
+        //final SegmentsForSequence segmentsForSequence = segments.get(sequenceName);
+        final SegmentsForSequence segmentsForSequence = null;
         if (segmentsForSequence == null) {
           throw new ISE("Can't find segmentsForSequence for sequence[%s]", sequenceName);
         }
@@ -192,7 +193,8 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
   {
     final Map<String, SegmentsForSequence> snapshot;
     synchronized (segments) {
-      snapshot = ImmutableMap.copyOf(segments);
+      snapshot = null;
+      //snapshot = ImmutableMap.copyOf(segments);
     }
 
     return publishInBackground(

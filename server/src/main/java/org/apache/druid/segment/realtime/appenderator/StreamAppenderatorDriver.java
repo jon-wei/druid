@@ -115,14 +115,39 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
   {
     handoffNotifier.start();
 
-    final AppenderatorDriverMetadata metadata = objectMapper.convertValue(
+    final AppenderatorDriverMetadataNew metadata = objectMapper.convertValue(
         appenderator.startJob(),
-        AppenderatorDriverMetadata.class
+        AppenderatorDriverMetadataNew.class
     );
 
     log.info("Restored metadata[%s].", metadata);
 
     if (metadata != null) {
+      synchronized (segments) {
+        Map<String, Map<String, List<SegmentWithState>>> metadataSegments = metadata.getSegments();
+        Map<String, Map<String, String>> lastSegmentIds = metadata.getLastSegmentIds();
+
+        for (Map.Entry<String, Map<String, List<SegmentWithState>>> segmentEntry : metadataSegments.entrySet()) {
+          String datasourceName = segmentEntry.getKey();
+          Preconditions.checkState(
+              metadata.getSegments().get(datasourceName).keySet().equals(lastSegmentIds.get(datasourceName).keySet()),
+              "Sequences for segment states and last segment IDs are not same, datasource: " + datasourceName
+          );
+
+          final Map<String, SegmentsForSequenceBuilder> builders = new TreeMap<>();
+
+          for (Entry<String, List<SegmentWithState>> entry : metadata.getSegments().get(datasourceName).entrySet()) {
+            final String sequenceName = entry.getKey();
+            final SegmentsForSequenceBuilder builder = new SegmentsForSequenceBuilder(lastSegmentIds.get(datasourceName).get(sequenceName));
+            builders.put(sequenceName, builder);
+            entry.getValue().forEach(builder::add);
+          }
+
+          builders.forEach((sequence, builder) -> segments.get(datasourceName).put(sequence, builder.build()));
+        }
+      }
+
+      /*
       synchronized (segments) {
         final Map<String, String> lastSegmentIds = metadata.getLastSegmentIds();
         Preconditions.checkState(
@@ -141,6 +166,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 
         builders.forEach((sequence, builder) -> segments.put(sequence, builder.build()));
       }
+      */
 
       return metadata.getCallerMetadata();
     } else {
@@ -192,7 +218,8 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
   public void moveSegmentOut(final String sequenceName, final List<SegmentIdentifier> identifiers)
   {
     synchronized (segments) {
-      final SegmentsForSequence activeSegmentsForSequence = segments.get(sequenceName);
+      //final SegmentsForSequence activeSegmentsForSequence = segments.get(sequenceName);
+      final SegmentsForSequence activeSegmentsForSequence = null;
       if (activeSegmentsForSequence == null) {
         throw new ISE("WTF?! Asked to remove segments for sequenceName[%s] which doesn't exist...", sequenceName);
       }
