@@ -113,6 +113,7 @@ public class SegmentDescriptor
     int result = interval != null ? interval.hashCode() : 0;
     result = 31 * result + (version != null ? version.hashCode() : 0);
     result = 31 * result + partitionNumber;
+    result = 31 * result + (datasource != null ? datasource.hashCode() : 0);
     return result;
   }
 
@@ -123,6 +124,7 @@ public class SegmentDescriptor
            "interval=" + interval +
            ", version='" + version + '\'' +
            ", partitionNumber=" + partitionNumber +
+           ", datasource=" + datasource +
            '}';
   }
 

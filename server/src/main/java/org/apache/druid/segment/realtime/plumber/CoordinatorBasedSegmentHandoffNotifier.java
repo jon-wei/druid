@@ -64,7 +64,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
       SegmentDescriptor descriptor, Executor exec, Runnable handOffRunnable
   )
   {
-    log.info("Adding SegmentHandoffCallback for dataSource[%s] Segment[%s]", dataSource, descriptor);
+    log.info("Adding SegmentHandoffCallback for dataSource[%s] Segment[%s]", descriptor.getDatasource(), descriptor);
     Pair<Executor, Runnable> prev = handOffCallbacks.putIfAbsent(
         descriptor,
         new Pair<>(exec, handOffRunnable)
