@@ -48,6 +48,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -79,6 +80,9 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
   private final ObjectMapper objectMapper;
   private final DatasourceGroup datasourceGroup;
 
+  private final SegmentHandoffNotifierFactory handoffNotifierFactory;
+  private final Map<String, SegmentHandoffNotifier> handoffNotifiers = new HashMap<>();
+
   /**
    * Create a driver.
    *
@@ -102,6 +106,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
   {
     super(appenderator, segmentAllocator, usedSegmentChecker, dataSegmentKiller);
 
+    this.handoffNotifierFactory = handoffNotifierFactory;
     this.handoffNotifier = Preconditions.checkNotNull(handoffNotifierFactory, "handoffNotifierFactory")
                                         .createSegmentHandoffNotifier(appenderator.getDataSource());
     this.metrics = Preconditions.checkNotNull(metrics, "metrics");
@@ -316,7 +321,10 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         publishFuture,
         (Function<? super SegmentsAndMetadata, ? extends SegmentsAndMetadata>) sam -> {
           synchronized (segments) {
-            sequenceNames.forEach(segments::remove);
+            for (Map<String, SegmentsForSequence> datasourceSequence : segments.values()) {
+              sequenceNames.forEach(datasourceSequence::remove);
+            }
+            //sequenceNames.forEach(segments::remove);
           }
           return sam;
         }
@@ -360,7 +368,17 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       final AtomicInteger numRemainingHandoffSegments = new AtomicInteger(waitingSegmentIdList.size());
 
       for (final SegmentIdentifier segmentIdentifier : waitingSegmentIdList) {
-        handoffNotifier.registerSegmentHandoffCallback(
+
+        SegmentHandoffNotifier notifier = handoffNotifiers.get(segmentIdentifier.getDataSource());
+        if (notifier == null) {
+          notifier = handoffNotifierFactory.createSegmentHandoffNotifier(
+              segmentIdentifier.getDataSource()
+          );
+          notifier.start();
+          handoffNotifiers.put(segmentIdentifier.getDataSource(), notifier);
+        }
+
+        notifier.registerSegmentHandoffCallback(
             new SegmentDescriptor(
                 segmentIdentifier.getInterval(),
                 segmentIdentifier.getVersion(),
@@ -425,6 +443,9 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
   {
     super.close();
     handoffNotifier.close();
+    for (SegmentHandoffNotifier notifier : handoffNotifiers.values()) {
+      notifier.close();
+    }
   }
 
   private static class SegmentsForSequenceBuilder
