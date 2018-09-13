@@ -67,4 +67,9 @@ public interface KafkaIndexTaskRunner extends ChatHandler
   Response pause() throws InterruptedException;
   @VisibleForTesting
   void resume() throws InterruptedException;
+
+  default boolean hasDatasource(String datasourceName)
+  {
+    return false;
+  }
 }

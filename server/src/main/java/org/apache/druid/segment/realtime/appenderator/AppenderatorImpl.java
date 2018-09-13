@@ -209,6 +209,12 @@ public class AppenderatorImpl implements Appenderator
   }
 
   @Override
+  public boolean hasDatasource(String datasource)
+  {
+    return sinkTimelines.get(datasource) != null;
+  }
+
+  @Override
   public Object startJob()
   {
     tuningConfig.getBasePersistDirectory().mkdirs();

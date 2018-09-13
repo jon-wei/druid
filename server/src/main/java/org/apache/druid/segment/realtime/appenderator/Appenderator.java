@@ -49,6 +49,11 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    */
   String getDataSource();
 
+  default boolean hasDatasource(String datasource)
+  {
+    return false;
+  }
+
   /**
    * Perform any initial setup. Should be called before using any other methods.
    *

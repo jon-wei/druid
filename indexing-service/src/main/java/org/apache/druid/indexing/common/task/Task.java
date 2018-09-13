@@ -130,6 +130,11 @@ public interface Task
    */
   String getDataSource();
 
+  default boolean hasDatasource(String datasource)
+  {
+    return false;
+  }
+
   /**
    * Returns query runners for this task. If this task is not meant to answer queries over its datasource, this method
    * should return null.

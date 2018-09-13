@@ -197,6 +197,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   }
 
   @Override
+  public boolean hasDatasource(String datasource)
+  {
+    return runner.hasDatasource(datasource);
+  }
+
+  @Override
   public boolean isReady(TaskActionClient taskActionClient)
   {
     return true;

@@ -1542,6 +1542,12 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
     }
   }
 
+  @Override
+  public boolean hasDatasource(String datasourceName)
+  {
+    return appenderator.hasDatasource(datasourceName);
+  }
+
   @GET
   @Path("/time/start")
   @Produces(MediaType.APPLICATION_JSON)

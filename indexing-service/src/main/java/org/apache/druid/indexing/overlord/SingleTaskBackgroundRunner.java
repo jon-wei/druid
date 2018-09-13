@@ -328,7 +328,8 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
 
     if (runningItem != null) {
       final Task task = runningItem.getTask();
-      if (task.getDataSource().equals(queryDataSource)) {
+      if (task.hasDatasource(queryDataSource)) {
+      //if (task.getDataSource().equals(queryDataSource)) {
         final QueryRunner<T> taskQueryRunner = task.getQueryRunner(query);
 
         if (taskQueryRunner != null) {
