@@ -50,6 +50,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -238,7 +239,8 @@ public abstract class BaseAppenderatorDriver implements Closeable
   // Note: BatchAppenderatorDriver currently doesn't need to lock this map because it doesn't do anything concurrently.
   // However, it's desired to do some operations like indexing and pushing at the same time. Locking this map is also
   // required in BatchAppenderatorDriver once this feature is supported.
-  protected final Map<String, SegmentsForSequence> segments = new TreeMap<>();
+  //protected final Map<String, SegmentsForSequence> segments = new TreeMap<>();
+  protected final Map<String, Map<String, SegmentsForSequence>> segments = new HashMap<>();
   protected final ListeningExecutorService executor;
 
   BaseAppenderatorDriver(
@@ -256,7 +258,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
   }
 
   @VisibleForTesting
-  Map<String, SegmentsForSequence> getSegments()
+  Map<String, Map<String, SegmentsForSequence>> getSegments()
   {
     return segments;
   }
@@ -275,10 +277,16 @@ public abstract class BaseAppenderatorDriver implements Closeable
   /**
    * Find a segment in the {@link SegmentState#APPENDING} state for the given timestamp and sequenceName.
    */
-  private SegmentIdentifier getAppendableSegment(final DateTime timestamp, final String sequenceName)
+  private SegmentIdentifier getAppendableSegment(final DateTime timestamp, final String sequenceName, final String datasourceName)
   {
     synchronized (segments) {
-      final SegmentsForSequence segmentsForSequence = segments.get(sequenceName);
+      Map<String, SegmentsForSequence> datasourceSegments = segments.get(datasourceName);
+      if (datasourceSegments == null) {
+        datasourceSegments = new TreeMap<>();
+        segments.put(datasourceName, datasourceSegments);
+      }
+
+      final SegmentsForSequence segmentsForSequence = datasourceSegments.get(sequenceName);
 
       if (segmentsForSequence == null) {
         return null;
@@ -319,17 +327,23 @@ public abstract class BaseAppenderatorDriver implements Closeable
       final InputRow row,
       final String sequenceName,
       final boolean skipSegmentLineageCheck,
-      final DatasourceGroup datasourceGroup
+      final String datasourceName
   ) throws IOException
   {
     synchronized (segments) {
       final DateTime timestamp = row.getTimestamp();
-      final SegmentIdentifier existing = getAppendableSegment(timestamp, sequenceName);
+      final SegmentIdentifier existing = getAppendableSegment(timestamp, sequenceName, datasourceName);
       if (existing != null) {
         return existing;
       } else {
         // Allocate new segment.
-        final SegmentsForSequence segmentsForSequence = segments.get(sequenceName);
+        Map<String, SegmentsForSequence> datasourceSegments = segments.get(datasourceName);
+        if (datasourceSegments == null) {
+          datasourceSegments = new TreeMap<>();
+          segments.put(datasourceName, datasourceSegments);
+        }
+
+        final SegmentsForSequence segmentsForSequence = datasourceSegments.get(sequenceName);
         final SegmentIdentifier newSegment = segmentAllocator.allocate(
             row,
             sequenceName,
@@ -352,7 +366,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
           }
 
           log.info("New segment[%s] for row[%s] sequenceName[%s].", newSegment, row, sequenceName);
-          addSegment(sequenceName, newSegment);
+          addSegment(sequenceName, newSegment, datasourceName);
         } else {
           // Well, we tried.
           log.warn("Cannot allocate segment for timestamp[%s], sequenceName[%s]. ", timestamp, sequenceName);
@@ -363,10 +377,16 @@ public abstract class BaseAppenderatorDriver implements Closeable
     }
   }
 
-  private void addSegment(String sequenceName, SegmentIdentifier identifier)
+  private void addSegment(String sequenceName, SegmentIdentifier identifier, String datasourceName)
   {
     synchronized (segments) {
-      segments.computeIfAbsent(sequenceName, k -> new SegmentsForSequence())
+      Map<String, SegmentsForSequence> datasourceSegments = segments.get(datasourceName);
+      if (datasourceSegments == null) {
+        datasourceSegments = new TreeMap<>();
+        segments.put(datasourceName, datasourceSegments);
+      }
+
+      datasourceSegments.computeIfAbsent(sequenceName, k -> new SegmentsForSequence())
               .add(identifier);
     }
   }
@@ -399,7 +419,9 @@ public abstract class BaseAppenderatorDriver implements Closeable
     Preconditions.checkNotNull(row, "row");
     Preconditions.checkNotNull(sequenceName, "sequenceName");
 
-    final SegmentIdentifier identifier = getSegment(row, sequenceName, skipSegmentLineageCheck, datasourceGroup);
+    String datasourceName = datasourceGroup.getDemux().chooseDatasource(row);
+
+    final SegmentIdentifier identifier = getSegment(row, sequenceName, skipSegmentLineageCheck, datasourceName);
 
     if (identifier != null) {
       try {
@@ -431,6 +453,34 @@ public abstract class BaseAppenderatorDriver implements Closeable
    */
   Stream<SegmentWithState> getSegmentWithStates(Collection<String> sequenceNames)
   {
+    List<Stream<SegmentWithState>> datasourceStreams = new ArrayList<>();
+
+    for (Map<String, SegmentsForSequence> datasourceSegments : segments.values()) {
+      Stream<SegmentWithState> datasourceStream = sequenceNames
+          .stream()
+          .map(datasourceSegments::get)
+          .filter(Objects::nonNull)
+          .flatMap(segmentsForSequence -> segmentsForSequence.intervalToSegmentStates.values().stream())
+          .flatMap(segmentsOfInterval -> segmentsOfInterval.getAllSegments().stream());
+
+      datasourceStreams.add(datasourceStream);
+    }
+
+    if (datasourceStreams.size() == 0) {
+      return Stream.empty();
+    }
+
+    int i = 0;
+    for (Stream<SegmentWithState> datasourceStream : datasourceStreams) {
+      if (i != 0) {
+        Stream.concat(datasourceStreams.get(0), datasourceStream);
+      }
+      i++;
+    }
+
+    return datasourceStreams.get(0);
+
+    /*
     synchronized (segments) {
       return sequenceNames
           .stream()
@@ -439,10 +489,39 @@ public abstract class BaseAppenderatorDriver implements Closeable
           .flatMap(segmentsForSequence -> segmentsForSequence.intervalToSegmentStates.values().stream())
           .flatMap(segmentsOfInterval -> segmentsOfInterval.getAllSegments().stream());
     }
+    */
   }
 
   Stream<SegmentWithState> getAppendingSegments(Collection<String> sequenceNames)
   {
+    List<Stream<SegmentWithState>> datasourceStreams = new ArrayList<>();
+
+    for (Map<String, SegmentsForSequence> datasourceSegments : segments.values()) {
+      Stream<SegmentWithState> datasourceStream = sequenceNames
+          .stream()
+          .map(datasourceSegments::get)
+          .filter(Objects::nonNull)
+          .flatMap(segmentsForSequence -> segmentsForSequence.intervalToSegmentStates.values().stream())
+          .map(segmentsOfInterval -> segmentsOfInterval.appendingSegment)
+          .filter(Objects::nonNull);
+
+      datasourceStreams.add(datasourceStream);
+    }
+
+    if (datasourceStreams.size() == 0) {
+      return Stream.empty();
+    }
+
+    int i = 0;
+    for (Stream<SegmentWithState> datasourceStream : datasourceStreams) {
+      if (i != 0) {
+        Stream.concat(datasourceStreams.get(0), datasourceStream);
+      }
+      i++;
+    }
+
+    return datasourceStreams.get(0);
+    /*
     synchronized (segments) {
       return sequenceNames
           .stream()
@@ -452,6 +531,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
           .map(segmentsOfInterval -> segmentsOfInterval.appendingSegment)
           .filter(Objects::nonNull);
     }
+    */
   }
 
   /**
@@ -622,9 +702,9 @@ public abstract class BaseAppenderatorDriver implements Closeable
   static class WrappedCommitter implements Committer
   {
     private final Committer delegate;
-    private final AppenderatorDriverMetadata metadata;
+    private final AppenderatorDriverMetadataNew metadata;
 
-    WrappedCommitter(Committer delegate, AppenderatorDriverMetadata metadata)
+    WrappedCommitter(Committer delegate, AppenderatorDriverMetadataNew metadata)
     {
       this.delegate = delegate;
       this.metadata = metadata;
@@ -645,12 +725,54 @@ public abstract class BaseAppenderatorDriver implements Closeable
 
   WrappedCommitter wrapCommitter(final Committer committer)
   {
-    final AppenderatorDriverMetadata wrappedMetadata;
-    final Map<String, SegmentsForSequence> snapshot;
+    final AppenderatorDriverMetadataNew wrappedMetadata;
+    final Map<String, Map<String, SegmentsForSequence>> snapshot;
     synchronized (segments) {
       snapshot = ImmutableMap.copyOf(segments);
     }
 
+    Map<String, Map<String, List<SegmentWithState>>> segments = new HashMap<>();
+    Map<String, Map<String, String>> lastSegmentIds = new HashMap<>();
+
+    for (Map.Entry<String, Map<String, SegmentsForSequence>> segmentEntry : snapshot.entrySet()) {
+      segments.put(
+          segmentEntry.getKey(),
+          ImmutableMap.copyOf(
+              Maps.transformValues(
+                  segmentEntry.getValue(),
+                  (Function<SegmentsForSequence, List<SegmentWithState>>) input -> ImmutableList.copyOf(
+                      input.intervalToSegmentStates
+                          .values()
+                          .stream()
+                          .flatMap(segmentsOfInterval -> segmentsOfInterval.getAllSegments().stream())
+                          .collect(Collectors.toList())
+                  )
+              )
+          )
+      );
+    }
+
+    for (Map.Entry<String, Map<String, SegmentsForSequence>> segmentEntry : snapshot.entrySet()) {
+      lastSegmentIds.put(
+          segmentEntry.getKey(),
+          segmentEntry.getValue().entrySet()
+                  .stream()
+                  .collect(
+                      Collectors.toMap(
+                          Entry::getKey,
+                          e -> e.getValue().lastSegmentId
+                      )
+                  )
+      );
+    }
+
+    wrappedMetadata = new AppenderatorDriverMetadataNew(
+        segments,
+        lastSegmentIds,
+        committer.getMetadata()
+    );
+
+    /*
     wrappedMetadata = new AppenderatorDriverMetadata(
         ImmutableMap.copyOf(
             Maps.transformValues(
@@ -674,6 +796,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
                 ),
         committer.getMetadata()
     );
+    */
 
     return new WrappedCommitter(committer, wrappedMetadata);
   }
