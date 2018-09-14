@@ -72,6 +72,8 @@ import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -306,6 +308,29 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     // Find which segments are used (i.e. not overshadowed).
     final Set<DataSegment> usedSegments = Sets.newHashSet();
+
+    final Map<String, Set<DataSegment>> perDatasourceSegments = new HashMap<>();
+    for (DataSegment segment : segments) {
+      Set<DataSegment> datasourceSegmentSet = perDatasourceSegments.get(segment.getDataSource());
+      if (datasourceSegmentSet == null) {
+        datasourceSegmentSet = new HashSet<>();
+        perDatasourceSegments.put(segment.getDataSource(), datasourceSegmentSet);
+      }
+    }
+
+    for (Set<DataSegment> datasourceSegmentSet : perDatasourceSegments.values()) {
+      List<TimelineObjectHolder<String, DataSegment>> segmentHolders =
+          VersionedIntervalTimeline.forSegments(datasourceSegmentSet).lookupWithIncompletePartitions(Intervals.ETERNITY);
+      for (TimelineObjectHolder<String, DataSegment> holder : segmentHolders) {
+        for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
+          usedSegments.add(chunk.getObject());
+        }
+      }
+    }
+
+    
+    /*
+    final Set<DataSegment> usedSegments = Sets.newHashSet();
     List<TimelineObjectHolder<String, DataSegment>> segmentHolders =
         VersionedIntervalTimeline.forSegments(segments).lookupWithIncompletePartitions(Intervals.ETERNITY);
     for (TimelineObjectHolder<String, DataSegment> holder : segmentHolders) {
@@ -313,6 +338,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         usedSegments.add(chunk.getObject());
       }
     }
+    */
 
     final AtomicBoolean definitelyNotUpdated = new AtomicBoolean(false);
 

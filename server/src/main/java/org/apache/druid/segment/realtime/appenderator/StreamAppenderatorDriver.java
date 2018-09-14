@@ -340,7 +340,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
    *
    * @return null if the input segmentsAndMetadata is null. Otherwise, a {@link ListenableFuture} for the submitted task
    * which returns {@link SegmentsAndMetadata} containing the segments successfully handed off and the metadata
-   * of the caller of {@link AppenderatorDriverMetadata}
+   * of the caller of {@link AppenderatorDriverMetadataNew}
    */
   public ListenableFuture<SegmentsAndMetadata> registerHandoff(SegmentsAndMetadata segmentsAndMetadata)
   {
