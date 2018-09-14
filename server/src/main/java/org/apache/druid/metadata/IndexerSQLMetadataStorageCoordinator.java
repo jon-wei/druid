@@ -316,6 +316,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         datasourceSegmentSet = new HashSet<>();
         perDatasourceSegments.put(segment.getDataSource(), datasourceSegmentSet);
       }
+      datasourceSegmentSet.add(segment);
     }
 
     for (Set<DataSegment> datasourceSegmentSet : perDatasourceSegments.values()) {
@@ -328,7 +329,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       }
     }
 
-    
+
     /*
     final Set<DataSegment> usedSegments = Sets.newHashSet();
     List<TimelineObjectHolder<String, DataSegment>> segmentHolders =
