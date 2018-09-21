@@ -19,6 +19,7 @@
 
 package org.apache.druid.client;
 
+import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.QueryRunner;
@@ -27,6 +28,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.concurrent.Executor;
 
 /**
@@ -35,6 +37,9 @@ public interface TimelineServerView extends ServerView
 {
   @Nullable
   TimelineLookup<String, ServerSelector> getTimeline(DataSource dataSource);
+
+  @Nullable
+  Map<String, QueryableDruidServer> getClients();
 
   <T> QueryRunner<T> getQueryRunner(DruidServer server);
 

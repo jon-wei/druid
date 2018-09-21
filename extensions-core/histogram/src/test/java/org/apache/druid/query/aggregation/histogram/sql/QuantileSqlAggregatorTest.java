@@ -23,7 +23,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
@@ -64,8 +66,10 @@ import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.sql.calcite.util.TestServerInventoryView;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -149,6 +153,8 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
     );
 
     final PlannerConfig plannerConfig = new PlannerConfig();
+    final TimelineServerView serverView = new TestServerInventoryView(walker.getSegments());
+    final DruidLeaderClient druidLeaderClient = EasyMock.createMock(DruidLeaderClient.class);
     final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
         ImmutableSet.of(new QuantileSqlAggregator()),
@@ -157,12 +163,15 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
 
     plannerFactory = new PlannerFactory(
         druidSchema,
+        serverView,
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         operatorTable,
         CalciteTests.createExprMacroTable(),
         plannerConfig,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        CalciteTests.getJsonMapper()
+        CalciteTests.getJsonMapper(),
+        druidLeaderClient,
+        druidLeaderClient
     );
   }
 

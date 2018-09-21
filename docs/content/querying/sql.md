@@ -468,6 +468,11 @@ plan SQL queries. This metadata is cached on broker startup and also updated per
 [SegmentMetadata queries](segmentmetadataquery.html). Background metadata refreshing is triggered by
 segments entering and exiting the cluster, and can also be throttled through configuration.
 
+Druid exposes system information through special system tables. There are two such schemas available: Information Schema and System Schema
+Information schema provides details about table and column types. Sys schema provides information about Druid internals like segments/tasks/servers.
+
+## INFORMATION SCHEMA
+
 You can access table and column metadata through JDBC using `connection.getMetaData()`, or through the
 INFORMATION_SCHEMA tables described below. For example, to retrieve metadata for the Druid
 datasource "foo", use the query:
@@ -518,6 +523,89 @@ SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_
 |CHARACTER_SET_NAME||
 |COLLATION_NAME||
 |JDBC_TYPE|Type code from java.sql.Types (Druid extension)|
+
+## SYSTEM SCHEMA
+
+The SYS schema provides visibility into Druid segments, servers and tasks.
+For example to retrieve all segments for datasource "wikipedia", use the query:
+```sql
+SELECT * FROM sys.segments WHERE datasource = 'wikipedia'
+```
+
+### SEGMENTS table
+Segments table provides details on all Druid segments, whether they are published yet or not.
+
+
+|Column|Notes|
+|------|-----|
+|segment_id|Unique segment identifier|
+|datasource|Name of datasource|
+|start|Interval start time (in ISO 8601 format)|
+|end|Interval end time (in ISO 8601 format)|
+|size|Size of segment in bytes|
+|version|Version number (generally an ISO8601 timestamp corresponding to when the segment set was first started)|
+|partition_num|Partition number (an integer, unique within a datasource+interval+version; may not necessarily be contiguous)|
+|num_replicas|Number replicas of this segment currently being served|
+|num_rows|Number of rows in current segment, this value could be null if unkown to broker at query time|
+|is_published|True if this segment has been published to the metadata store|
+|is_available|True if this segment is currently being served by any server|
+|is_realtime|True if this segment is being served on a realtime server|
+|payload|Jsonified datasegment payload|
+
+### SERVERS table
+Servers table lists all data servers(any server that hosts a segment). It includes both historicals and peons.
+
+|Column|Notes|
+|------|-----|
+|server|Server name in the form host:port|
+|scheme|Server scheme http or https|
+|server_type|Type of druid service for example historical, realtime, bridge, indexer_executor|
+|tier|Distribution tier see [druid.server.tier](#../configuration/index.html#Historical-General-Configuration)|
+|current_size|Current size of segments in bytes on this server|
+|max_size|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](#../configuration/index.html#Historical-General-Configuration)|
+
+To retrieve information about all servers, use the query:
+```sql
+SELECT * FROM sys.servers;
+```
+
+### SEGMENT_SERVERS table
+
+SEGMENT_SERVERS is used to join SEGMENTS with SERVERS table
+
+|Column|Notes|
+|------|-----|
+|server|Server name in format host:port (Primary key of [servers table](#SERVERS-table))|
+|segment_id|Segment identifier (Primary key of [segments table](#SEGMENTS-table))|
+
+To retrieve information from segment_servers table, use the query:
+```sql
+SELECT * FROM sys.segment_servers;
+```
+
+### TASKS table
+
+The tasks table provides information about active and recently-completed indexing tasks. For more information 
+checkout out [ingestion tasks](#../ingestion/tasks.html)
+
+|Column|Notes|
+|------|-----|
+|task_id|Unique task identifier|
+|type|Task type, this should be "index" for indexing tasks|
+|datasource|Datasource name being indexed|
+|created_time|Timestamp in ISO8601 format corresponding to when the ingestion task was created. Note that this value is populated for completed and waiting tasks. For running and pending tasks this value is set to DateTimes.EPOCH|
+|queue_insertion_time|Timestamp in ISO8601 format corresponding to when this task was added to the queue on the overlord|
+|status|Status of a task can be RUNNING, FAILED, SUCCESS|
+|runner_status|Runner status of a completed task would be NONE, for in-progress tasks this can be RUNNING, WAITING, PENDING|
+|duration|Time it took to finish the task in milliseconds, this value is present only for completed tasks|
+|location|Server name where this task is running in the format host:port, this information is present only for RUNNING tasks|
+|error_msg|Detailed error message in case of FAILED tasks|
+
+For example, to retrieve tasks information filtered by status, use the query
+```sql
+SELECT * FROM sys.tasks where status='FAILED';
+```
+
 
 ## Server configuration
 

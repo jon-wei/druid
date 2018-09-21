@@ -25,7 +25,9 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -46,6 +48,7 @@ import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.sql.calcite.util.TestServerInventoryView;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
@@ -112,9 +115,11 @@ public class SqlResourceTest extends CalciteTestBase
     walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
 
     final PlannerConfig plannerConfig = new PlannerConfig();
+    final TimelineServerView serverView = new TestServerInventoryView(walker.getSegments());
     final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+    final DruidLeaderClient druidLeaderClient = EasyMock.createMock(DruidLeaderClient.class);
     req = EasyMock.createStrictMock(HttpServletRequest.class);
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
@@ -134,12 +139,15 @@ public class SqlResourceTest extends CalciteTestBase
         JSON_MAPPER,
         new PlannerFactory(
             druidSchema,
+            serverView,
             CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
             operatorTable,
             macroTable,
             plannerConfig,
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            CalciteTests.getJsonMapper()
+            CalciteTests.getJsonMapper(),
+            druidLeaderClient,
+            druidLeaderClient
         )
     );
   }
