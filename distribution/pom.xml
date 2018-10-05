@@ -111,6 +111,11 @@
                                 <argument>io.druid.extensions:simple-client-sslcontext</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-basic-security</argument>
+                                <argument>--no-default-hadoop</argument>
+                                <argument>-r</argument>
+                                <argument>http://repo.hortonworks.com/content/repositories/releases</argument>
+                                <argument>-r</argument>
+                                <argument>http://repo.hortonworks.com/content/groups/public</argument>
                                 <argument>${druid.distribution.pulldeps.opts}</argument>
                             </arguments>
                         </configuration>
@@ -204,6 +209,10 @@
                                         <argument>-l</argument>
                                         <argument>${settings.localRepository}</argument>
                                         <argument>--no-default-hadoop</argument>
+                                        <argument>-r</argument>
+                                        <argument>http://repo.hortonworks.com/content/repositories/releases</argument>
+                                        <argument>-r</argument>
+                                        <argument>http://repo.hortonworks.com/content/groups/public</argument>
                                         <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:ambari-metrics-emitter</argument>
                                         <argument>-c</argument>
