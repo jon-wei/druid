@@ -384,6 +384,14 @@ public class FixedBucketsHistogram
           throw e;
         }
 
+
+        double cursorFrac = (theirCursor - (theirCurBucket * otherHistogram.getBucketSize() + otherHistogram.getLowerLimit())) / otherHistogram.getBucketSize();
+        double value = cursorFrac * otherHistogram.bucketSize + (theirCurBucket * otherHistogram.getBucketSize() + otherHistogram.getLowerLimit());
+        log.info("INTERPOLATED VAL: " + value + ", FRACTIONAL: " + cursorFrac);
+
+        max = Math.max(value, max);
+        min = Math.min(value, min);
+
         histogram[myCurBucket] += Math.round(fractionalCount);
         count += Math.round(fractionalCount);
 
@@ -417,8 +425,8 @@ public class FixedBucketsHistogram
 
     log.info("FINAL TC: " + theirCursor + " TCB: " + theirCurBucket + ", TNCB: " + theirNextCursorBoundary);
 
-    max = Math.max(max, otherHistogram.getMax());
-    min = Math.min(min, otherHistogram.getMin());
+    //max = Math.max(max, otherHistogram.getMax());
+    //min = Math.min(min, otherHistogram.getMin());
   }
 
   // Based off PercentileBuckets code from Netflix Spectator: https://github.com/Netflix/spectator

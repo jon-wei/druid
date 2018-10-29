@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation.histogram;
 
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class FixedBucketsHistogramTest
@@ -247,6 +248,77 @@ public class FixedBucketsHistogramTest
     log.info("THEIR-P12.5: " + percentile.evaluate(12.5));
     log.info("THEIR-P50: " + percentile.evaluate(50));
     log.info("THEIR-P98: " + percentile.evaluate(98));
+  }
+
+  @Test
+  public void testMergeSameBuckets()
+  {
+    FixedBucketsHistogram h = buildHistogram(
+        0,
+        20,
+        5,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{1,2,7,12,19}
+    );
+
+    FixedBucketsHistogram h2 = buildHistogram(
+        0,
+        20,
+        5,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{3,8,9,13}
+    );
+
+    h.combineHistogram(h2);
+
+    Assert.assertEquals(h.getNumBuckets(), 5);
+    Assert.assertEquals(h.getBucketSize(), 4.0, 0.01);
+    Assert.assertEquals(h.getLowerLimit(), 0, 0.01);
+    Assert.assertEquals(h.getUpperLimit(), 20, 0.01);
+    Assert.assertEquals(h.getOutlierHandlingMode(), FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW);
+    Assert.assertArrayEquals(h.getHistogram(), new long[]{3, 1, 2, 2, 1});
+    Assert.assertEquals(h.getCount(), 9);
+    Assert.assertEquals(h.getMin(), 1, 0.01);
+    Assert.assertEquals(h.getMax(), 19, 0.01);
+    Assert.assertEquals(h.getMissingValueCount(), 0);
+    Assert.assertEquals(h.getLowerOutlierCount(), 0);
+    Assert.assertEquals(h.getUpperOutlierCount(), 0);
+  }
+
+
+  @Test
+  public void testMergeSameBucketsRightOverlap()
+  {
+    FixedBucketsHistogram h = buildHistogram(
+        0,
+        20,
+        5,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{1, 2, 7, 12, 19}
+    );
+
+    FixedBucketsHistogram h2 = buildHistogram(
+        12,
+        32,
+        5,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{13, 18, 25, 29}
+    );
+
+    h.combineHistogram(h2);
+
+    Assert.assertEquals(h.getNumBuckets(), 5);
+    Assert.assertEquals(h.getBucketSize(), 4.0, 0.01);
+    Assert.assertEquals(h.getLowerLimit(), 0, 0.01);
+    Assert.assertEquals(h.getUpperLimit(), 20, 0.01);
+    Assert.assertEquals(h.getOutlierHandlingMode(), FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW);
+    Assert.assertArrayEquals(h.getHistogram(), new long[]{2, 1, 0, 2, 2});
+    Assert.assertEquals(h.getCount(), 7);
+    Assert.assertEquals(h.getMin(), 1, 0.01);
+    Assert.assertEquals(h.getMax(), 19, 0.01);
+    Assert.assertEquals(h.getMissingValueCount(), 0);
+    Assert.assertEquals(h.getLowerOutlierCount(), 0);
+    Assert.assertEquals(h.getUpperOutlierCount(), 0);
   }
 
 
