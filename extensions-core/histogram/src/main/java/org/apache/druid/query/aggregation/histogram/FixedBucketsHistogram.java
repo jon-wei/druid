@@ -369,7 +369,18 @@ public class FixedBucketsHistogram
 
       // consume one of our bucket's worth of data from the other histogram
       while (needToConsume > 0) {
-        log.info("TC: " + theirCursor + " TCB: " + theirCurBucket + ", TNCB: " + theirNextCursorBoundary);
+        //log.info("TOCONSUME: " +  toConsume + ", TheirC: " + theirCursor + " TCB: " + theirCurBucket + ", TNCB: " + theirNextCursorBoundary);
+
+        log.info(
+            "TOCONSUME: %s, TheirC: %s, TCB: %s, TNCB: %s, MyC: %s, MCB: %s, MNCB: %s",
+            toConsume,
+            theirCursor,
+            theirCurBucket,
+            theirNextCursorBoundary,
+            myCursor,
+            myCurBucket,
+            myNextCursorBoundary
+        );
 
         double fractional = toConsume / otherHistogram.getBucketSize();
         double fractionalCount;
@@ -387,9 +398,9 @@ public class FixedBucketsHistogram
 
         double cursorFrac = (theirCursor - (theirCurBucket * otherHistogram.getBucketSize() + otherHistogram.getLowerLimit())) / otherHistogram.getBucketSize();
         double value = cursorFrac * otherHistogram.bucketSize + (theirCurBucket * otherHistogram.getBucketSize() + otherHistogram.getLowerLimit());
-        log.info("FRACCOUNT: " + fractionalCount + ", INTERPOLATED VAL: " + value + ", FRACTIONAL: " + cursorFrac);
 
-        if (fractionalCount > 0) {
+        if (Math.round(fractionalCount) > 0) {
+          log.info("--------FRACCOUNT: " + fractionalCount + ", INTERPOLATED VAL: " + value + ", FRACTIONAL: " + cursorFrac);
           max = Math.max(value, max);
           min = Math.min(value, min);
         }

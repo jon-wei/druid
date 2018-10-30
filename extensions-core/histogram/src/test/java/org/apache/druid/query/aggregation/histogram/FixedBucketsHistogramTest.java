@@ -546,7 +546,7 @@ public class FixedBucketsHistogramTest
         30,
         7,
         FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
-        new float[]{11, 15, 21, 29}
+        new float[]{11, 15, 21, 21, 29}
     );
 
     h.combineHistogram(h2);
@@ -556,10 +556,45 @@ public class FixedBucketsHistogramTest
     Assert.assertEquals(0, h.getLowerLimit(), 0.01);
     Assert.assertEquals(50,h.getUpperLimit(), 0.01);
     Assert.assertEquals(FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, h.getOutlierHandlingMode());
-    Assert.assertArrayEquals(new long[]{1, 0, 1, 2, 1, 1, 1, 0, 0, 1}, h.getHistogram());
-    Assert.assertEquals(8, h.getCount());
+    Assert.assertArrayEquals(new long[]{1, 0, 2, 2, 1, 1, 1, 0, 0, 1}, h.getHistogram());
+    Assert.assertEquals(9, h.getCount());
     Assert.assertEquals(2, h.getMin(), 0.01);
     Assert.assertEquals(48, h.getMax(), 0.01);
+    Assert.assertEquals(0, h.getMissingValueCount());
+    Assert.assertEquals(0, h.getLowerOutlierCount());
+    Assert.assertEquals(0, h.getUpperOutlierCount());
+  }
+
+  @Test
+  public void testMergeDifferentBucketsContainedByOther()
+  {
+    FixedBucketsHistogram h = buildHistogram(
+        10,
+        30,
+        4,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{11, 15, 21, 29}
+    );
+
+    FixedBucketsHistogram h2 = buildHistogram(
+        0,
+        50,
+        13,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{2, 18, 34, 48}
+    );
+
+    h.combineHistogram(h2);
+
+    Assert.assertEquals(4, h.getNumBuckets());
+    Assert.assertEquals(5.0, h.getBucketSize(), 0.01);
+    Assert.assertEquals(10, h.getLowerLimit(), 0.01);
+    Assert.assertEquals(30,h.getUpperLimit(), 0.01);
+    Assert.assertEquals(FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, h.getOutlierHandlingMode());
+    Assert.assertArrayEquals(new long[]{1, 2, 1, 1}, h.getHistogram());
+    Assert.assertEquals(5, h.getCount());
+    Assert.assertEquals(11, h.getMin(), 0.01);
+    Assert.assertEquals(29, h.getMax(), 0.01);
     Assert.assertEquals(0, h.getMissingValueCount());
     Assert.assertEquals(0, h.getLowerOutlierCount());
     Assert.assertEquals(0, h.getUpperOutlierCount());
