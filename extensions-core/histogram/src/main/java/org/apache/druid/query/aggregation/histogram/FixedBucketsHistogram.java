@@ -342,6 +342,8 @@ public class FixedBucketsHistogram
     } else {
       simpleInterpolateMerge(otherHistogram);
     }
+    missingValueCount += otherHistogram.getMissingValueCount();
+
     return this;
   }
 
@@ -468,6 +470,8 @@ public class FixedBucketsHistogram
       prev = next;
       prevP = nextP;
       prevB = nextB;
+
+      log.info("PREV: %s, PREVP: %s, PREVB: %s, PCTIDX: %s", prev, prevP, prevB, pctIdx);
     }
 
     double nextP = 100.0;

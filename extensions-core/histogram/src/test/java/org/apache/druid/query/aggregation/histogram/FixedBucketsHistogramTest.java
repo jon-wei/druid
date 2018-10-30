@@ -161,6 +161,66 @@ public class FixedBucketsHistogramTest
   }
 
   @Test
+  public void testOfferValues32()
+  {
+    log.info("testOfferValues3");
+
+    FixedBucketsHistogram h = buildHistogram(
+        0,
+        200,
+        100,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        VALUES3
+    );
+
+    float[] quantiles = h.percentilesFloat(new double[]{12.5f, 50.0f, 98f, 120f});
+    double[] doubles = new double[VALUES3.length];
+
+    for (int i = 0; i < doubles.length; i++) {
+      doubles[i] = VALUES3[i];
+    }
+
+    Percentile percentile = new Percentile();
+    percentile.setData(doubles);
+    log.info("MY-P12.5: " + quantiles[0]);
+    log.info("MY-P50: " + quantiles[1]);
+    log.info("MY-P98: " + quantiles[2]);
+    log.info("THEIR-P12.5: " + percentile.evaluate(12.5));
+    log.info("THEIR-P50: " + percentile.evaluate(50));
+    log.info("THEIR-P98: " + percentile.evaluate(98));
+  }
+
+  @Test
+  public void testOfferValues4()
+  {
+    log.info("testOfferValues4");
+
+    FixedBucketsHistogram h = buildHistogram(
+        -100,
+        100,
+        100,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        VALUES4
+    );
+
+    float[] quantiles = h.percentilesFloat(new double[]{12.5f, 50.0f, 98f});
+    double[] doubles = new double[VALUES4.length];
+
+    for (int i = 0; i < doubles.length; i++) {
+      doubles[i] = VALUES4[i];
+    }
+
+    Percentile percentile = new Percentile();
+    percentile.setData(doubles);
+    log.info("MY-P12.5: " + quantiles[0]);
+    log.info("MY-P50: " + quantiles[1]);
+    log.info("MY-P98: " + quantiles[2]);
+    log.info("THEIR-P12.5: " + percentile.evaluate(12.5));
+    log.info("THEIR-P50: " + percentile.evaluate(50));
+    log.info("THEIR-P98: " + percentile.evaluate(98));
+  }
+
+  @Test
   public void testOfferValues5()
   {
     log.info("testOfferValues5");
@@ -604,7 +664,7 @@ public class FixedBucketsHistogramTest
   public void testSerde()
   {
     FixedBucketsHistogram h = buildHistogram(
-        0,
+        -10,
         200,
         100,
         FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
@@ -628,75 +688,4 @@ public class FixedBucketsHistogramTest
     FixedBucketsHistogram fromBase64 = FixedBucketsHistogram.fromBase64(asBase64);
     Assert.assertEquals(h, fromBase64);
   }
-
-
-  /*
-  @Test
-  public void testOverlapMerge()
-  {
-    FixedBucketsHistogram h = buildHistogram(
-        0,
-        200,
-        20,
-        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
-        new float[]{}
-    );
-
-    FixedBucketsHistogram h2 = buildHistogram(
-        0,
-        100,
-        10,
-        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
-        //new float[]{10,20,30,40,50,60,70,80,90,99}
-        new float[]{10, 10, 20, 20, 30, 30, 40, 40, 50, 50, 60, 60, 70, 70, 80, 80, 90, 90, 99, 99}
-    );
-
-    FixedBucketsHistogram h4 = buildHistogram(
-        37,
-        96,
-        17,
-        FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
-        //new float[]{10,20,30,40,50,60,70,80,90,99}
-        new float[]{40, 40, 50, 50, 60, 60, 70, 70, 80, 80, 90, 90}
-    );
-
-    FixedBucketsHistogram hh = buildHistogram(
-        0,
-        200,
-        20,
-        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
-        new float[]{}
-    );
-
-    //hh.combineHistogram(h2);
-
-    hh.combineHistogram(h4);
-
-    /*
-    h.combineHistogram(h2);
-
-    byte[] lz4d = h.toBytesLZ4();
-    FixedBucketsHistogram hu = FixedBucketsHistogram.fromBytes(lz4d);
-
-    String b64 = FixedBucketsHistogram.toBase64(h);
-    log.info(b64);
-    FixedBucketsHistogram h4 = FixedBucketsHistogram.fromBase64(b64);
-    log.info("S");
-    */
-
-  /*
-    h = FixedBucketsHistogram.fromBase64("AQAAAOgTAAEAI0BpCQAwAAAUBQADAgAIDAAJAgAxQFjAEAAhQCQHAAwCABMCEQAPCAAlEwRAAA8CADFQAAAAAAA=");
-
-    FixedBucketsHistogram h3 = buildHistogram(
-        0,
-        100,
-        10,
-        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
-        new float[]{}
-    );
-
-    h3.combineHistogram(h);
-    log.info("DFSFSDFDSF");
-  }
-  */
 }
