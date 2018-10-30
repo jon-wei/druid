@@ -285,7 +285,6 @@ public class FixedBucketsHistogramTest
     Assert.assertEquals(0, h.getUpperOutlierCount());
   }
 
-
   @Test
   public void testMergeSameBucketsRightOverlap()
   {
@@ -421,6 +420,146 @@ public class FixedBucketsHistogramTest
     Assert.assertEquals(5, h.getCount());
     Assert.assertEquals(11, h.getMin(), 0.01);
     Assert.assertEquals(29, h.getMax(), 0.01);
+    Assert.assertEquals(0, h.getMissingValueCount());
+    Assert.assertEquals(0, h.getLowerOutlierCount());
+    Assert.assertEquals(0, h.getUpperOutlierCount());
+  }
+
+  @Test
+  public void testMergeDifferentBuckets()
+  {
+    FixedBucketsHistogram h = buildHistogram(
+        0,
+        20,
+        5,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{1,2,7,12,18}
+    );
+
+    FixedBucketsHistogram h2 = buildHistogram(
+        0,
+        20,
+        7,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{3,8,9,19}
+    );
+
+    h.combineHistogram(h2);
+
+    Assert.assertEquals(5, h.getNumBuckets());
+    Assert.assertEquals(4.0, h.getBucketSize(), 0.01);
+    Assert.assertEquals(0, h.getLowerLimit(), 0.01);
+    Assert.assertEquals(20,h.getUpperLimit(), 0.01);
+    Assert.assertEquals(FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, h.getOutlierHandlingMode());
+    Assert.assertArrayEquals(new long[]{2, 3, 1, 1, 2}, h.getHistogram());
+    Assert.assertEquals(9, h.getCount());
+    Assert.assertEquals(1, h.getMin(), 0.01);
+    Assert.assertEquals(18, h.getMax(), 0.01);
+    Assert.assertEquals(0, h.getMissingValueCount());
+    Assert.assertEquals(0, h.getLowerOutlierCount());
+    Assert.assertEquals(0, h.getUpperOutlierCount());
+  }
+
+  @Test
+  public void testMergeDifferentBucketsRightOverlap()
+  {
+    FixedBucketsHistogram h = buildHistogram(
+        0,
+        20,
+        5,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{1, 2, 7, 12, 19}
+    );
+
+    FixedBucketsHistogram h2 = buildHistogram(
+        12,
+        32,
+        7,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{13, 18, 25, 29}
+    );
+
+    h.combineHistogram(h2);
+
+    Assert.assertEquals(5, h.getNumBuckets());
+    Assert.assertEquals(4.0, h.getBucketSize(), 0.01);
+    Assert.assertEquals(0, h.getLowerLimit(), 0.01);
+    Assert.assertEquals(20,h.getUpperLimit(), 0.01);
+    Assert.assertEquals(FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, h.getOutlierHandlingMode());
+    Assert.assertEquals(7, h.getCount());
+    Assert.assertArrayEquals(new long[]{2, 1, 0, 2, 2}, h.getHistogram());
+    Assert.assertEquals(1, h.getMin(), 0.01);
+    Assert.assertEquals(19, h.getMax(), 0.01);
+    Assert.assertEquals(0, h.getMissingValueCount());
+    Assert.assertEquals(0, h.getLowerOutlierCount());
+    Assert.assertEquals(0, h.getUpperOutlierCount());
+  }
+
+  @Test
+  public void testMergeDifferentBucketsLeftOverlap()
+  {
+    FixedBucketsHistogram h = buildHistogram(
+        12,
+        32,
+        5,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{13, 18, 25, 29}
+    );
+
+    FixedBucketsHistogram h2 = buildHistogram(
+        0,
+        20,
+        9,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{1, 2, 7, 12, 19}
+    );
+
+    h.combineHistogram(h2);
+
+    Assert.assertEquals(5, h.getNumBuckets());
+    Assert.assertEquals(4.0, h.getBucketSize(), 0.01);
+    Assert.assertEquals(12, h.getLowerLimit(), 0.01);
+    Assert.assertEquals(32,h.getUpperLimit(), 0.01);
+    Assert.assertEquals(FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, h.getOutlierHandlingMode());
+    Assert.assertArrayEquals(new long[]{2, 2, 0, 1, 1}, h.getHistogram());
+    Assert.assertEquals(6, h.getCount());
+    Assert.assertEquals(12, h.getMin(), 0.01);
+    Assert.assertEquals(29, h.getMax(), 0.01);
+    Assert.assertEquals(0, h.getMissingValueCount());
+    Assert.assertEquals(0, h.getLowerOutlierCount());
+    Assert.assertEquals(0, h.getUpperOutlierCount());
+  }
+
+  @Test
+  public void testMergeDifferentBucketsContainsOther()
+  {
+    FixedBucketsHistogram h = buildHistogram(
+        0,
+        50,
+        10,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{2, 18, 34, 48}
+    );
+
+    FixedBucketsHistogram h2 = buildHistogram(
+        10,
+        30,
+        7,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{11, 15, 21, 29}
+    );
+
+    h.combineHistogram(h2);
+
+    Assert.assertEquals(10, h.getNumBuckets());
+    Assert.assertEquals(5.0, h.getBucketSize(), 0.01);
+    Assert.assertEquals(0, h.getLowerLimit(), 0.01);
+    Assert.assertEquals(50,h.getUpperLimit(), 0.01);
+    Assert.assertEquals(FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, h.getOutlierHandlingMode());
+    Assert.assertArrayEquals(new long[]{1, 0, 1, 2, 1, 1, 1, 0, 0, 1}, h.getHistogram());
+    Assert.assertEquals(8, h.getCount());
+    Assert.assertEquals(2, h.getMin(), 0.01);
+    Assert.assertEquals(48, h.getMax(), 0.01);
     Assert.assertEquals(0, h.getMissingValueCount());
     Assert.assertEquals(0, h.getLowerOutlierCount());
     Assert.assertEquals(0, h.getUpperOutlierCount());
