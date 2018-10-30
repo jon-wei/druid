@@ -387,10 +387,12 @@ public class FixedBucketsHistogram
 
         double cursorFrac = (theirCursor - (theirCurBucket * otherHistogram.getBucketSize() + otherHistogram.getLowerLimit())) / otherHistogram.getBucketSize();
         double value = cursorFrac * otherHistogram.bucketSize + (theirCurBucket * otherHistogram.getBucketSize() + otherHistogram.getLowerLimit());
-        log.info("INTERPOLATED VAL: " + value + ", FRACTIONAL: " + cursorFrac);
+        log.info("FRACCOUNT: " + fractionalCount + ", INTERPOLATED VAL: " + value + ", FRACTIONAL: " + cursorFrac);
 
-        max = Math.max(value, max);
-        min = Math.min(value, min);
+        if (fractionalCount > 0) {
+          max = Math.max(value, max);
+          min = Math.min(value, min);
+        }
 
         histogram[myCurBucket] += Math.round(fractionalCount);
         count += Math.round(fractionalCount);
