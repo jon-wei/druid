@@ -475,6 +475,7 @@ public class FixedBucketsHistogram
     double nextB = Double.MAX_VALUE;
     //CHECKSTYLE.ON: Regexp
     while (pctIdx < pcts.length) {
+      log.info("********** PCTIDX: " + pctIdx);
       double f = (pcts[pctIdx] - prevP) / (nextP - prevP);
       results[pctIdx] = (float) (f * (nextB - prevB) + prevB);
       ++pctIdx;
@@ -632,9 +633,9 @@ public class FixedBucketsHistogram
     return fromBytes(asBytes);
   }
 
-  public static String toBase64(FixedBucketsHistogram hist)
+  public String toBase64()
   {
-    byte[] asBytes = hist.toBytesLZ4();
+    byte[] asBytes = toBytesLZ4();
     return StringUtils.fromUtf8(Base64.encodeBase64(asBytes));
   }
 

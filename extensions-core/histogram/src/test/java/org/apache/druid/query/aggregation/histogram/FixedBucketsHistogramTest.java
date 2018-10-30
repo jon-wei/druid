@@ -600,6 +600,35 @@ public class FixedBucketsHistogramTest
     Assert.assertEquals(0, h.getUpperOutlierCount());
   }
 
+  @Test
+  public void testSerde()
+  {
+    FixedBucketsHistogram h = buildHistogram(
+        0,
+        200,
+        100,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        VALUES3
+    );
+
+    h.add(300);
+    h.add(-300);
+    h.incrementMissing();
+
+    byte[] fullWithHeader = h.toBytesFull(true);
+    byte[] lz4 = h.toBytesLZ4();
+    String asBase64 = h.toBase64();
+
+    FixedBucketsHistogram fromFullWithHeader = FixedBucketsHistogram.fromBytes(fullWithHeader);
+    Assert.assertEquals(h, fromFullWithHeader);
+
+    FixedBucketsHistogram fromLZ4 = FixedBucketsHistogram.fromBytes(lz4);
+    Assert.assertEquals(h, fromLZ4);
+
+    FixedBucketsHistogram fromBase64 = FixedBucketsHistogram.fromBase64(asBase64);
+    Assert.assertEquals(h, fromBase64);
+  }
+
 
   /*
   @Test
