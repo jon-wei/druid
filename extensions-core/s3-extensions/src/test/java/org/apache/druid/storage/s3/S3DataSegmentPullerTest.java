@@ -20,6 +20,7 @@
 package org.apache.druid.storage.s3;
 
 import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3Object;
@@ -114,20 +115,17 @@ public class S3DataSegmentPullerTest
     EasyMock.expect(s3Client.doesObjectExist(EasyMock.eq(object0.getBucketName()), EasyMock.eq(object0.getKey())))
             .andReturn(true)
             .once();
-    EasyMock.expect(s3Client.listObjectsV2(EasyMock.anyObject(ListObjectsV2Request.class)))
-            .andReturn(listObjectsResult)
-            .once();
-    EasyMock.expect(s3Client.getObject(EasyMock.eq(object0.getBucketName()), EasyMock.eq(object0.getKey())))
+    EasyMock.expect(s3Client.getObject(EasyMock.anyObject(GetObjectRequest.class)))
             .andReturn(object0)
             .once();
+
     S3DataSegmentPuller puller = new S3DataSegmentPuller(s3Client);
 
     EasyMock.replay(s3Client);
     FileUtils.FileCopyResult result = puller.getSegmentFiles(
-        new S3DataSegmentPuller.S3Coords(
-            bucket,
-            object0.getKey()
-        ), tmpDir
+        bucket,
+        object0.getKey(),
+        tmpDir
     );
     EasyMock.verify(s3Client);
 
@@ -170,31 +168,27 @@ public class S3DataSegmentPullerTest
     File tmpDir = temporaryFolder.newFolder("gzTestDir");
 
     AmazonS3Exception exception = new AmazonS3Exception("S3DataSegmentPullerTest");
-    exception.setErrorCode("NoSuchKey");
-    exception.setStatusCode(404);
+    exception.setErrorCode("RequestTimeout");
+    exception.setStatusCode(400);
     EasyMock.expect(s3Client.doesObjectExist(EasyMock.eq(object0.getBucketName()), EasyMock.eq(object0.getKey())))
             .andReturn(true)
             .once();
-    EasyMock.expect(s3Client.listObjectsV2(EasyMock.anyObject(ListObjectsV2Request.class)))
-            .andReturn(listObjectsResult)
-            .once();
-    EasyMock.expect(s3Client.getObject(EasyMock.eq(bucket), EasyMock.eq(object0.getKey())))
+
+    EasyMock.expect(s3Client.getObject(EasyMock.anyObject(GetObjectRequest.class)))
             .andThrow(exception)
             .once();
-    EasyMock.expect(s3Client.listObjectsV2(EasyMock.anyObject(ListObjectsV2Request.class)))
-            .andReturn(listObjectsResult)
-            .once();
-    EasyMock.expect(s3Client.getObject(EasyMock.eq(bucket), EasyMock.eq(object0.getKey())))
+
+    EasyMock.expect(s3Client.getObject(EasyMock.anyObject(GetObjectRequest.class)))
             .andReturn(object0)
             .once();
+
     S3DataSegmentPuller puller = new S3DataSegmentPuller(s3Client);
 
     EasyMock.replay(s3Client);
     FileUtils.FileCopyResult result = puller.getSegmentFiles(
-        new S3DataSegmentPuller.S3Coords(
-            bucket,
-            object0.getKey()
-        ), tmpDir
+        bucket,
+        object0.getKey(),
+        tmpDir
     );
     EasyMock.verify(s3Client);
 

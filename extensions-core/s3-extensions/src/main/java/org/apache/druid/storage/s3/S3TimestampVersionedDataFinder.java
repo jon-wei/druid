@@ -19,6 +19,7 @@
 
 package org.apache.druid.storage.s3;
 
+import com.amazonaws.services.s3.AmazonS3URI;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
@@ -60,18 +61,18 @@ public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implemen
     try {
       return RetryUtils.retry(
           () -> {
-            final S3Coords coords = new S3Coords(checkURI(uri));
+            final AmazonS3URI amazonS3URI = new AmazonS3URI(uri);
             long mostRecent = Long.MIN_VALUE;
             URI latest = null;
             final Iterator<S3ObjectSummary> objectSummaryIterator = S3Utils.objectSummaryIterator(
                 s3Client,
-                coords.bucket,
-                coords.path,
+                amazonS3URI.getBucket(),
+                amazonS3URI.getKey(),
                 MAX_LISTING_KEYS
             );
             while (objectSummaryIterator.hasNext()) {
               final S3ObjectSummary objectSummary = objectSummaryIterator.next();
-              String keyString = objectSummary.getKey().substring(coords.path.length());
+              String keyString = objectSummary.getKey().substring(amazonS3URI.getKey().length());
               if (keyString.startsWith("/")) {
                 keyString = keyString.substring(1);
               }
