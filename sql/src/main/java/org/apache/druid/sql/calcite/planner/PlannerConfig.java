@@ -67,7 +67,7 @@ public class PlannerConfig
   private DateTimeZone sqlTimeZone = DateTimeZone.UTC;
 
   @JsonProperty
-  private boolean serializeComplexValues = true;
+  private boolean serializeComplexValues = false;
 
   public Period getMetadataRefreshPeriod()
   {
