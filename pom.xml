@@ -1474,6 +1474,7 @@
                                 <exclude>quickstart/tutorial/conf/**</exclude>
                                 <exclude>docker/*.conf</exclude>
                                 <exclude>target/**</exclude>
+                                <exclude>licenses/**</exclude>
                                 <exclude>**/test/resources/**</exclude>
                                 <exclude>**/derby.log</exclude>
                                 <exclude>**/jvm.config</exclude>
