@@ -33,6 +33,7 @@ import org.apache.druid.data.input.Rows;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -63,6 +64,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Determines appropriate ShardSpecs for a job by determining approximate cardinality of data set using HyperLogLog
@@ -123,11 +125,30 @@ public class DetermineHashedPartitionsJob implements Jobby
       groupByJob.submit();
       log.info("Job %s submitted, status available at: %s", groupByJob.getJobName(), groupByJob.getTrackingURL());
 
-      if (!groupByJob.waitForCompletion(true)) {
-        log.error("Job failed: %s", groupByJob.getJobID());
-        failureCause = Utils.getFailureMessage(groupByJob, config.JSON_MAPPER);
-        return false;
+      try {
+        if (!groupByJob.waitForCompletion(true)) {
+          log.error("Job failed: %s", groupByJob.getJobID());
+          failureCause = Utils.getFailureMessage(groupByJob, config.JSON_MAPPER);
+          return false;
+        }
       }
+      catch (Exception e) {
+        AtomicBoolean succeeded = new AtomicBoolean(false);
+        RetryUtils.retry(
+            () -> {
+              IndexGeneratorJob.tryYarnRMJobStatus(groupByJob, succeeded);
+              return null;
+            },
+            ex -> {
+              return !succeeded.get();
+            },
+            5
+        );
+        if (!succeeded.get()) {
+          throw new RuntimeException(e);
+        }
+      }
+
 
       /*
        * Load partitions and intervals determined by the previous job.
