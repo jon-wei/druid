@@ -249,9 +249,14 @@ SOURCE/JAVA-CORE
      ConciseSet to use IntBuffers.
       * extendedset/src/main/java/org/apache/druid/extendedset/intset/
 
-    This product contains a modified version of Closer class from the Guava library,
-     copyright The Guava Authors (https://github.com/google/guava)
+    This product contains modified portions of the Guava library,
+     copyright The Guava Authors (https://github.com/google/guava).
+      Closer class:
       * core/src/main/java/org/apache/druid/java/util/common/io/Closer.java
+      Splitter.splitToList() method:
+      * core/src/main/java/org/apache/druid/java/util/common/parsers/DelimitedParser.java
+      DirectExecutorService class:
+      * core/src/main/java/org/apache/druid/java/util/common/concurrent/DirectExecutorService.java
 
     This product contains modified versions of the Dockerfile and related configuration files
      from SequenceIQ's Hadoop Docker image, copyright SequenceIQ, Inc. (https://github.com/sequenceiq/hadoop-docker/)
