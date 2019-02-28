@@ -47,8 +47,12 @@ with open(license_report_path, 'r') as license_report_file:
     nice_dependency_name = dependency_name.replace("/", "-")
     dependency_ver = match_result.group(2)
 
-    licenseType = dependency["licenses"]
-    licenseFile = dependency["licenseFile"]
+    try:
+      licenseType = dependency["licenses"]
+      licenseFile = dependency["licenseFile"]
+    except:
+      print("No license file for {}".format(dependency_name_version))
+
     try:
       publisher = dependency["publisher"]
     except:

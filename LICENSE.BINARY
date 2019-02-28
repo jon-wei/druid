@@ -270,6 +270,10 @@ SOURCE/JAVA-CORE
 BINARY/WEB-CONSOLE
     This product bundles Microsoft tslib version 1.9.3.
 
+    This product bundles diff-match-patch version 1.0.4.
+
+    This product bundles @blueprintjs/core version 1.0.1.
+
 
 BINARY/JAVA-CORE
     This product bundles AWS SDK for Java version 1.11.199.
@@ -787,14 +791,8 @@ BINARY/EXTENSIONS/druid-kafka-eight
 BINARY/WEB-CONSOLE
 The following dependency names are NPM package names (https://www.npmjs.com).
 
-    This product bundles @babel/runtime version 7.3.1, copyright Sebastian McKenzie and other contributors,
+    This product bundles @babel/runtime version 7.3.4, copyright Sebastian McKenzie and other contributors,
      which is available under an MIT license. For details, see licenses/bin/@babel-runtime.MIT.
-
-    This product bundles @types/dom4 version 2.0.1, copyright Microsoft Corporation,
-     which is available under an MIT license. For details, see licenses/bin/@types-dom4.MIT.
-
-    This product bundles @types/hjson version 2.4.0, copyright Microsoft Corporation,
-     which is available under an MIT license. For details, see licenses/bin/@types-hjson.MIT.
 
     This product bundles array-includes version 3.0.3, copyright Jordan Harband,
      which is available under an MIT license. For details, see licenses/bin/array-includes.MIT.
@@ -805,17 +803,14 @@ The following dependency names are NPM package names (https://www.npmjs.com).
     This product bundles axios version 0.18.0, copyright Matt Zabriskie,
      which is available under an MIT license. For details, see licenses/bin/axios.MIT.
 
+    This product bundles brace version 0.11.1, copyright Thorsten Lorenz,
+     which is available under an MIT license. For details, see licenses/brace.MIT.
+
+    This product bundles chain-function version 1.0.1, copyright jquense,
+     which is available under an MIT license. For details, see licenses/chain-function.MIT.
+
     This product bundles classnames version 2.2.6, copyright Jed Watson,
      which is available under an MIT license. For details, see licenses/bin/classnames.MIT.
-
-    This product bundles core-js version 1.2.7, copyright Denis Pushkarev,
-     which is available under an MIT license. For details, see licenses/bin/core-js.MIT.
-
-    This product bundles create-react-context version 0.2.2, copyright James Kyle,
-     which is available under an MIT license. For details, see licenses/bin/create-react-context.MIT.
-
-    This product bundles debug version 3.1.0, copyright TJ Holowaychuk,
-     which is available under an MIT license. For details, see licenses/bin/debug.MIT.
 
     This product bundles define-properties version 1.1.3, copyright Jordan Harband,
      which is available under an MIT license. For details, see licenses/bin/define-properties.MIT.
@@ -823,7 +818,7 @@ The following dependency names are NPM package names (https://www.npmjs.com).
     This product bundles dom-helpers version 3.4.0, copyright Jason Quense,
      which is available under an MIT license. For details, see licenses/bin/dom-helpers.MIT.
 
-    This product bundles dom4 version 2.1.4, copyright Andrea Giammarchi,
+    This product bundles dom4 version 1.8.5, copyright Andrea Giammarchi,
      which is available under an MIT license. For details, see licenses/bin/dom4.MIT.
 
     This product bundles encoding version 0.1.12, copyright Andris Reinman,
@@ -844,14 +839,8 @@ The following dependency names are NPM package names (https://www.npmjs.com).
     This product bundles fbjs version 0.8.17, copyright Facebook, Inc.,
      which is available under an MIT license. For details, see licenses/bin/fbjs.MIT.
 
-    This product bundles follow-redirects version 1.6.1, copyright Olivier Lalonde, James Talmage, Ruben Verborgh,
-     which is available under an MIT license. For details, see licenses/bin/follow-redirects.MIT.
-
     This product bundles function-bind version 1.1.1, copyright Raynos,
      which is available under an MIT license. For details, see licenses/bin/function-bind.MIT.
-
-    This product bundles gud version 1.0.0, copyright Jamie Kyle,
-     which is available under an MIT license. For details, see licenses/bin/gud.MIT.
 
     This product bundles has-symbols version 1.0.0, copyright Jordan Harband,
      which is available under an MIT license. For details, see licenses/bin/has-symbols.MIT.
@@ -864,9 +853,6 @@ The following dependency names are NPM package names (https://www.npmjs.com).
 
     This product bundles hjson version 3.1.2, copyright Christian Zangl,
      which is available under an MIT license. For details, see licenses/bin/hjson.MIT.
-
-    This product bundles iconv-lite version 0.4.24, copyright Alexander Shtuchkin,
-     which is available under an MIT license. For details, see licenses/bin/iconv-lite.MIT.
 
     This product bundles invariant version 2.2.4, copyright Facebook, Inc.,
      which is available under an MIT license. For details, see licenses/bin/invariant.MIT.
@@ -883,36 +869,11 @@ The following dependency names are NPM package names (https://www.npmjs.com).
     This product bundles is-regex version 1.0.4, copyright Jordan Harband,
      which is available under an MIT license. For details, see licenses/bin/is-regex.MIT.
 
-    This product bundles is-stream version 1.1.0, copyright Sindre Sorhus,
-     which is available under an MIT license. For details, see licenses/bin/is-stream.MIT.
-
     This product bundles is-symbol version 1.0.2, copyright Jordan Harband,
      which is available under an MIT license. For details, see licenses/bin/is-symbol.MIT.
 
     This product bundles isarray version 0.0.1, copyright Julian Gruber,
      which is available under an MIT license. For details, see licenses/bin/isarray.MIT.
-
-    This product bundles isomorphic-fetch version 2.2.1, copyright Matt Andrews,
-     which is available under an MIT license. For details, see licenses/bin/isomorphic-fetch.MIT.
-
-    This product bundles js-tokens version 4.0.0, copyright Simon Lydell,
-     which is available under an MIT license. For details, see licenses/bin/js-tokens.MIT.
-
-    This product bundles lodash.debounce version 4.0.8, copyright jQuery Foundation and other contributors,
-     Based on Underscore.js, copyright Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
-     which is available under an MIT license. For details, see licenses/bin/lodash.debounce.MIT.
-
-    This product bundles loose-envify version 1.4.0, copyright Andres Suarez,
-     which is available under an MIT license. For details, see licenses/bin/loose-envify.MIT.
-
-    This product bundles ms version 2.0.0, copyright Zeit, Inc.,
-     which is available under an MIT license. For details, see licenses/bin/ms.MIT.
-
-    This product bundles node-fetch version 1.7.3, copyright David Frank,
-     which is available under an MIT license. For details, see licenses/bin/node-fetch.MIT.
-
-    This product bundles normalize.css version 8.0.1, copyright Nicolas Gallagher and Jonathan Neal,
-     which is available under an MIT license. For details, see licenses/bin/normalize.css.MIT.
 
     This product bundles numeral version 2.0.6, copyright Adam Draper,
      which is available under an MIT license. For details, see licenses/bin/numeral.MIT.
@@ -920,38 +881,29 @@ The following dependency names are NPM package names (https://www.npmjs.com).
     This product bundles object-assign version 4.1.1, copyright Sindre Sorhus,
      which is available under an MIT license. For details, see licenses/bin/object-assign.MIT.
 
-    This product bundles object-keys version 1.0.12, copyright Jordan Harband,
+    This product bundles object-keys version 1.1.0, copyright Jordan Harband,
      which is available under an MIT license. For details, see licenses/bin/object-keys.MIT.
-
-    This product bundles object.entries version 1.1.0, copyright Jordan Harband,
-     which is available under an MIT license. For details, see licenses/bin/object.entries.MIT.
-
-    This product bundles object.getownpropertydescriptors version 2.0.3, copyright Jordan Harband,
-     which is available under an MIT license. For details, see licenses/bin/object.getownpropertydescriptors.MIT.
-
-    This product bundles object.values version 1.1.0, copyright Jordan Harband,
-     which is available under an MIT license. For details, see licenses/bin/object.values.MIT.
 
     This product bundles path-to-regexp version 1.7.0, copyright Blake Embrey (hello@blakeembrey.com),
      which is available under an MIT license. For details, see licenses/bin/path-to-regexp.MIT.
 
-    This product bundles popper.js version 1.14.6, copyright Federico Zivolo and contributors,
-     which is available under an MIT license. For details, see licenses/bin/popper.js.MIT.
-
-    This product bundles promise version 7.3.1, copyright Forbes Lindesay,
-     which is available under an MIT license. For details, see licenses/bin/promise.MIT.
-
-    This product bundles prop-types version 15.6.2, copyright Facebook, Inc.,
+    This product bundles prop-types version 15.7.2, copyright Facebook, Inc.,
      which is available under an MIT license. For details, see licenses/bin/prop-types.MIT.
 
-    This product bundles react-dom version 16.7.0, copyright Facebook, Inc. and its affiliates.,
+    This product bundles pure-render-decorator version 1.1.1, copyright Félix Girault,
+     which is available under an MIT license. For details, see licenses/pure-render-decorator.MIT.
+
+    This product bundles react-ace version 6.4.0, copyright James Hrisho,
+     which is available under an MIT license. For details, see licenses/react-ace.MIT.
+
+    This product bundles react-addons-css-transition-group version 15.6.2, copyright ,
+     which is available under an MIT license. For details, see licenses/react-addons-css-transition-group.MIT.
+
+    This product bundles react-dom version 16.8.3, copyright Facebook, Inc. and its affiliates.,
      which is available under an MIT license. For details, see licenses/bin/react-dom.MIT.
 
-    This product bundles react-lifecycles-compat version 3.0.4, copyright Facebook, Inc.,
-     which is available under an MIT license. For details, see licenses/bin/react-lifecycles-compat.MIT.
-
-    This product bundles react-popper version 1.3.2, copyright React Popper authors,
-     which is available under an MIT license. For details, see licenses/bin/react-popper.MIT.
+    This product bundles react-is version 16.8.3, copyright ,
+     which is available under an MIT license. For details, see licenses/react-is.MIT.
 
     This product bundles react-router-dom version 4.3.1, copyright React Training,
      which is available under an MIT license. For details, see licenses/bin/react-router-dom.MIT.
@@ -959,56 +911,29 @@ The following dependency names are NPM package names (https://www.npmjs.com).
     This product bundles react-router version 4.3.1, copyright React Training,
      which is available under an MIT license. For details, see licenses/bin/react-router.MIT.
 
-    This product bundles react-table version 6.8.6, copyright Tanner Linsley,
+    This product bundles react-table version 6.9.2, copyright Tanner Linsley,
      which is available under an MIT license. For details, see licenses/bin/react-table.MIT.
 
-    This product bundles react version 16.7.0, copyright Facebook, Inc. and its affiliates.,
+    This product bundles react version 16.8.3, copyright Facebook, Inc. and its affiliates.,
      which is available under an MIT license. For details, see licenses/bin/react.MIT.
-
-    This product bundles regenerator-runtime version 0.12.1, copyright Facebook, Inc.,
-     which is available under an MIT license. For details, see licenses/bin/regenerator-runtime.MIT.
-
-    This product bundles resize-observer-polyfill version 1.5.1, copyright Denis Rul,
-     which is available under an MIT license. For details, see licenses/bin/resize-observer-polyfill.MIT.
 
     This product bundles resolve-pathname version 2.2.0, copyright Michael Jackson,
      which is available under an MIT license. For details, see licenses/bin/resolve-pathname.MIT.
 
-    This product bundles safer-buffer version 2.1.2, copyright Nikita Skovoroda,
-     which is available under an MIT license. For details, see licenses/bin/safer-buffer.MIT.
-
-    This product bundles scheduler version 0.12.0, copyright Facebook, Inc. and its affiliates.,
+    This product bundles scheduler version 0.13.3, copyright Facebook, Inc. and its affiliates.,
      which is available under an MIT license. For details, see licenses/bin/scheduler.MIT.
-
-    This product bundles setimmediate version 1.0.5, copyright Barnesandnoble.com, llc, Donavon West, and Domenic Denicola,
-     which is available under an MIT license. For details, see licenses/bin/setimmediate.MIT.
 
     This product bundles string-at version 1.0.1, copyright Jordan Harband,
      which is available under an MIT license. For details, see licenses/bin/string-at.MIT.
 
-    This product bundles string.prototype.padend version 3.0.0, copyright EcmaScript Shims,
-     which is available under an MIT license. For details, see licenses/bin/string.prototype.padend.MIT.
-
-    This product bundles string.prototype.padstart version 3.0.0, copyright EcmaScript Shims,
-     which is available under an MIT license. For details, see licenses/bin/string.prototype.padstart.MIT.
-
-    This product bundles string.prototype.trimleft version 2.0.0, copyright Jordan Harband,
-     which is available under an MIT license. For details, see licenses/bin/string.prototype.trimleft.MIT.
-
-    This product bundles string.prototype.trimright version 2.0.0, copyright Jordan Harband,
-     which is available under an MIT license. For details, see licenses/bin/string.prototype.trimright.MIT.
-
-    This product bundles typed-styles version 0.0.7, copyright Artur Kenzhaev,
-     which is available under an MIT license. For details, see licenses/bin/typed-styles.MIT.
+    This product bundles tether version 1.4.5, copyright ,
+     which is available under an MIT license. For details, see licenses/tether.MIT.
 
     This product bundles value-equal version 0.4.0, copyright Michael Jackson,
      which is available under an MIT license. For details, see licenses/bin/value-equal.MIT.
 
-    This product bundles warning version 4.0.2, copyright Facebook, Inc.,
+    This product bundles warning version 4.0.3, copyright Facebook, Inc.,
      which is available under an MIT license. For details, see licenses/bin/warning.MIT.
-
-    This product bundles whatwg-fetch version 3.0.0, copyright GitHub, Inc.,
-     which is available under an MIT license. For details, see licenses/bin/whatwg-fetch.MIT.
 
     This product bundles ua-parser-js version 0.7.19, copyright Faisal Salman,
      which is available under an MIT license. For details, see licenses/bin/ua-parser-js.MIT.
@@ -1156,7 +1081,7 @@ BINARY/WEB-CONSOLE
     This product bundles hoist-non-react-statics version 2.5.5, copyright Yahoo! Inc.,
      which is available under a BSD-3-Clause License. For details, see licenses/bin/hoist-non-react-statics.BSD3.
 
-    This product bundles react-transition-group version 2.5.3, copyright 2018, React Community,
+    This product bundles react-transition-group version 1.2.1, copyright 2016, React Community,
      forked from React (https://github.com/facebook/react), copyright 2013-present, Facebook, Inc.
      which is available under a BSD-3-Clause License. For details, see licenses/bin/react-transition-group.BSD3.
 
@@ -1337,7 +1262,7 @@ Blueprint License (tentative, see https://issues.apache.org/jira/browse/LEGAL-43
 ================================
 
 BINARY/WEB-CONSOLE
-    This product bundles @blueprintjs/core version 3.12.0, copyright Palantir Technologies, Inc.,
+    This product bundles @blueprintjs/core version 1.0.1, copyright Palantir Technologies, Inc.,
      which is available under the Blueprint License. For details, see licenses/bin/blueprint.license.
 
     This product bundles @blueprintjs/icons version 3.5.1, copyright Palantir Technologies, Inc.,
