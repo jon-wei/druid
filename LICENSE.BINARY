@@ -1256,14 +1256,3 @@ BINARY/JAVA-CORE
 BINARY/HADOOP-CLIENT
     This product bundles XZ for Java version 1.0, which is in the public domain (https://tukaani.org/xz/java.html).
       * org.tukaani:xz
-
-
-Blueprint License (tentative, see https://issues.apache.org/jira/browse/LEGAL-436)
-================================
-
-BINARY/WEB-CONSOLE
-    This product bundles @blueprintjs/core version 1.0.1, copyright Palantir Technologies, Inc.,
-     which is available under the Blueprint License. For details, see licenses/bin/blueprint.license.
-
-    This product bundles @blueprintjs/icons version 3.5.1, copyright Palantir Technologies, Inc.,
-     which is available under the Blueprint License. For details, see licenses/bin/blueprint.license.
