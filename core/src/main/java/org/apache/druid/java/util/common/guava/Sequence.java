@@ -54,13 +54,13 @@ public interface Sequence<T>
   <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator);
 
  /**
-   * Return an Yielder for accumulated sequence.
+   * Return a Yielder for accumulated sequence.
    *
    * @param initValue   the initial value to pass along to start the accumulation.
    * @param accumulator the accumulator which is responsible for accumulating input values.
    * @param <OutType>   the type of accumulated value.
    *
-   * @return an Yielder for accumulated sequence.
+   * @return a Yielder for accumulated sequence.
    *
    * @see Yielder
    */
@@ -72,6 +72,8 @@ public interface Sequence<T>
   }
 
   /**
+   * This will materialize the entire sequence.  Use at your own risk.
+   *
    * Several benchmarks rely on this method to eagerly accumulate Sequences to ArrayLists.  e.g.
    * GroupByBenchmark.
    */
