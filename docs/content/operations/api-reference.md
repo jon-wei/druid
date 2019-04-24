@@ -220,6 +220,11 @@ Returns full segment metadata for a specific segment in the cluster.
 
 Return the tiers that a datasource exists in.
 
+#### Note for coordinator's POST and DELETE API's
+The segments would be enabled/disabled when these API's are called, but then can be disabled/enabled again by the coordinator if any loadRule/dropRule matches. If an indexing or kill task runs at the same time as these API's are invoked, the behavior is undefined. Some segments might be killed and others might be enabled. It's also possible that all segments might be disabled but at the same time, the indexing task is able to read data from those segments and succeed. 
+
+Caution : Avoid using indexing or kill tasks and these API's at the same time.
+
 ##### POST
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}`
@@ -229,6 +234,19 @@ Enables all segments of datasource which are not overshadowed by others.
 * `/druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
 
 Enables a segment of a datasource.
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}/markUnused`
+
+Marks segments unused for a datasource by interval or set of segment Ids. The request payload contains the interval or set of segment Ids to be marked unused.
+Either interval or segment ids should be provided, if both or none are provided in the payload , the API would throw an error (400 BAD REQUEST).Interval specifies the start and end times as IS0 8601 strings. `interval=(start/end)` where start and end both are inclusive.
+
+JSON Request Payload:
+
+ |Key|Description|Example|
+|----------|-------------|---------|
+|`interval`|The interval for which to mark segments unused|"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"|
+|`segmentIds`|Set of segment Ids to be marked unused|["segmentId1", "segmentId2"]|
+
 
 ##### DELETE<a name="coordinator-delete"></a>
 
