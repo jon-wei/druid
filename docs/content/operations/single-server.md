@@ -6,7 +6,7 @@ title: "Single Server Deployments"
 # Example configurations
 
 
-Micro-Tutorial: 4 CPU, 16GB RAM
+Micro-Quickstart: 4 CPU, 16GB RAM
 ------------
 
 Coordinator: 128MB heap
@@ -19,7 +19,6 @@ Router: 128MB heap
 300GB segment cache
 
 128 + 128 + 512 + 500 + 512 + 1000 + 64 + 3000 + 128 = 5972GB
-
 
 
 
@@ -37,7 +36,22 @@ Rotuer: 512MB heap
 
 
 
-Medium: 32 CPU, 256GB RAM
+
+Medium: 16 CPU, 128GB RAM
+------------
+Coordinator: 1GB heap
+Overlord: 1GB heap
+Broker: 8GB heap, 8GB dir
+Hist: 8GB heap, 8GB dir
+MM: 64MB heap, 6 workers * (1GB direct + 2GB heap)
+Rotuer: 512MB heap
+
+1000 + 1000 + 16000 + 16000 + 64 + 18000 + 512 = 52576
+
+
+
+
+Large: 32 CPU, 256GB RAM
 ------------
 
 Coordinator: 2GB heap
@@ -51,7 +65,8 @@ Rotuer: 2GB heap
 
 
 
-Large: 64 CPU, 512 GB RAM
+
+X-Large: 64 CPU, 512 GB RAM
 ------------
 
 Coordinator: 4GB heap
