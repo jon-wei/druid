@@ -34,6 +34,10 @@ Rotuer: 512MB heap
 
 1000 + 1000 + 10000 + 10000 + 64 + 10000 + 512 = 32576 (leave some room for mmap segments)
 
+10 concurrent queries
+4 processing threads at broker
+1 processing thread per peon
+4 processing threads at historical
 
 
 
@@ -41,9 +45,9 @@ Medium: 16 CPU, 128GB RAM
 ------------
 Coordinator: 1GB heap
 Overlord: 1GB heap
-Broker: 8GB heap, 8GB dir
-Hist: 8GB heap, 8GB dir
-MM: 64MB heap, 6 workers * (1GB direct + 2GB heap)
+Broker: 8GB heap, 10GB dir
+Hist: 8GB heap, 10GB dir
+MM: 64MB heap, 8 workers * (1GB direct + 1.5GB heap)
 Rotuer: 512MB heap
 
 1000 + 1000 + 16000 + 16000 + 64 + 18000 + 512 = 52576
@@ -58,7 +62,7 @@ Coordinator: 2GB heap
 Overlord: 2GB heap
 Broker: 24GB heap, 12GB dir
 Hist: 24GB heap, 12GB dir
-MM: 128MB heap, 12 workers * (1GB direct + 2GB heap)
+MM: 128MB heap, 12 workers * (1GB direct + 1.5GB heap)
 Rotuer: 2GB heap
 
 2000 + 2000 + 36000 + 36000 + 128 + 36000 + 2000 = 114128GB (128GB for mmap)
@@ -66,7 +70,7 @@ Rotuer: 2GB heap
 
 
 
-X-Large: 64 CPU, 512 GB RAM
+X-Large: 64 CPU, 512GB RAM
 ------------
 
 Coordinator: 4GB heap
