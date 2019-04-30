@@ -27,12 +27,12 @@ Small: 8 CPU, 64GB RAM
 
 Coordinator: 1GB heap
 Overlord: 1GB heap
-Broker: 4GB heap, 4GB dir
-Hist: 4GB heap, 4GB dir
-MM: 64MB heap, 4 workers * (1GB direct + 2GB heap)
+Broker: 4GB heap, 6GB dir
+Hist: 4GB heap, 6GB dir
+MM: 64MB heap, 4 workers * (1GB direct + 1.5GB heap)
 Rotuer: 512MB heap
 
-1000 + 1000 + 8000 + 8000 + 64 + 12000 + 512 = 30576 (leave some room for mmap segments)
+1000 + 1000 + 10000 + 10000 + 64 + 10000 + 512 = 32576 (leave some room for mmap segments)
 
 
 
