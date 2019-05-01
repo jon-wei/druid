@@ -5,10 +5,8 @@ title: "Single Server Deployments"
 
 # Example configurations
 
-
 Micro-Quickstart: 4 CPU, 16GB RAM
 ------------
-
 Coordinator: 128MB heap
 Overlord: 128MB heap
 Broker: 512MB heap, 500MB dir 
@@ -29,7 +27,6 @@ Router: 128MB heap
 
 Small: 8 CPU, 64GB RAM
 ------------
-
 Coordinator: 1GB heap
 Overlord: 1GB heap
 Broker: 4GB heap, 7GB dir
@@ -45,7 +42,6 @@ Router: 512MB heap
 4 processing threads at broker
 1 processing thread per peon
 4 processing threads at historical
-
 
 
 Medium: 16 CPU, 128GB RAM
@@ -65,8 +61,6 @@ Rotuer: 512MB heap
 12 processing threads at historical
 
 
-
-
 Large: 32 CPU, 256GB RAM
 ------------
 Coordinator: 2GB heap
@@ -84,14 +78,13 @@ Router: 2GB heap
 24 processing threads at historical
 
 
-
 X-Large: 64 CPU, 512GB RAM
 ------------
 Coordinator: 4GB heap
 Overlord: 4GB heap
 Broker: 24GB heap, 51GB dir
 Hist: 24GB heap, 51GB dir
-MM: 256MB heap, 16 workers * (1GB direct + 2GB heap)
+MM: 256MB heap, 16 workers * (1GB direct + 1.5GB heap)
 Router: 4GB heap
 
 4000 + 4000 + 72000 + 72000 + 256 + 48000 + 4000 = 204256GB (~300GB for mmap)
