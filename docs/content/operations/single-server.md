@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Single Server Deployments"
+title: "Reference Single Server Configurations"
 ---
 
 # Example configurations
@@ -90,7 +90,6 @@ Router: 4GB heap
 4000 + 4000 + 72000 + 72000 + 256 + 48000 + 4000 = 204256GB (~300GB for mmap)
 
 48 concurrent queries
-
 48 processing threads at broker
 1 processing thread per peon
 48 processing threads at historical
