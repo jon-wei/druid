@@ -1,9 +1,11 @@
 ---
 layout: doc_page
-title: "Reference Single Server Configurations"
+title: "Single Server Deployments"
 ---
 
-# Example configurations
+# 
+
+# Reference configurations
 
 Micro-Quickstart: 4 CPU, 16GB RAM
 ------------
