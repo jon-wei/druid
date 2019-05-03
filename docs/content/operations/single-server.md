@@ -3,95 +3,63 @@ layout: doc_page
 title: "Single Server Deployments"
 ---
 
-# 
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+  
+# Single Server Deployments
 
-# Reference configurations
+Druid includes a set of reference configurations and launch scripts for single-machine deployments:
+
+- `micro-quickstart`
+- `small`
+- `medium`
+- `large`
+- `xlarge`
+
+The `micro-quickstart` is sized for small machines like laptops and is intended for quick evaluation use-cases.
+
+The other configurations are intended for general use single-machine deployments. They are sized for hardware roughly based on Amazon's i3 series of EC2 instances.
+
+## Single Server Reference Configurations
 
 Micro-Quickstart: 4 CPU, 16GB RAM
 ------------
-Coordinator: 128MB heap
-Overlord: 128MB heap
-Broker: 512MB heap, 500MB dir 
-Hist: 512MB Heap, ~1GB direct
-MM: 64MB heap, 2 workers * (500MB direct + 1GB heap)
-Router: 128MB heap
+Launch command: `bin/start-micro-quickstart`
+Configuration directory: `conf/druid/single-server/micro-quickstart`
 
-10MB query cache
-300GB segment cache
-
-128 + 128 + 512 + 500 + 512 + 1000 + 64 + 3000 + 128 = 5972GB
-
-10 concurrent queries
-2 processing threads at broker
-1 processing thread per peon
-2 processing threads at historical
-
-
-Small: 8 CPU, 64GB RAM
+Small: 8 CPU, 64GB RAM (~i3.2xlarge)
 ------------
-Coordinator: 1GB heap
-Overlord: 1GB heap
-Broker: 4GB heap, 7GB dir
-Hist: 4GB heap, 7GB dir
-MM: 64MB heap, 4 workers * (1GB direct + 1.5GB heap)
-Router: 512MB heap
+Launch command: `bin/start-small`
+Configuration directory: `conf/druid/single-server/small`
 
-256MB query cache
-
-1000 + 1000 + 10000 + 10000 + 64 + 10000 + 512 = 32576 (leave some room for mmap segments)
-
-10 concurrent queries
-4 processing threads at broker
-1 processing thread per peon
-4 processing threads at historical
-
-
-Medium: 16 CPU, 128GB RAM
+Medium: 16 CPU, 128GB RAM (~i3.4xlarge)
 ------------
-Coordinator: 1GB heap
-Overlord: 1GB heap
-Broker: 8GB heap, 15GB dir
-Hist: 8GB heap, 15GB dir
-MM: 64MB heap, 4 workers * (1GB direct + 1.5GB heap)
-Rotuer: 512MB heap
+Launch command: `bin/start-medium`
+Configuration directory: `conf/druid/single-server/medium`
 
-1000 + 1000 + 16000 + 16000 + 64 + 18000 + 512 = 52576
-
-12 concurrent queries
-12 processing threads at broker
-1 processing thread per peon
-12 processing threads at historical
-
-
-Large: 32 CPU, 256GB RAM
+Large: 32 CPU, 256GB RAM (~i3.8xlarge)
 ------------
-Coordinator: 2GB heap
-Overlord: 2GB heap
-Broker: 16GB heap, 27GB dir
-Hist: 16GB heap, 27GB dir
-MM: 128MB heap, 8 workers * (1GB direct + 1.5GB heap)
-Router: 2GB heap
+Launch command: `bin/start-large`
+Configuration directory: `conf/druid/single-server/large`
 
-2000 + 2000 + 36000 + 36000 + 128 + 36000 + 2000 = 114128GB (128GB for mmap)
-
-24 concurrent queries
-24 processing threads at broker
-1 processing thread per peon
-24 processing threads at historical
-
-
-X-Large: 64 CPU, 512GB RAM
+X-Large: 64 CPU, 512GB RAM (~i3.16xlarge)
 ------------
-Coordinator: 4GB heap
-Overlord: 4GB heap
-Broker: 24GB heap, 51GB dir
-Hist: 24GB heap, 51GB dir
-MM: 256MB heap, 16 workers * (1GB direct + 1.5GB heap)
-Router: 4GB heap
+Launch command: `bin/start-xlarge`
+Configuration directory: `conf/druid/single-server/xlarge`
 
-4000 + 4000 + 72000 + 72000 + 256 + 48000 + 4000 = 204256GB (~300GB for mmap)
-
-48 concurrent queries
-48 processing threads at broker
-1 processing thread per peon
-48 processing threads at historical

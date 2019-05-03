@@ -5,6 +5,31 @@ title: "Reference Cluster Architectures"
 
 # Reference Cluster architectures
 
+
+
+CLUSTER from XL
+-----------------
+Master: 2 * m5.4xlarge 16/64
+Data: 4 * i3.4xlarge	  16/122
+Query: 1 * m5.4xlarge	
+
+master
+-------
+Coordinator: 18GB heap
+Overlord: 18GB heap
+
+data
+------
+historical: 8GB heap, 10.5GB dir
+MM: 128MB heap, 4 workers * (400MB direct + 1GB heap)
+2gb cache
+
+query
+------
+Broker: 24GB heap, 9GB dir
+Router: 1GB heap
+
+
 # Small nodes
 
 data: m5d.large
