@@ -23,14 +23,17 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
+import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
@@ -42,6 +45,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Used to represent projections (Calcite "Project"). These are embedded in {@link Sorting} and {@link Grouping} to
@@ -79,6 +83,138 @@ public class Projection
     this.outputRowSignature = outputRowSignature;
   }
 
+  private static void postAggregationHandleInputRefOrLiteral(
+      final Project project,
+      final PlannerContext plannerContext,
+      final RowSignature inputRowSignature,
+      final RexNode postAggregatorRexNode,
+      final List<PostAggregator> postAggregators,
+      final List<String> rowOrder,
+      final String outputNamePrefix,
+      final AtomicInteger outputNameCounter
+  )
+  {
+    // Attempt to convert to PostAggregator.
+    final DruidExpression postAggregatorExpression = Expressions.toDruidExpression(
+        plannerContext,
+        inputRowSignature,
+        postAggregatorRexNode
+    );
+
+    if (postAggregatorExpression == null) {
+      throw new CannotBuildQueryException(project, postAggregatorRexNode);
+    }
+
+    if (postAggregatorComplexDirectColumnIsOk(inputRowSignature, postAggregatorExpression, postAggregatorRexNode)) {
+      // Direct column access on a COMPLEX column, expressions cannot operate on complex columns, only postaggs
+      // Wrap the column access in a field access postagg so that other postaggs can use it
+      final PostAggregator postAggregator = new FieldAccessPostAggregator(
+          outputNamePrefix + outputNameCounter.getAndIncrement(),
+          postAggregatorExpression.getDirectColumn()
+      );
+      postAggregators.add(postAggregator);
+      rowOrder.add(postAggregator.getName());
+    } else if (postAggregatorDirectColumnIsOk(inputRowSignature, postAggregatorExpression, postAggregatorRexNode)) {
+      // Direct column access, without any type cast as far as Druid's runtime is concerned.
+      // (There might be a SQL-level type cast that we don't care about)
+      rowOrder.add(postAggregatorExpression.getDirectColumn());
+    } else {
+      final String postAggregatorName = outputNamePrefix + outputNameCounter.getAndIncrement();
+      final PostAggregator postAggregator = new ExpressionPostAggregator(
+          postAggregatorName,
+          postAggregatorExpression.getExpression(),
+          null,
+          plannerContext.getExprMacroTable()
+      );
+      postAggregators.add(postAggregator);
+      rowOrder.add(postAggregator.getName());
+    }
+  }
+
+  private static void postAggregationHandleOtherKinds(
+      final Project project,
+      final PlannerContext plannerContext,
+      final RowSignature inputRowSignature,
+      final RexNode postAggregatorRexNode,
+      final List<PostAggregator> postAggregators,
+      final List<String> rowOrder,
+      final String outputNamePrefix,
+      final AtomicInteger outputNameCounter
+  )
+  {
+    PostAggregator pagg = OperatorConversions.toPostAggregator(
+        plannerContext,
+        inputRowSignature,
+        postAggregatorRexNode,
+        outputNamePrefix,
+        outputNameCounter
+    );
+
+    //pagg = null;
+
+    if (pagg != null) {
+      postAggregators.add(pagg);
+      rowOrder.add(pagg.getName());
+    } else {
+
+      final List<PostAggregator> hackyPostAggList = new ArrayList<>();
+
+      // Attempt to convert to PostAggregator.
+
+      final DruidExpression postAggregatorExpression = Expressions.toDruidExpressionWithPostAggOperands(
+          plannerContext,
+          inputRowSignature,
+          postAggregatorRexNode,
+          outputNamePrefix,
+          outputNameCounter,
+          hackyPostAggList
+      );
+
+
+         /*
+        // Attempt to convert to PostAggregator.
+        final DruidExpression postAggregatorExpression = Expressions.toDruidExpression(
+            plannerContext,
+            inputRowSignature,
+            postAggregatorRexNode
+        );
+        */
+
+      if (postAggregatorExpression != null) {
+        for (PostAggregator postAggWithinExpression : hackyPostAggList) {
+          postAggregators.add(postAggWithinExpression);
+        }
+
+        if (postAggregatorComplexDirectColumnIsOk(inputRowSignature, postAggregatorExpression, postAggregatorRexNode)) {
+          // Direct column access on a COMPLEX column, expressions cannot operate on complex columns, only postaggs
+          // Wrap the column access in a field access postagg so that other postaggs can use it
+          final PostAggregator postAggregator = new FieldAccessPostAggregator(
+              outputNamePrefix + outputNameCounter.getAndIncrement(),
+              postAggregatorExpression.getDirectColumn()
+          );
+          postAggregators.add(postAggregator);
+          rowOrder.add(postAggregator.getName());
+        } else if (postAggregatorDirectColumnIsOk(inputRowSignature, postAggregatorExpression, postAggregatorRexNode)) {
+          // Direct column access, without any type cast as far as Druid's runtime is concerned.
+          // (There might be a SQL-level type cast that we don't care about)
+          rowOrder.add(postAggregatorExpression.getDirectColumn());
+        } else {
+          final String postAggregatorName = outputNamePrefix + outputNameCounter.getAndIncrement();
+          final PostAggregator postAggregator = new ExpressionPostAggregator(
+              postAggregatorName,
+              postAggregatorExpression.getExpression(),
+              null,
+              plannerContext.getExprMacroTable()
+          );
+          postAggregators.add(postAggregator);
+          rowOrder.add(postAggregator.getName());
+        }
+      } else {
+        throw new CannotBuildQueryException(project, postAggregatorRexNode);
+      }
+    }
+  }
+
   public static Projection postAggregation(
       final Project project,
       final PlannerContext plannerContext,
@@ -93,33 +229,31 @@ public class Projection
         new TreeSet<>(inputRowSignature.getRowOrder())
     );
 
-    int outputNameCounter = 0;
+    //int outputNameCounter = 0;
+    AtomicInteger outputNameCounter = new AtomicInteger(0);
     for (final RexNode postAggregatorRexNode : project.getChildExps()) {
-      // Attempt to convert to PostAggregator.
-      final DruidExpression postAggregatorExpression = Expressions.toDruidExpression(
-          plannerContext,
-          inputRowSignature,
-          postAggregatorRexNode
-      );
-
-      if (postAggregatorExpression == null) {
-        throw new CannotBuildQueryException(project, postAggregatorRexNode);
-      }
-
-      if (postAggregatorDirectColumnIsOk(inputRowSignature, postAggregatorExpression, postAggregatorRexNode)) {
-        // Direct column access, without any type cast as far as Druid's runtime is concerned.
-        // (There might be a SQL-level type cast that we don't care about)
-        rowOrder.add(postAggregatorExpression.getDirectColumn());
-      } else {
-        final String postAggregatorName = outputNamePrefix + outputNameCounter++;
-        final PostAggregator postAggregator = new ExpressionPostAggregator(
-            postAggregatorName,
-            postAggregatorExpression.getExpression(),
-            null,
-            plannerContext.getExprMacroTable()
+      if (postAggregatorRexNode.getKind() == SqlKind.INPUT_REF || postAggregatorRexNode.getKind() == SqlKind.LITERAL) {
+        postAggregationHandleInputRefOrLiteral(
+            project,
+            plannerContext,
+            inputRowSignature,
+            postAggregatorRexNode,
+            postAggregators,
+            rowOrder,
+            outputNamePrefix,
+            outputNameCounter
         );
-        postAggregators.add(postAggregator);
-        rowOrder.add(postAggregator.getName());
+      } else {
+        postAggregationHandleOtherKinds(
+            project,
+            plannerContext,
+            inputRowSignature,
+            postAggregatorRexNode,
+            postAggregators,
+            rowOrder,
+            outputNamePrefix,
+            outputNameCounter
+        );
       }
     }
 
@@ -207,6 +341,33 @@ public class Projection
     );
 
     return toExprType.equals(fromExprType);
+  }
+
+  /**
+   * Returns true if a post-aggregation "expression" can be realized as a direct field access. This is true if it's
+   * a direct column access that doesn't require an implicit cast.
+   *
+   * @param aggregateRowSignature signature of the aggregation
+   * @param expression            post-aggregation expression
+   * @param rexNode               RexNode for the post-aggregation expression
+   *
+   * @return yes or no
+   */
+  private static boolean postAggregatorComplexDirectColumnIsOk(
+      final RowSignature aggregateRowSignature,
+      final DruidExpression expression,
+      final RexNode rexNode
+  )
+  {
+    if (!expression.isDirectColumnAccess()) {
+      return false;
+    }
+
+    // Check if a cast is necessary.
+    final ValueType toValueType = aggregateRowSignature.getColumnType(expression.getDirectColumn());
+    final ValueType fromValueType = Calcites.getValueTypeForSqlTypeName(rexNode.getType().getSqlTypeName());
+
+    return toValueType == ValueType.COMPLEX && fromValueType == ValueType.COMPLEX;
   }
 
   public List<PostAggregator> getPostAggregators()

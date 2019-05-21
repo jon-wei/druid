@@ -21,12 +21,15 @@ package org.apache.druid.sql.calcite.expression;
 
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public interface SqlOperatorConversion
 {
@@ -49,7 +52,25 @@ public interface SqlOperatorConversion
    * @see Expressions#toDruidExpression(PlannerContext, RowSignature, RexNode)
    */
   @Nullable
-  DruidExpression toDruidExpression(PlannerContext plannerContext, RowSignature rowSignature, RexNode rexNode);
+  DruidExpression toDruidExpression(
+      PlannerContext plannerContext,
+      RowSignature rowSignature,
+      RexNode rexNode
+  );
+
+  @Nullable
+  default DruidExpression toDruidExpressionWithPostAggOperands(
+      PlannerContext plannerContext,
+      RowSignature rowSignature,
+      RexNode rexNode,
+      String outputNamePrefix,
+      AtomicInteger outputNameCounter,
+      List<PostAggregator> hackyPostAggList
+
+  )
+  {
+    return toDruidExpression(plannerContext, rowSignature, rexNode);
+  }
 
   /**
    * Returns a Druid filter corresponding to a Calcite {@code RexNode} used as a filter condition.
@@ -67,6 +88,28 @@ public interface SqlOperatorConversion
       RowSignature rowSignature,
       @Nullable VirtualColumnRegistry virtualColumnRegistry,
       RexNode rexNode
+  )
+  {
+    return null;
+  }
+
+  /**
+   * Returns a Druid PostAggregator corresponding to a Calcite {@link RexNode} used to transform a row after
+   * aggregation has occurred.
+   *
+   * @param plannerContext   SQL planner context
+   * @param querySignature   signature of the rows to be extracted from
+   * @param rexNode          expression meant to be applied on top of the rows
+   *
+   * @return filter, or null if the call cannot be translated
+   */
+  @Nullable
+  default PostAggregator toPostAggregator(
+      PlannerContext plannerContext,
+      RowSignature querySignature,
+      RexNode rexNode,
+      final String outputNamePrefix,
+      final AtomicInteger outputNameCounter
   )
   {
     return null;

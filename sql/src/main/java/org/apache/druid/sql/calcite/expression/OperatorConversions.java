@@ -25,6 +25,7 @@ import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlCallBinding;
@@ -43,7 +44,10 @@ import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Static;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
@@ -51,6 +55,7 @@ import org.apache.druid.sql.calcite.table.RowSignature;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
@@ -133,6 +138,93 @@ public class OperatorConversions
       return f.apply(operands.get(i));
     } else {
       return defaultReturnValue;
+    }
+  }
+
+  @Nullable
+  public static DruidExpression convertCallPostAggs(
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final RexNode rexNode,
+      final Function<List<DruidExpression>, DruidExpression> expressionFunction,
+      String outputNamePrefix,
+      AtomicInteger outputNameCounter,
+      List<PostAggregator> hackyPostAggList
+  )
+  {
+    final RexCall call = (RexCall) rexNode;
+
+    final List<DruidExpression> druidExpressions = Expressions.toDruidExpressionsWithPostAgg(
+        plannerContext,
+        rowSignature,
+        call.getOperands(),
+        outputNamePrefix,
+        outputNameCounter,
+        hackyPostAggList
+    );
+
+    if (druidExpressions == null) {
+      return null;
+    }
+
+    return expressionFunction.apply(druidExpressions);
+  }
+
+  /**
+   * Translate a Calcite {@code RexNode} to a Druid PostAggregator
+   *
+   * @param plannerContext SQL planner context
+   * @param rowSignature   signature of the rows to be extracted from
+   * @param rexNode        expression meant to be applied on top of the rows
+   *
+   * @return rexNode referring to fields in rowOrder, or null if not possible
+   */
+  @Nullable
+  public static PostAggregator toPostAggregator(
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final RexNode rexNode,
+      final String outputNamePrefix,
+      final AtomicInteger outputNameCounter
+  )
+  {
+    final SqlKind kind = rexNode.getKind();
+    final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
+
+    if (kind == SqlKind.INPUT_REF) {
+      // Translate field references.
+      final RexInputRef ref = (RexInputRef) rexNode;
+      final String columnName = rowSignature.getRowOrder().get(ref.getIndex());
+      if (columnName == null) {
+        throw new ISE("WTF?! PostAgg referred to nonexistent index[%d]", ref.getIndex());
+      }
+
+      //return null;
+
+      return new FieldAccessPostAggregator(
+          outputNamePrefix + outputNameCounter.getAndIncrement(),
+          columnName
+      );
+    } else if (rexNode instanceof RexCall) {
+      final SqlOperator operator = ((RexCall) rexNode).getOperator();
+      final SqlOperatorConversion conversion = plannerContext.getOperatorTable()
+                                                             .lookupOperatorConversion(operator);
+
+      if (conversion == null) {
+        return null;
+      } else {
+        return conversion.toPostAggregator(
+            plannerContext,
+            rowSignature,
+            rexNode,
+            outputNamePrefix,
+            outputNameCounter
+        );
+      }
+    } else if (kind == SqlKind.LITERAL) {
+      return null;
+    } else {
+      throw new IAE("Unknown rexnode kind: " + kind);
     }
   }
 

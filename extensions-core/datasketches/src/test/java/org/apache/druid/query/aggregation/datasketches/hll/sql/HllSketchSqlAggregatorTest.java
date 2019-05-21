@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Druids;
@@ -48,6 +49,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -127,6 +129,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
     HllSketchModule.registerSerde();
     for (Module mod : new HllSketchModule().getJacksonModules()) {
       CalciteTests.getJsonMapper().registerModule(mod);
+      TestHelper.JSON_MAPPER.registerModule(mod);
     }
 
     final QueryableIndex index = IndexBuilder.create()
@@ -165,8 +168,16 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
     final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
     final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
-        ImmutableSet.of(new HllSketchSqlAggregator()),
-        ImmutableSet.of()
+        ImmutableSet.of(
+            new HllSketchApproxCountDistinctSqlAggregator(),
+            new HllSketchSqlAggregator()
+        ),
+        ImmutableSet.of(
+            new HllSketchEstimateOperatorConversion(),
+            new HllSketchEstimateWithErrorBoundsOperatorConversion(),
+            new HllSketchSetUnionOperatorConversion(),
+            new HllSketchToStringOperatorConversion()
+        )
     );
 
     sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(
@@ -188,6 +199,176 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
   {
     walker.close();
     walker = null;
+  }
+
+
+  @Test
+  public void testtHllSketchObject() throws Exception
+  {
+    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
+
+    final String sql = "SELECT\n"
+                       //+ "  ABS(HLL_SKETCH_ESTIMATE(DS_HLL(dim2)))\n"
+                       + "  DS_HLL(dim2),\n" // uppercase
+                       + "  HLL_SKETCH_ESTIMATE(DS_HLL(dim2)),\n"
+                       //+ "  DS_HLL(dim2),\n" // uppercase
+                       + "  HLL_SKETCH_ESTIMATE(DS_HLL(CONCAT(dim2, 'hello'))),\n"
+                       + "  HLL_SKETCH_ESTIMATE(DS_HLL(dim2)) + 1,\n"
+                       + "  ABS(HLL_SKETCH_ESTIMATE(DS_HLL(dim2))),\n"
+                       + "  HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(DS_HLL(dim2), 2),\n"
+                       + "  HLL_SKETCH_TO_STRING(DS_HLL(dim2)),\n"
+                       + "  UPPER(HLL_SKETCH_TO_STRING(DS_HLL(dim2))),\n"
+                       + "  DS_HLL(m1),\n"
+                       + "  HLL_SKETCH_TO_STRING(DS_HLL(POWER(ABS(m1 + 100), 2))),\n"
+                       //+ "  ABS(HLL_SKETCH_ESTIMATE(DS_HLL(dim2)))\n"
+                       + "  APPROX_COUNT_DISTINCT_DS_HLL(dim2)\n"
+                       + "FROM druid.foo";
+
+    // Verify results
+    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+
+    /*
+    final List<Object[]> expectedResults;
+
+    if (NullHandling.replaceWithDefault()) {
+      expectedResults = ImmutableList.of(
+          new Object[]{
+              6L,
+              2L,
+              2L,
+              1L,
+              2L,
+              5L,
+              5L
+          }
+      );
+    } else {
+      expectedResults = ImmutableList.of(
+          new Object[]{
+              6L,
+              2L,
+              2L,
+              1L,
+              1L,
+              5L,
+              5L
+          }
+      );
+    }
+    */
+    for (Object[] resultArray : results) {
+      for (Object result : resultArray) {
+        System.out.println("RESULT: " + result);
+      }
+    }
+  }
+
+
+  @Test
+  public void testtHllSketchObject2() throws Exception
+  {
+    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
+
+    final String sql = "SELECT DS_HLL(dim2) as y FROM druid.foo ORDER BY HLL_SKETCH_ESTIMATE(DS_HLL(dim2)) DESC LIMIT 10";
+    final String sql2 = StringUtils.format("SELECT HLL_SKETCH_TO_STRING(y) from (%s)", sql);
+
+    // Verify results
+    final List<Object[]> results = sqlLifecycle.runSimple(sql2, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> expectedResults;
+
+    if (NullHandling.replaceWithDefault()) {
+      expectedResults = ImmutableList.of(
+          new Object[]{
+              6L,
+              2L,
+              2L,
+              1L,
+              2L,
+              5L,
+              5L
+          }
+      );
+    } else {
+      expectedResults = ImmutableList.of(
+          new Object[]{
+              6L,
+              2L,
+              2L,
+              1L,
+              1L,
+              5L,
+              5L
+          }
+      );
+    }
+
+    Assert.assertEquals(expectedResults.size(), results.size());
+    for (int i = 0; i < expectedResults.size(); i++) {
+      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
+    }
+
+    // Verify query
+    Assert.assertEquals(
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource(CalciteTests.DATASOURCE1)
+              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+              .granularity(Granularities.ALL)
+              .virtualColumns(
+                  new ExpressionVirtualColumn(
+                      "v0",
+                      "substring(\"dim2\", 0, 1)",
+                      ValueType.STRING,
+                      TestExprMacroTable.INSTANCE
+                  ),
+                  new ExpressionVirtualColumn(
+                      "v1",
+                      "concat(substring(\"dim2\", 0, 1),'x')",
+                      ValueType.STRING,
+                      TestExprMacroTable.INSTANCE
+                  )
+              )
+              .aggregators(
+                  ImmutableList.of(
+                      new LongSumAggregatorFactory("a0", "cnt"),
+                      new HllSketchBuildAggregatorFactory(
+                          "a1",
+                          "dim2",
+                          null,
+                          null,
+                          false
+                      ),
+                      new FilteredAggregatorFactory(
+                          new HllSketchBuildAggregatorFactory(
+                              "a2",
+                              "dim2",
+                              null,
+                              null,
+                              false
+                          ),
+                          BaseCalciteQueryTest.not(BaseCalciteQueryTest.selector("dim2", "", null))
+                      ),
+                      new HllSketchBuildAggregatorFactory(
+                          "a3",
+                          "v0",
+                          null,
+                          null,
+                          false
+                      ),
+                      new HllSketchBuildAggregatorFactory(
+                          "a4",
+                          "v1",
+                          null,
+                          null,
+                          false
+                      ),
+                      new HllSketchMergeAggregatorFactory("a5", "hllsketch_dim1", 21, "HLL_8", false),
+                      new HllSketchMergeAggregatorFactory("a6", "hllsketch_dim1", null, null, false)
+                  )
+              )
+              .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
+              .build(),
+        Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
+    );
   }
 
   @Test
