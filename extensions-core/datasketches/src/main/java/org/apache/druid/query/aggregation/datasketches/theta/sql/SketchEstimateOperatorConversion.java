@@ -28,7 +28,6 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchEstimatePostAggregator;
-import org.apache.druid.query.aggregation.datasketches.theta.expression.SketchEstimateExprMacro;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
@@ -40,15 +39,16 @@ import java.util.List;
 
 public class SketchEstimateOperatorConversion extends DirectOperatorConversion
 {
+  private static String FUNCTION_NAME = "theta_sketch_estimate";
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder(StringUtils.toUpperCase(SketchEstimateExprMacro.FN_NAME))
+      .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
       .operandTypes(SqlTypeFamily.ANY)
       .returnTypeInference(ReturnTypes.DOUBLE)
       .build();
 
   public SketchEstimateOperatorConversion()
   {
-    super(SQL_FUNCTION, SketchEstimateExprMacro.FN_NAME);
+    super(SQL_FUNCTION, FUNCTION_NAME);
   }
 
   @Override

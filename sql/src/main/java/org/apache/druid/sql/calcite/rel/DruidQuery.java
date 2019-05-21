@@ -75,6 +75,7 @@ import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.DimensionExpression;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
+import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -412,25 +413,40 @@ public class DruidQuery
           postAggregatorRexNode
       );
 
-      if (postAggregatorExpression == null) {
-        throw new CannotBuildQueryException(project, postAggregatorRexNode);
+      if (postAggregatorExpression != null) {
+        if (postAggregatorDirectColumnIsOk(inputRowSignature, postAggregatorExpression, postAggregatorRexNode)) {
+          // Direct column access, without any type cast as far as Druid's runtime is concerned.
+          // (There might be a SQL-level type cast that we don't care about)
+          rowOrder.add(postAggregatorExpression.getDirectColumn());
+        } else {
+          final String postAggregatorName = outputNamePrefix + outputNameCounter++;
+          final PostAggregator postAggregator = new ExpressionPostAggregator(
+              postAggregatorName,
+              postAggregatorExpression.getExpression(),
+              null,
+              plannerContext.getExprMacroTable()
+          );
+          aggregations.add(postAggregator);
+          rowOrder.add(postAggregator.getName());
+        }
+      } else {
+        final PostAggregator pagg = OperatorConversions.toPostAggregator(
+            plannerContext,
+            inputRowSignature,
+            postAggregatorRexNode,
+            outputNamePrefix,
+            outputNameCounter
+        );
+
+        if (pagg == null) {
+          throw new CannotBuildQueryException(project, postAggregatorRexNode);
+        }
+
+        aggregations.add(pagg);
+        rowOrder.add(pagg.getName());
       }
 
-      if (postAggregatorDirectColumnIsOk(inputRowSignature, postAggregatorExpression, postAggregatorRexNode)) {
-        // Direct column access, without any type cast as far as Druid's runtime is concerned.
-        // (There might be a SQL-level type cast that we don't care about)
-        rowOrder.add(postAggregatorExpression.getDirectColumn());
-      } else {
-        final String postAggregatorName = outputNamePrefix + outputNameCounter++;
-        final PostAggregator postAggregator = new ExpressionPostAggregator(
-            postAggregatorName,
-            postAggregatorExpression.getExpression(),
-            null,
-            plannerContext.getExprMacroTable()
-        );
-        aggregations.add(postAggregator);
-        rowOrder.add(postAggregator.getName());
-      }
+
     }
 
     return new ProjectRowOrderAndPostAggregations(rowOrder, aggregations);

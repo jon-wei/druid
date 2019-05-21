@@ -57,7 +57,7 @@ import java.util.List;
 
 public class ThetaSketchObjectSqlAggregator implements SqlAggregator
 {
-  private static final SqlAggFunction FUNCTION_INSTANCE = new ThetaSketchSqlAggFunction();
+  private static final SqlAggFunction FUNCTION_INSTANCE = new ThetaSketchObjectSqlAggFunction();
   private static final String NAME = "DS_THETA";
 
   @Override
@@ -162,17 +162,17 @@ public class ThetaSketchObjectSqlAggregator implements SqlAggregator
     );
   }
 
-  private static class ThetaSketchSqlAggFunction extends SqlAggFunction
+  private static class ThetaSketchObjectSqlAggFunction extends SqlAggFunction
   {
     private static final String SIGNATURE = "'" + NAME + "(column, size)'\n";
 
-    ThetaSketchSqlAggFunction()
+    ThetaSketchObjectSqlAggFunction()
     {
       super(
           NAME,
           null,
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.explicit(SqlTypeName.BIGINT),
+          ReturnTypes.explicit(SqlTypeName.OTHER),
           InferTypes.VARCHAR_1024,
           OperandTypes.or(
               OperandTypes.ANY,
@@ -181,7 +181,7 @@ public class ThetaSketchObjectSqlAggregator implements SqlAggregator
                   OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
               )
           ),
-          SqlFunctionCategory.NUMERIC,
+          SqlFunctionCategory.USER_DEFINED_FUNCTION,
           false,
           false
       );

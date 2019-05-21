@@ -47,6 +47,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -125,6 +126,7 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
     SketchModule.registerSerde();
     for (Module mod : new SketchModule().getJacksonModules()) {
       CalciteTests.getJsonMapper().registerModule(mod);
+      TestHelper.JSON_MAPPER.registerModule(mod);
     }
 
     final QueryableIndex index = IndexBuilder.create()
@@ -168,7 +170,9 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
             new ThetaSketchSqlAggregator(),
             new ThetaSketchObjectSqlAggregator()
         ),
-        ImmutableSet.of()
+        ImmutableSet.of(
+            new SketchEstimateOperatorConversion()
+        )
     );
 
     sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(
@@ -190,6 +194,118 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
   {
     walker.close();
     walker = null;
+  }
+
+  @Test
+  public void testThetaSketchObject() throws Exception
+  {
+    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
+    final String sql = "SELECT\n"
+                       + "  SUM(cnt),\n"
+                       + "  theta_sketch_estimate(DS_THETA(dim2))\n" // uppercase
+                       + "FROM druid.foo";
+
+    // Verify results
+    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> expectedResults;
+
+    if (NullHandling.replaceWithDefault()) {
+      expectedResults = ImmutableList.of(
+          new Object[]{
+              6L,
+              2L,
+              2L,
+              1L,
+              2L,
+              5L,
+              5L
+          }
+      );
+    } else {
+      expectedResults = ImmutableList.of(
+          new Object[]{
+              6L,
+              2L,
+              2L,
+              1L,
+              1L,
+              5L,
+              5L
+          }
+      );
+    }
+
+    Assert.assertEquals(expectedResults.size(), results.size());
+    for (int i = 0; i < expectedResults.size(); i++) {
+      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
+    }
+
+    // Verify query
+    Assert.assertEquals(
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource(CalciteTests.DATASOURCE1)
+              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+              .granularity(Granularities.ALL)
+              .virtualColumns(
+                  new ExpressionVirtualColumn(
+                      "v0",
+                      "substring(\"dim2\", 0, 1)",
+                      ValueType.STRING,
+                      TestExprMacroTable.INSTANCE
+                  ),
+                  new ExpressionVirtualColumn(
+                      "v1",
+                      "concat(substring(\"dim2\", 0, 1),'x')",
+                      ValueType.STRING,
+                      TestExprMacroTable.INSTANCE
+                  )
+              )
+              .aggregators(
+                  ImmutableList.of(
+                      new LongSumAggregatorFactory("a0", "cnt"),
+                      new SketchMergeAggregatorFactory(
+                          "a1",
+                          "dim2",
+                          null,
+                          null,
+                          null,
+                          null
+                      ),
+                      new FilteredAggregatorFactory(
+                          new SketchMergeAggregatorFactory(
+                              "a2",
+                              "dim2",
+                              null,
+                              null,
+                              null,
+                              null
+                          ),
+                          BaseCalciteQueryTest.not(BaseCalciteQueryTest.selector("dim2", "", null))
+                      ),
+                      new SketchMergeAggregatorFactory(
+                          "a3",
+                          "v0",
+                          null,
+                          null,
+                          null,
+                          null
+                      ),
+                      new SketchMergeAggregatorFactory(
+                          "a4",
+                          "v1",
+                          null,
+                          null,
+                          null,
+                          null
+                      ),
+                      new SketchMergeAggregatorFactory("a5", "thetasketch_dim1", 32768, null, null, null),
+                      new SketchMergeAggregatorFactory("a6", "thetasketch_dim1", null, null, null, null)
+                  )
+              )
+              .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
+              .build(),
+        Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
+    );
   }
 
   @Test
