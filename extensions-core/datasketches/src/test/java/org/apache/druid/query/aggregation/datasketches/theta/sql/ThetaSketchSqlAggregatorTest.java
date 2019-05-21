@@ -164,7 +164,10 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
     final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
     final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
-        ImmutableSet.of(new ThetaSketchSqlAggregator()),
+        ImmutableSet.of(
+            new ThetaSketchSqlAggregator(),
+            new ThetaSketchObjectSqlAggregator()
+        ),
         ImmutableSet.of()
     );
 
