@@ -44,6 +44,7 @@ import org.apache.druid.sql.calcite.table.RowSignature;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 /**
@@ -125,7 +126,7 @@ public class OperatorConversions
       final RowSignature rowSignature,
       final RexNode rexNode,
       final String outputNamePrefix,
-      final int outputNameCounter
+      final AtomicInteger outputNameCounter
   )
   {
     final SqlKind kind = rexNode.getKind();
@@ -156,7 +157,7 @@ public class OperatorConversions
             rowSignature,
             rexNode,
             outputNamePrefix,
-            outputNameCounter + 1
+            outputNameCounter
         );
       }
     } else {

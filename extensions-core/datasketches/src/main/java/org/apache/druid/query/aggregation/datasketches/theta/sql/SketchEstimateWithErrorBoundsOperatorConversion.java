@@ -37,6 +37,7 @@ import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class SketchEstimateWithErrorBoundsOperatorConversion extends DirectOperatorConversion
 {
@@ -74,7 +75,7 @@ public class SketchEstimateWithErrorBoundsOperatorConversion extends DirectOpera
       RowSignature rowSignature,
       RexNode rexNode,
       final String outputNamePrefix,
-      final int outputNameCounter
+      final AtomicInteger outputNameCounter
   )
   {
     final List<RexNode> operands = ((RexCall) rexNode).getOperands();
@@ -83,7 +84,7 @@ public class SketchEstimateWithErrorBoundsOperatorConversion extends DirectOpera
         rowSignature,
         operands.get(0),
         outputNamePrefix,
-        outputNameCounter + 2
+        outputNameCounter
     );
 
     if (firstOperand == null) {
@@ -92,9 +93,8 @@ public class SketchEstimateWithErrorBoundsOperatorConversion extends DirectOpera
 
     final int errorBoundsStdDev =  ((Number) RexLiteral.value(operands.get(1))).intValue();
 
-    int newCounter = outputNameCounter + 1;
     return new SketchEstimatePostAggregator(
-        outputNamePrefix + newCounter,
+        outputNamePrefix + outputNameCounter.getAndIncrement(),
         firstOperand,
         errorBoundsStdDev
     );

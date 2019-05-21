@@ -92,6 +92,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A fully formed Druid query, built from a {@link PartialDruidQuery}. The work to develop this query is done
@@ -404,7 +405,8 @@ public class DruidQuery
         new TreeSet<>(inputRowSignature.getRowOrder())
     );
 
-    int outputNameCounter = 0;
+    //int outputNameCounter = 0;
+    AtomicInteger outputNameCounter = new AtomicInteger(0);
     for (final RexNode postAggregatorRexNode : project.getChildExps()) {
       // Attempt to convert to PostAggregator.
       final DruidExpression postAggregatorExpression = Expressions.toDruidExpression(
@@ -413,13 +415,14 @@ public class DruidQuery
           postAggregatorRexNode
       );
 
+
       if (postAggregatorExpression != null) {
         if (postAggregatorDirectColumnIsOk(inputRowSignature, postAggregatorExpression, postAggregatorRexNode)) {
           // Direct column access, without any type cast as far as Druid's runtime is concerned.
           // (There might be a SQL-level type cast that we don't care about)
           rowOrder.add(postAggregatorExpression.getDirectColumn());
         } else {
-          final String postAggregatorName = outputNamePrefix + outputNameCounter++;
+          final String postAggregatorName = outputNamePrefix + outputNameCounter.getAndIncrement();
           final PostAggregator postAggregator = new ExpressionPostAggregator(
               postAggregatorName,
               postAggregatorExpression.getExpression(),

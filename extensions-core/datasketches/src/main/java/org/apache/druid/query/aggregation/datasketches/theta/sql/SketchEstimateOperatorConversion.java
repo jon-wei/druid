@@ -36,6 +36,7 @@ import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class SketchEstimateOperatorConversion extends DirectOperatorConversion
 {
@@ -72,7 +73,7 @@ public class SketchEstimateOperatorConversion extends DirectOperatorConversion
       RowSignature rowSignature,
       RexNode rexNode,
       final String outputNamePrefix,
-      final int outputNameCounter
+      final AtomicInteger outputNameCounter
   )
   {
     final List<RexNode> operands = ((RexCall) rexNode).getOperands();
@@ -81,16 +82,15 @@ public class SketchEstimateOperatorConversion extends DirectOperatorConversion
         rowSignature,
         operands.get(0),
         outputNamePrefix,
-        outputNameCounter + 2
+        outputNameCounter
     );
 
     if (firstOperand == null) {
       return null;
     }
 
-    int newCounter = outputNameCounter + 1;
     return new SketchEstimatePostAggregator(
-        outputNamePrefix + newCounter,
+        outputNamePrefix + outputNameCounter.getAndIncrement(),
         firstOperand,
         null
     );

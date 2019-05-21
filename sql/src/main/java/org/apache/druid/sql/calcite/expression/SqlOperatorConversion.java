@@ -29,6 +29,7 @@ import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.Null;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public interface SqlOperatorConversion
 {
@@ -88,7 +89,7 @@ public interface SqlOperatorConversion
       RowSignature querySignature,
       RexNode rexNode,
       final String outputNamePrefix,
-      final int outputNameCounter
+      final AtomicInteger outputNameCounter
   )
   {
     return null;
