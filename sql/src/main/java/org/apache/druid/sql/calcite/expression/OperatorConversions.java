@@ -21,17 +21,22 @@ package org.apache.druid.sql.calcite.expression;
 
 import com.google.common.base.Preconditions;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
@@ -103,6 +108,60 @@ public class OperatorConversions
     }
 
     return expressionFunction.apply(druidExpressions);
+  }
+
+  /**
+   * Translate a Calcite {@code RexNode} to a Druid PostAggregator
+   *
+   * @param plannerContext SQL planner context
+   * @param rowSignature   signature of the rows to be extracted from
+   * @param rexNode        expression meant to be applied on top of the rows
+   *
+   * @return rexNode referring to fields in rowOrder, or null if not possible
+   */
+  @Nullable
+  public static PostAggregator toPostAggregator(
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final RexNode rexNode,
+      final String outputNamePrefix,
+      final int outputNameCounter
+  )
+  {
+    final SqlKind kind = rexNode.getKind();
+    final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
+
+    if (kind == SqlKind.INPUT_REF) {
+      // Translate field references.
+      final RexInputRef ref = (RexInputRef) rexNode;
+      final String columnName = rowSignature.getRowOrder().get(ref.getIndex());
+      if (columnName == null) {
+        throw new ISE("WTF?! PostAgg referred to nonexistent index[%d]", ref.getIndex());
+      }
+
+      return new FieldAccessPostAggregator(
+          columnName,
+          columnName
+      );
+    } else if (rexNode instanceof RexCall) {
+      final SqlOperator operator = ((RexCall) rexNode).getOperator();
+      final SqlOperatorConversion conversion = plannerContext.getOperatorTable()
+                                                             .lookupOperatorConversion(operator);
+
+      if (conversion == null) {
+        return null;
+      } else {
+        return conversion.toPostAggregator(
+            plannerContext,
+            rowSignature,
+            rexNode,
+            outputNamePrefix,
+            outputNameCounter + 1
+        );
+      }
+    } else {
+      throw new IAE("Unknown rexnode kind: " + kind);
+    }
   }
 
   public static OperatorBuilder operatorBuilder(final String name)

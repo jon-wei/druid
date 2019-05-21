@@ -21,12 +21,14 @@ package org.apache.druid.sql.calcite.expression;
 
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQuerySignature;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.Null;
 
 public interface SqlOperatorConversion
 {
@@ -65,6 +67,28 @@ public interface SqlOperatorConversion
       PlannerContext plannerContext,
       DruidQuerySignature querySignature,
       RexNode rexNode
+  )
+  {
+    return null;
+  }
+
+  /**
+   * Returns a Druid PostAggregator corresponding to a Calcite {@link RexNode} used to transform a row after
+   * aggregation has occurred.
+   *
+   * @param plannerContext   SQL planner context
+   * @param querySignature   signature of the rows to be extracted from
+   * @param rexNode          expression meant to be applied on top of the rows
+   *
+   * @return filter, or null if the call cannot be translated
+   */
+  @Nullable
+  default PostAggregator toPostAggregator(
+      PlannerContext plannerContext,
+      RowSignature querySignature,
+      RexNode rexNode,
+      final String outputNamePrefix,
+      final int outputNameCounter
   )
   {
     return null;

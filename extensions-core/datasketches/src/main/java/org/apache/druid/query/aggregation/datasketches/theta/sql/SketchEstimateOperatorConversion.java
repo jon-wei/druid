@@ -19,34 +19,84 @@
 
 package org.apache.druid.query.aggregation.datasketches.theta.sql;
 
+import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.datasketches.theta.SketchEstimatePostAggregator;
+import org.apache.druid.query.aggregation.datasketches.theta.expression.SketchEstimateExprMacro;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.DruidQuerySignature;
 import org.apache.druid.sql.calcite.table.RowSignature;
+
+import javax.annotation.Nullable;
+import java.util.List;
 
 public class SketchEstimateOperatorConversion extends DirectOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder(StringUtils.toUpperCase(BloomFilterExprMacro.FN_NAME))
+      .operatorBuilder(StringUtils.toUpperCase(SketchEstimateExprMacro.FN_NAME))
       .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.CHARACTER)
-      .returnTypeInference(ReturnTypes.BOOLEAN_NULLABLE)
+      .returnType(SqlTypeName.OTHER)
+      //.returnTypeInference(ReturnTypes.DOUBLE)
       .build();
 
-  public BloomFilterOperatorConversion()
+  public SketchEstimateOperatorConversion()
   {
-    super(SQL_FUNCTION, BloomFilterExprMacro.FN_NAME);
+    super(SQL_FUNCTION, SketchEstimateExprMacro.FN_NAME);
   }
 
   @Override
   public SqlOperator calciteOperator()
   {
     return SQL_FUNCTION;
+  }
+
+  @Override
+  public DruidExpression toDruidExpression(
+      PlannerContext plannerContext, RowSignature rowSignature, RexNode rexNode
+  )
+  {
+    return null;
+  }
+
+  @Nullable
+  @Override
+  public PostAggregator toPostAggregator(
+      PlannerContext plannerContext,
+      RowSignature rowSignature,
+      RexNode rexNode,
+      final String outputNamePrefix,
+      final int outputNameCounter
+  )
+  {
+    final List<RexNode> operands = ((RexCall) rexNode).getOperands();
+    final PostAggregator firstOperand = OperatorConversions.toPostAggregator(
+        plannerContext,
+        rowSignature,
+        operands.get(0),
+        outputNamePrefix,
+        outputNameCounter + 2
+    );
+
+    if (firstOperand == null) {
+      return null;
+    }
+
+    int newCounter = outputNameCounter + 1;
+    return new SketchEstimatePostAggregator(
+        outputNamePrefix + newCounter,
+        firstOperand,
+        null
+    );
   }
 
 }

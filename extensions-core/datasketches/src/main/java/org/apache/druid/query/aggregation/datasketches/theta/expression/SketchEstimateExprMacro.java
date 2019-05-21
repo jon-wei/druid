@@ -19,8 +19,24 @@
 
 package org.apache.druid.query.aggregation.datasketches.theta.expression;
 
+import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
+
+import java.util.List;
 
 public class SketchEstimateExprMacro implements ExprMacroTable.ExprMacro
 {
+  public static String FN_NAME = "theta_sketch_estimate";
+
+  @Override
+  public String name()
+  {
+    return FN_NAME;
+  }
+
+  @Override
+  public Expr apply(List<Expr> args)
+  {
+    return null;
+  }
 }
