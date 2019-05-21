@@ -55,10 +55,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class ThetaSketchObjectSqlAggregator implements SqlAggregator
+public class ThetaSketchApproxCountDistinctSqlAggregator implements SqlAggregator
 {
-  private static final SqlAggFunction FUNCTION_INSTANCE = new ThetaSketchObjectSqlAggFunction();
-  private static final String NAME = "DS_THETA";
+  private static final SqlAggFunction FUNCTION_INSTANCE = new ThetaSketchSqlAggFunction();
+  private static final String NAME = "APPROX_COUNT_DISTINCT_DS_THETA";
 
   @Override
   public SqlAggFunction calciteFunction()
@@ -158,21 +158,24 @@ public class ThetaSketchObjectSqlAggregator implements SqlAggregator
     return Aggregation.create(
         virtualColumns,
         Collections.singletonList(aggregatorFactory),
-        null
+        finalizeAggregations ? new FinalizingFieldAccessPostAggregator(
+            name,
+            aggregatorFactory.getName()
+        ) : null
     );
   }
 
-  private static class ThetaSketchObjectSqlAggFunction extends SqlAggFunction
+  private static class ThetaSketchSqlAggFunction extends SqlAggFunction
   {
     private static final String SIGNATURE = "'" + NAME + "(column, size)'\n";
 
-    ThetaSketchObjectSqlAggFunction()
+    ThetaSketchSqlAggFunction()
     {
       super(
           NAME,
           null,
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.explicit(SqlTypeName.OTHER),
+          ReturnTypes.explicit(SqlTypeName.BIGINT),
           InferTypes.VARCHAR_1024,
           OperandTypes.or(
               OperandTypes.ANY,
@@ -181,7 +184,7 @@ public class ThetaSketchObjectSqlAggregator implements SqlAggregator
                   OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
               )
           ),
-          SqlFunctionCategory.USER_DEFINED_FUNCTION,
+          SqlFunctionCategory.NUMERIC,
           false,
           false
       );

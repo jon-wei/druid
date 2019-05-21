@@ -445,8 +445,6 @@ public class DruidQuery
         aggregations.add(pagg);
         rowOrder.add(pagg.getName());
       }
-
-
     }
 
     return new ProjectRowOrderAndPostAggregations(rowOrder, aggregations);

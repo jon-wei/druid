@@ -24,12 +24,10 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
-import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.query.aggregation.datasketches.theta.expression.SketchEstimateExprMacro;
 import org.apache.druid.query.aggregation.datasketches.theta.sql.SketchEstimateOperatorConversion;
-import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchObjectSqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchSqlAggregator;
+import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchApproxCountDistinctSqlAggregator;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.sql.guice.SqlBindings;
 
@@ -52,11 +50,10 @@ public class SketchModule implements DruidModule
   public void configure(Binder binder)
   {
     registerSerde();
+    SqlBindings.addAggregator(binder, ThetaSketchApproxCountDistinctSqlAggregator.class);
     SqlBindings.addAggregator(binder, ThetaSketchSqlAggregator.class);
-    SqlBindings.addAggregator(binder, ThetaSketchObjectSqlAggregator.class);
 
     SqlBindings.addOperatorConversion(binder, SketchEstimateOperatorConversion.class);
-    ExpressionModule.addExprMacro(binder, SketchEstimateExprMacro.class);
   }
 
   @Override

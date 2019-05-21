@@ -167,11 +167,12 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
     final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
         ImmutableSet.of(
-            new ThetaSketchSqlAggregator(),
-            new ThetaSketchObjectSqlAggregator()
+            new ThetaSketchApproxCountDistinctSqlAggregator(),
+            new ThetaSketchSqlAggregator()
         ),
         ImmutableSet.of(
-            new SketchEstimateOperatorConversion()
+            new SketchEstimateOperatorConversion(),
+            new SketchEstimateWithErrorBoundsOperatorConversion()
         )
     );
 
@@ -202,7 +203,8 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
     SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
     final String sql = "SELECT\n"
                        + "  SUM(cnt),\n"
-                       + "  theta_sketch_estimate(DS_THETA(dim2))\n" // uppercase
+                       + "  theta_sketch_estimate(DS_THETA(dim2)),\n" // uppercase
+                       + "  theta_sketch_estimate_with_error_bounds(DS_THETA(dim2), 10)\n" // uppercase
                        + "FROM druid.foo";
 
     // Verify results
