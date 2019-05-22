@@ -173,7 +173,9 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
         ImmutableSet.of(
             new ThetaSketchEstimateOperatorConversion(),
             new ThetaSketchEstimateWithErrorBoundsOperatorConversion(),
-            new ThetaSketchSetIntersectOperatorConversion()
+            new ThetaSketchSetIntersectOperatorConversion(),
+            new ThetaSketchSetUnionOperatorConversion(),
+            new ThetaSketchSetNotOperatorConversion()
         )
     );
 
@@ -207,6 +209,8 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
                        + "  theta_sketch_estimate(DS_THETA(dim2)),\n" // uppercase
                        + "  theta_sketch_estimate_with_error_bounds(DS_THETA(dim2), 10),\n" // uppercase
                        + "  THETA_SKETCH_INTERSECT(DS_THETA(dim2), DS_THETA(dim1)),\n" // uppercase,
+                       + "  THETA_SKETCH_UNION(DS_THETA(dim2), DS_THETA(dim1)),\n" // uppercase,
+                       + "  THETA_SKETCH_NOT(DS_THETA(dim2), DS_THETA(dim1)),\n" // uppercase,
                        + "  THETA_SKETCH_INTERSECT(32768, DS_THETA(dim2), DS_THETA(dim1)),\n" // uppercase
                        + "  theta_sketch_estimate(THETA_SKETCH_INTERSECT(THETA_SKETCH_INTERSECT(DS_THETA(dim2), DS_THETA(dim1)), DS_THETA(dim2)))\n" // uppercase
                        + "FROM druid.foo";
