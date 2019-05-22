@@ -160,6 +160,8 @@ public class OperatorConversions
             outputNameCounter
         );
       }
+    } else if (kind == SqlKind.LITERAL) {
+      return null;
     } else {
       throw new IAE("Unknown rexnode kind: " + kind);
     }

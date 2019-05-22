@@ -23,43 +23,40 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
+import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.OperandTypes;
+import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.PostAggregator;
-import org.apache.druid.query.aggregation.datasketches.theta.SketchEstimatePostAggregator;
-import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
+import org.apache.druid.query.aggregation.datasketches.theta.SketchSetPostAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
+import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class SketchEstimateWithErrorBoundsOperatorConversion extends DirectOperatorConversion
+public abstract class ThetaSketchSetBaseOperatorConversion implements SqlOperatorConversion
 {
-  private static String FUNCTION_NAME = "theta_sketch_estimate_with_error_bounds";
-  private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
-      .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.INTEGER)
-      .returnType(SqlTypeName.OTHER)
-      .build();
-
-
-  public SketchEstimateWithErrorBoundsOperatorConversion()
+  public ThetaSketchSetBaseOperatorConversion()
   {
-    super(SQL_FUNCTION, FUNCTION_NAME);
   }
 
   @Override
   public SqlOperator calciteOperator()
   {
-    return SQL_FUNCTION;
+    return makeSqlFunction();
   }
 
+  @Nullable
   @Override
   public DruidExpression toDruidExpression(
       PlannerContext plannerContext, RowSignature rowSignature, RexNode rexNode
@@ -79,24 +76,64 @@ public class SketchEstimateWithErrorBoundsOperatorConversion extends DirectOpera
   )
   {
     final List<RexNode> operands = ((RexCall) rexNode).getOperands();
-    final PostAggregator firstOperand = OperatorConversions.toPostAggregator(
-        plannerContext,
-        rowSignature,
-        operands.get(0),
-        outputNamePrefix,
-        outputNameCounter
-    );
+    final List<PostAggregator> inputPostAggs = new ArrayList<>();
+    Integer size = null;
 
-    if (firstOperand == null) {
-      return null;
+    int operandCounter = 0;
+    for (RexNode operand : operands) {
+      final PostAggregator convertedPostAgg = OperatorConversions.toPostAggregator(
+          plannerContext,
+          rowSignature,
+          operand,
+          outputNamePrefix,
+          outputNameCounter
+      );
+      if (convertedPostAgg == null) {
+        if (operandCounter == 0) {
+          try {
+            size = RexLiteral.intValue(operand);
+          } catch (RuntimeException re) {
+            return null;
+          }
+        } else {
+          return null;
+        }
+      } else {
+        inputPostAggs.add(convertedPostAgg);
+        operandCounter++;
+      }
     }
 
-    final int errorBoundsStdDev =  ((Number) RexLiteral.value(operands.get(1))).intValue();
-
-    return new SketchEstimatePostAggregator(
+    return new SketchSetPostAggregator(
         outputNamePrefix + outputNameCounter.getAndIncrement(),
-        firstOperand,
-        errorBoundsStdDev
+        getSetOperationName(),
+        size,
+        inputPostAggs
     );
   }
+
+  private SqlFunction makeSqlFunction()
+  {
+    return new SqlFunction(
+        getFunctionName(),
+        SqlKind.OTHER_FUNCTION,
+        ReturnTypes.explicit(
+            factory -> Calcites.createSqlType(factory, SqlTypeName.OTHER)
+        ),
+        null,
+        OperandTypes.VARIADIC,
+        SqlFunctionCategory.USER_DEFINED_FUNCTION
+    );
+  }
+
+  public String getSetOperationName()
+  {
+    throw new UnsupportedOperationException("getSetOperationName() is not implemented.");
+  }
+
+  public String getFunctionName()
+  {
+    return StringUtils.format("THETA_SKETCH_%s", getSetOperationName());
+  }
+
 }

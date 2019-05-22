@@ -20,11 +20,12 @@
 package org.apache.druid.query.aggregation.datasketches.theta.sql;
 
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchEstimatePostAggregator;
@@ -38,16 +39,17 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class SketchEstimateOperatorConversion extends DirectOperatorConversion
+public class ThetaSketchEstimateWithErrorBoundsOperatorConversion extends DirectOperatorConversion
 {
-  private static String FUNCTION_NAME = "theta_sketch_estimate";
+  private static String FUNCTION_NAME = "theta_sketch_estimate_with_error_bounds";
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
-      .operandTypes(SqlTypeFamily.ANY)
-      .returnTypeInference(ReturnTypes.DOUBLE)
+      .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.INTEGER)
+      .returnType(SqlTypeName.OTHER)
       .build();
 
-  public SketchEstimateOperatorConversion()
+
+  public ThetaSketchEstimateWithErrorBoundsOperatorConversion()
   {
     super(SQL_FUNCTION, FUNCTION_NAME);
   }
@@ -89,11 +91,12 @@ public class SketchEstimateOperatorConversion extends DirectOperatorConversion
       return null;
     }
 
+    final int errorBoundsStdDev =  ((Number) RexLiteral.value(operands.get(1))).intValue();
+
     return new SketchEstimatePostAggregator(
         outputNamePrefix + outputNameCounter.getAndIncrement(),
         firstOperand,
-        null
+        errorBoundsStdDev
     );
   }
-
 }
