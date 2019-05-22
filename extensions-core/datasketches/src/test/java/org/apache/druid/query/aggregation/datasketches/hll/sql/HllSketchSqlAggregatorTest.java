@@ -205,11 +205,9 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
 
     final String sql = "SELECT\n"
                        + "  SUM(cnt),\n"
+                       + "  APPROX_COUNT_DISTINCT_DS_HLL(dim2),\n" // uppercase
                        + "  DS_HLL(dim2),\n" // uppercase
-                       + "  APPROX_COUNT_DISTINCT_DS_HLL(SUBSTRING(dim2, 1, 1)),\n" // on extractionFn
-                       + "  APPROX_COUNT_DISTINCT_DS_HLL(SUBSTRING(dim2, 1, 1) || 'x'),\n" // on expression
-                       + "  APPROX_COUNT_DISTINCT_DS_HLL(hllsketch_dim1, 21, 'HLL_8'),\n" // on native HllSketch column
-                       + "  APPROX_COUNT_DISTINCT_DS_HLL(hllsketch_dim1)\n" // on native HllSketch column
+                       + "  HLL_SKETCH_ESTIMATE(DS_HLL(dim2))\n" // uppercase
                        + "FROM druid.foo";
 
     // Verify results
