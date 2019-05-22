@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class ThetaSketchEstimateOperatorConversion extends DirectOperatorConversion
 {
-  private static String FUNCTION_NAME = "theta_sketch_estimate";
+  private static String FUNCTION_NAME = "THETA_SKETCH_ESTIMATE";
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
       .operandTypes(SqlTypeFamily.ANY)

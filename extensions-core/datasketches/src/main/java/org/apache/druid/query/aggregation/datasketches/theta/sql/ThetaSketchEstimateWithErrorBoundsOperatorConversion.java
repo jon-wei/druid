@@ -41,7 +41,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class ThetaSketchEstimateWithErrorBoundsOperatorConversion extends DirectOperatorConversion
 {
-  private static String FUNCTION_NAME = "theta_sketch_estimate_with_error_bounds";
+  private static String FUNCTION_NAME = "THETA_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS";
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
       .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.INTEGER)
