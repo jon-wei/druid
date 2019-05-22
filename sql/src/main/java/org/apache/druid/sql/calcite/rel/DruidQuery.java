@@ -51,6 +51,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -417,7 +418,16 @@ public class DruidQuery
 
 
       if (postAggregatorExpression != null) {
-        if (postAggregatorDirectColumnIsOk(inputRowSignature, postAggregatorExpression, postAggregatorRexNode)) {
+        if (postAggregatorComplexDirectColumnIsOk(inputRowSignature, postAggregatorExpression, postAggregatorRexNode)) {
+          // Direct column access on a COMPLEX column, expressions cannot operate on complex columns, only postaggs
+          // Wrap the column access in a field access postagg so that other postaggs can use it
+          final PostAggregator postAggregator = new FieldAccessPostAggregator(
+              outputNamePrefix + outputNameCounter.getAndIncrement(),
+              postAggregatorExpression.getDirectColumn()
+          );
+          aggregations.add(postAggregator);
+          rowOrder.add(postAggregator.getName());
+        } else if (postAggregatorDirectColumnIsOk(inputRowSignature, postAggregatorExpression, postAggregatorRexNode)) {
           // Direct column access, without any type cast as far as Druid's runtime is concerned.
           // (There might be a SQL-level type cast that we don't care about)
           rowOrder.add(postAggregatorExpression.getDirectColumn());
@@ -668,6 +678,33 @@ public class DruidQuery
     );
 
     return toExprType.equals(fromExprType);
+  }
+
+  /**
+   * Returns true if a post-aggregation "expression" can be realized as a direct field access. This is true if it's
+   * a direct column access that doesn't require an implicit cast.
+   *
+   * @param aggregateRowSignature signature of the aggregation
+   * @param expression            post-aggregation expression
+   * @param rexNode               RexNode for the post-aggregation expression
+   *
+   * @return yes or no
+   */
+  private static boolean postAggregatorComplexDirectColumnIsOk(
+      final RowSignature aggregateRowSignature,
+      final DruidExpression expression,
+      final RexNode rexNode
+  )
+  {
+    if (!expression.isDirectColumnAccess()) {
+      return false;
+    }
+
+    // Check if a cast is necessary.
+    final ValueType toValueType = aggregateRowSignature.getColumnType(expression.getDirectColumn());
+    final ValueType fromValueType = Calcites.getValueTypeForSqlTypeName(rexNode.getType().getSqlTypeName());
+
+    return toValueType == ValueType.COMPLEX && fromValueType == ValueType.COMPLEX;
   }
 
   public VirtualColumns getVirtualColumns(final boolean includeDimensions)
