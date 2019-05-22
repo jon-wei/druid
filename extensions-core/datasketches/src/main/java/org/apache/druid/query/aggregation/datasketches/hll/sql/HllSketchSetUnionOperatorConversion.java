@@ -109,6 +109,10 @@ public abstract class HllSketchSetUnionOperatorConversion implements SqlOperator
             return null;
           }
         } else if (operandCounter == 1) {
+          // both lgK and tgtHllType must be specified
+          if (lgK == null) {
+            return null;
+          }
           try {
             tgtHllType = RexLiteral.stringValue(operand);
           } catch (RuntimeException re) {
