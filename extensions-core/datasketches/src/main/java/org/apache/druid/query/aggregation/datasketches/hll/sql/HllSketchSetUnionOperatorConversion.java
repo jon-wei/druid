@@ -45,7 +45,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public abstract class HllSketchSetUnionOperatorConversion implements SqlOperatorConversion
+public class HllSketchSetUnionOperatorConversion implements SqlOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = new SqlFunction(
       "HLL_SKETCH_UNION",

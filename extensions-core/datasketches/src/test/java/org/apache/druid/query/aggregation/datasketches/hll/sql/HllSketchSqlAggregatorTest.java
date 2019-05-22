@@ -169,7 +169,12 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
             new HllSketchApproxCountDistinctSqlAggregator(),
             new HllSketchSqlAggregator()
         ),
-        ImmutableSet.of()
+        ImmutableSet.of(
+            new HllSketchEstimateOperatorConversion(),
+            new HllSketchEstimateWithErrorBoundsOperatorConversion(),
+            new HllSketchSetUnionOperatorConversion(),
+            new HllSketchToStringOperatorConversion()
+        )
     );
 
     sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(
