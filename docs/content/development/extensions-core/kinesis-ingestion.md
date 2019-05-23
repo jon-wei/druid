@@ -113,7 +113,7 @@ A sample supervisor spec is shown below:
 }
 ```
 
-## Supervisor Configuration
+## Supervisor Spec
 
 |Field|Description|Required|
 |--------|-----------|---------|
@@ -218,12 +218,35 @@ To authenticate with AWS, you must provide your AWS access key and AWS secret ke
 ```
 -Ddruid.kinesis.accessKey=123 -Ddruid.kinesis.secretKey=456
 ```
-The AWS access key ID and secret access key are used for Kinesis API requests. If this is not provided, the service will look for credentials set in environment variables, in the default profile configuration file, and from the EC2 instance profile provider (in this order).
+The AWS access key ID and secret access key are used for Kinesis API requests. If this is not provided, the service will
+look for credentials set in environment variables, in the default profile configuration file, and from the EC2 instance
+profile provider (in this order).
 
 ### Getting Supervisor Status Report
 
-`GET /druid/indexer/v1/supervisor/<supervisorId>/status` returns a snapshot report of the current state of the tasks managed by the given supervisor. This includes the latest
-sequence numbers as reported by Kinesis. Unlike the Kafka Indexing Service, stats about lag is not yet supported.
+`GET /druid/indexer/v1/supervisor/<supervisorId>/status` returns a snapshot report of the current state of the tasks 
+managed by the given supervisor. This includes the latest sequence numbers as reported by Kinesis. Unlike the Kafka
+Indexing Service, stats about lag are not yet supported.
+
+The status report also contains the supervisor's state and a list of recently thrown exceptions (whose max size can be 
+controlled using the `druid.supervisor.maxStoredExceptionEvents` config parameter).  The list of states is as
+follows:
+
+|State|Description|
+|-----|-----------|
+|UNHEALTHY_SUPERVISOR|The supervisor has encountered errors on the past `druid.supervisor.unhealthinessThreshold` iterations|
+|UNHEALTHY_TASKS|The last `druid.supervisor.taskUnhealthinessThreshold` tasks have all failed|
+|UNABLE_TO_CONNECT_TO_STREAM|The supervisor is encountering connectivity issues with Kinesis and has not successfully connected in the past|
+|LOST_CONTACT_WITH_STREAM|The supervisor is encountering connectivity issues with Kinesis but has successfully connected in the past|
+|PENDING (first iteration only)|The supervisor has been initialized and hasn't started connecting to the stream|
+|CONNECTING_TO_STREAM (first iteration only)|The supervisor is trying to connect to the stream and update partition data|
+|DISCOVERING_INITIAL_TASKS (first iteration only)|The supervisor is discovering already-running tasks|
+|CREATING_TASKS (first iteration only)|The supervisor is creating tasks and discovering state|
+|RUNNING|The supervisor has started tasks and is waiting for taskDuration to elapse|
+|SUSPENDED|The supervisor has been suspended|
+|STOPPING|The supervisor is stopping|
+
+States marked with "first iteration only" only occur on the supervisor's first iteration at startup or after suspension.
 
 ### Updating Existing Supervisors
 
