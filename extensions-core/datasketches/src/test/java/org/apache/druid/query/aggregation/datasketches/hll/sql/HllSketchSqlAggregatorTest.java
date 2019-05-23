@@ -203,11 +203,14 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
   {
     SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
 
-    final String sql = "SELECT\n"
-                       + "  SUM(cnt),\n"
-                       + "  APPROX_COUNT_DISTINCT_DS_HLL(dim2),\n" // uppercase
-                       + "  DS_HLL(dim2),\n" // uppercase
-                       + "  HLL_SKETCH_ESTIMATE(DS_HLL(dim2))\n" // uppercase
+    final String sql = "EXPLAIN PLAN FOR SELECT\n"
+                       //+ "  LOG10(ABS(SUM(cnt))),\n"
+                       //+ "  DS_HLL(dim2),\n" // uppercase
+                       //+ "  HLL_SKETCH_ESTIMATE(DS_HLL(CONCAT(dim2, 'hello'))),\n" // uppercase
+                       //+ "  HLL_SKETCH_ESTIMATE(DS_HLL(dim2)),\n" // uppercase
+                       + "  ABS(HLL_SKETCH_ESTIMATE(DS_HLL(dim2)))\n" // uppercase
+                       //+ "  ABS(HLL_SKETCH_ESTIMATE(DS_HLL(dim2)))\n" // uppercase
+                       //+ "  APPROX_COUNT_DISTINCT_DS_HLL(dim2)\n" // uppercase
                        + "FROM druid.foo";
 
     // Verify results
