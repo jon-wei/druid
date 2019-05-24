@@ -130,6 +130,29 @@ public class Expressions
     return retVal;
   }
 
+  @Nullable
+  public static List<DruidExpression> toDruidExpressionsWithPostAgg(
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final List<RexNode> rexNodes,
+      String outputNamePrefix,
+      AtomicInteger outputNameCounter
+  )
+  {
+    final List<DruidExpression> retVal = new ArrayList<>(rexNodes.size());
+    for (RexNode rexNode : rexNodes) {
+      final DruidExpression druidExpression = toDruidExpressionWithPostAggOperands(
+          plannerContext, rowSignature, rexNode, outputNamePrefix, outputNameCounter
+      );
+      if (druidExpression == null) {
+        return null;
+      }
+
+      retVal.add(druidExpression);
+    }
+    return retVal;
+  }
+
   /**
    * Translate a Calcite {@code RexNode} to a Druid expressions.
    *
@@ -237,7 +260,14 @@ public class Expressions
       if (conversion == null) {
         return null;
       } else {
-        DruidExpression expression = conversion.toDruidExpression(plannerContext, rowSignature, rexNode);
+        DruidExpression expression = conversion.toDruidExpressionWithPostAggOperands(
+            plannerContext,
+            rowSignature,
+            rexNode,
+            outputNamePrefix,
+            outputNameCounter
+        );
+
         if (expression == null) {
           PostAggregator postAggregator = conversion.toPostAggregator(
               plannerContext,
@@ -248,9 +278,11 @@ public class Expressions
           );
           if (postAggregator != null) {
             String exprName = postAggregator.getName();
-            return DruidExre(exprName, exprName);
-
+            return DruidExpression.of(null, exprName);
           }
+          return null;
+        } else {
+          return expression;
         }
       }
     } else if (kind == SqlKind.LITERAL) {

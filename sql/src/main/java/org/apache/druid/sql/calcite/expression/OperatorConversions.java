@@ -111,6 +111,33 @@ public class OperatorConversions
     return expressionFunction.apply(druidExpressions);
   }
 
+  @Nullable
+  public static DruidExpression convertCallPostAggs(
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final RexNode rexNode,
+      final Function<List<DruidExpression>, DruidExpression> expressionFunction,
+      String outputNamePrefix,
+      AtomicInteger outputNameCounter
+  )
+  {
+    final RexCall call = (RexCall) rexNode;
+
+    final List<DruidExpression> druidExpressions = Expressions.toDruidExpressionsWithPostAgg(
+        plannerContext,
+        rowSignature,
+        call.getOperands(),
+        outputNamePrefix,
+        outputNameCounter
+    );
+
+    if (druidExpressions == null) {
+      return null;
+    }
+
+    return expressionFunction.apply(druidExpressions);
+  }
+
   /**
    * Translate a Calcite {@code RexNode} to a Druid PostAggregator
    *

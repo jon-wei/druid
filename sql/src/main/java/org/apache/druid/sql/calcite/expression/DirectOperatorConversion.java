@@ -24,6 +24,9 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
+import javax.annotation.Nullable;
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class DirectOperatorConversion implements SqlOperatorConversion
 {
   private final SqlOperator operator;
@@ -53,6 +56,26 @@ public class DirectOperatorConversion implements SqlOperatorConversion
         rowSignature,
         rexNode,
         operands -> DruidExpression.fromExpression(DruidExpression.functionCall(druidFunctionName, operands))
+    );
+  }
+
+  @Nullable
+  @Override
+  public DruidExpression toDruidExpressionWithPostAggOperands(
+      PlannerContext plannerContext,
+      RowSignature rowSignature,
+      RexNode rexNode,
+      String outputNamePrefix,
+      AtomicInteger outputNameCounter
+  )
+  {
+    return OperatorConversions.convertCallPostAggs(
+        plannerContext,
+        rowSignature,
+        rexNode,
+        operands -> DruidExpression.fromExpression(DruidExpression.functionCall(druidFunctionName, operands)),
+        outputNamePrefix,
+        outputNameCounter
     );
   }
 }

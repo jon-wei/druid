@@ -58,10 +58,13 @@ public interface SqlOperatorConversion
       RexNode rexNode
   );
 
+  @Nullable
   default DruidExpression toDruidExpressionWithPostAggOperands(
       PlannerContext plannerContext,
       RowSignature rowSignature,
-      RexNode rexNode
+      RexNode rexNode,
+      String outputNamePrefix,
+      AtomicInteger outputNameCounter
   )
   {
     return toDruidExpression(plannerContext, rowSignature, rexNode);
