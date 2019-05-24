@@ -169,8 +169,10 @@ public class OperatorConversions
         throw new ISE("WTF?! PostAgg referred to nonexistent index[%d]", ref.getIndex());
       }
 
+      //return null;
+
       return new FieldAccessPostAggregator(
-          columnName,
+          outputNamePrefix + outputNameCounter.getAndIncrement(),
           columnName
       );
     } else if (rexNode instanceof RexCall) {

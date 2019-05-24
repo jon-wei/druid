@@ -414,7 +414,39 @@ public class DruidQuery
     AtomicInteger outputNameCounter = new AtomicInteger(0);
     for (final RexNode postAggregatorRexNode : project.getChildExps()) {
 
-      final PostAggregator pagg = OperatorConversions.toPostAggregator(
+      if (postAggregatorRexNode.getKind() == SqlKind.INPUT_REF) {
+        final DruidExpression postAggregatorFieldRefExpression = Expressions.toDruidExpression(
+            plannerContext,
+            inputRowSignature,
+            postAggregatorRexNode
+        );
+
+        if (postAggregatorFieldRefExpression == null) {
+          throw new CannotBuildQueryException(project, postAggregatorRexNode);
+        }
+
+        if (postAggregatorComplexDirectColumnIsOk(inputRowSignature, postAggregatorFieldRefExpression, postAggregatorRexNode)) {
+          // Direct column access on a COMPLEX column, expressions cannot operate on complex columns, only postaggs
+          // Wrap the column access in a field access postagg so that other postaggs can use it
+          final PostAggregator postAggregator = new FieldAccessPostAggregator(
+              outputNamePrefix + outputNameCounter.getAndIncrement(),
+              postAggregatorFieldRefExpression.getDirectColumn()
+          );
+          aggregations.add(postAggregator);
+          rowOrder.add(postAggregator.getName());
+          continue;
+        } else if (postAggregatorDirectColumnIsOk(inputRowSignature, postAggregatorFieldRefExpression, postAggregatorRexNode)) {
+          // Direct column access, without any type cast as far as Druid's runtime is concerned.
+          // (There might be a SQL-level type cast that we don't care about)
+          rowOrder.add(postAggregatorFieldRefExpression.getDirectColumn());
+          continue;
+        } else {
+          throw new CannotBuildQueryException(project, postAggregatorRexNode);
+
+        }
+      }
+
+      PostAggregator pagg = OperatorConversions.toPostAggregator(
           plannerContext,
           inputRowSignature,
           postAggregatorRexNode,
@@ -422,13 +454,17 @@ public class DruidQuery
           outputNameCounter
       );
 
+      //pagg = null;
+
       if (pagg != null) {
         aggregations.add(pagg);
         rowOrder.add(pagg.getName());
       } else {
+
         final List<PostAggregator> hackyPostAggList = new ArrayList<>();
 
         // Attempt to convert to PostAggregator.
+
         final DruidExpression postAggregatorExpression = Expressions.toDruidExpressionWithPostAggOperands(
             plannerContext,
             inputRowSignature,
@@ -437,6 +473,16 @@ public class DruidQuery
             outputNameCounter,
             hackyPostAggList
         );
+
+
+        /*
+        // Attempt to convert to PostAggregator.
+        final DruidExpression postAggregatorExpression = Expressions.toDruidExpression(
+            plannerContext,
+            inputRowSignature,
+            postAggregatorRexNode
+        );
+        */
 
         if (postAggregatorExpression != null) {
           for (PostAggregator postAggWithinExpression : hackyPostAggList) {
