@@ -24,9 +24,13 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
+import javax.annotation.Nullable;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class BinaryOperatorConversion implements SqlOperatorConversion
@@ -73,6 +77,43 @@ public class BinaryOperatorConversion implements SqlOperatorConversion
               )
           );
         }
+    );
+  }
+
+  @Nullable
+  @Override
+  public DruidExpression toDruidExpressionWithPostAggOperands(
+      PlannerContext plannerContext,
+      RowSignature rowSignature,
+      RexNode rexNode,
+      String outputNamePrefix,
+      AtomicInteger outputNameCounter,
+      List<PostAggregator> hackyPostAggList
+  )
+  {
+    return OperatorConversions.convertCallPostAggs(
+        plannerContext,
+        rowSignature,
+        rexNode,
+        operands -> {
+          if (operands.size() < 2) {
+            throw new ISE("WTF?! Got binary operator[%s] with %s args?", operator.getName(), operands.size());
+          }
+
+          return DruidExpression.fromExpression(
+              StringUtils.format(
+                  "(%s)",
+                  joiner.join(
+                      operands.stream()
+                              .map(DruidExpression::getExpression)
+                              .collect(Collectors.toList())
+                  )
+              )
+          );
+        },
+        outputNamePrefix,
+        outputNameCounter,
+        hackyPostAggList
     );
   }
 }

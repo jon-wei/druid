@@ -48,6 +48,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -123,6 +124,7 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
     DoublesSketchModule.registerSerde();
     for (Module mod : new DoublesSketchModule().getJacksonModules()) {
       CalciteTests.getJsonMapper().registerModule(mod);
+      TestHelper.JSON_MAPPER.registerModule(mod);
     }
 
     final QueryableIndex index = IndexBuilder.create()
@@ -159,8 +161,13 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
     final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
     final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
-        ImmutableSet.of(new DoublesSketchSqlAggregator()),
-        ImmutableSet.of()
+        ImmutableSet.of(
+            new DoublesSketchApproxQuantileSqlAggregator(),
+            new DoublesSketchSqlAggregator()
+        ),
+        ImmutableSet.of(
+            new DoublesSketchQuantileOperatorConversion()
+        )
     );
 
     sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(
@@ -182,6 +189,83 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
   {
     walker.close();
     walker = null;
+  }
+
+  @Test
+  public void testQuantileObject() throws Exception
+  {
+    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
+    final String sql = "SELECT\n"
+                       + "  SUM(cnt),\n"
+                       //+ "  APPROX_QUANTILE_DS(cnt, 0.5) + 1\n"
+                       + "  DS_GET_QUANTILE(DS_QUANTILES_SKETCH(cnt), 0.5) + 1000\n"
+                       //+ "  ABS(DS_GET_QUANTILE(DS_QUANTILES_SKETCH(cnt), 0.5))\n"
+                       + "FROM foo";
+
+    // Verify results
+    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{
+            1.0,
+            4.0,
+            6.0,
+            6.0,
+            12.0,
+            6.0,
+            5.0,
+            6.0,
+            1.0
+        }
+    );
+    Assert.assertEquals(expectedResults.size(), results.size());
+    for (int i = 0; i < expectedResults.size(); i++) {
+      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
+    }
+
+    // Verify query
+    Assert.assertEquals(
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource(CalciteTests.DATASOURCE1)
+              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+              .granularity(Granularities.ALL)
+              .virtualColumns(
+                  new ExpressionVirtualColumn(
+                      "v0",
+                      "(\"m1\" * 2)",
+                      ValueType.FLOAT,
+                      TestExprMacroTable.INSTANCE
+                  )
+              )
+              .aggregators(ImmutableList.of(
+                  new DoublesSketchAggregatorFactory("a0:agg", "m1", null),
+                  new DoublesSketchAggregatorFactory("a1:agg", "m1", 64),
+                  new DoublesSketchAggregatorFactory("a2:agg", "m1", 256),
+                  new DoublesSketchAggregatorFactory("a4:agg", "v0", null),
+                  new FilteredAggregatorFactory(
+                      new DoublesSketchAggregatorFactory("a5:agg", "m1", null),
+                      new SelectorDimFilter("dim1", "abc", null)
+                  ),
+                  new FilteredAggregatorFactory(
+                      new DoublesSketchAggregatorFactory("a6:agg", "m1", null),
+                      new NotDimFilter(new SelectorDimFilter("dim1", "abc", null))
+                  ),
+                  new DoublesSketchAggregatorFactory("a8:agg", "cnt", null)
+              ))
+              .postAggregators(
+                  new DoublesSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.01f),
+                  new DoublesSketchToQuantilePostAggregator("a1", makeFieldAccessPostAgg("a1:agg"), 0.50f),
+                  new DoublesSketchToQuantilePostAggregator("a2", makeFieldAccessPostAgg("a2:agg"), 0.98f),
+                  new DoublesSketchToQuantilePostAggregator("a3", makeFieldAccessPostAgg("a0:agg"), 0.99f),
+                  new DoublesSketchToQuantilePostAggregator("a4", makeFieldAccessPostAgg("a4:agg"), 0.97f),
+                  new DoublesSketchToQuantilePostAggregator("a5", makeFieldAccessPostAgg("a5:agg"), 0.99f),
+                  new DoublesSketchToQuantilePostAggregator("a6", makeFieldAccessPostAgg("a6:agg"), 0.999f),
+                  new DoublesSketchToQuantilePostAggregator("a7", makeFieldAccessPostAgg("a5:agg"), 0.999f),
+                  new DoublesSketchToQuantilePostAggregator("a8", makeFieldAccessPostAgg("a8:agg"), 0.50f)
+              )
+              .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
+              .build(),
+        Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
+    );
   }
 
   @Test
