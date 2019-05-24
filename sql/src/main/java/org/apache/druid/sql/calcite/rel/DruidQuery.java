@@ -128,8 +128,6 @@ public class DruidQuery
 
   private final RowSignature outputRowSignature;
 
-  private final List<PostAggregator> hackyPostAggList;
-
   public DruidQuery(
       final PartialDruidQuery partialQuery,
       final DataSource dataSource,
@@ -170,8 +168,6 @@ public class DruidQuery
 
     this.limitSpec = computeLimitSpec(partialQuery, sortingInputRowSignature);
     this.query = computeQuery();
-
-    this.hackyPostAggList = new ArrayList<>();
   }
 
   @Nullable
@@ -414,7 +410,7 @@ public class DruidQuery
     AtomicInteger outputNameCounter = new AtomicInteger(0);
     for (final RexNode postAggregatorRexNode : project.getChildExps()) {
 
-      if (postAggregatorRexNode.getKind() == SqlKind.INPUT_REF) {
+      if (postAggregatorRexNode.getKind() == SqlKind.INPUT_REF || postAggregatorRexNode.getKind() == SqlKind.LITERAL) {
         final DruidExpression postAggregatorFieldRefExpression = Expressions.toDruidExpression(
             plannerContext,
             inputRowSignature,
