@@ -413,7 +413,9 @@ public class DruidQuery
       final DruidExpression postAggregatorExpression = Expressions.toDruidExpression(
           plannerContext,
           inputRowSignature,
-          postAggregatorRexNode
+          postAggregatorRexNode,
+          outputNamePrefix,
+          outputNameCounter
       );
 
 

@@ -39,6 +39,7 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.TimeFormatExtractionFn;
@@ -65,6 +66,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A collection of functions for translating from Calcite expressions into Druid objects.
@@ -166,6 +168,90 @@ public class Expressions
         return null;
       } else {
         return conversion.toDruidExpression(plannerContext, rowSignature, rexNode);
+      }
+    } else if (kind == SqlKind.LITERAL) {
+      // Translate literal.
+      if (RexLiteral.isNullLiteral(rexNode)) {
+        return DruidExpression.fromExpression(DruidExpression.nullLiteral());
+      } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
+        return DruidExpression.fromExpression(DruidExpression.numberLiteral((Number) RexLiteral.value(rexNode)));
+      } else if (SqlTypeFamily.INTERVAL_DAY_TIME == sqlTypeName.getFamily()) {
+        // Calcite represents DAY-TIME intervals in milliseconds.
+        final long milliseconds = ((Number) RexLiteral.value(rexNode)).longValue();
+        return DruidExpression.fromExpression(DruidExpression.numberLiteral(milliseconds));
+      } else if (SqlTypeFamily.INTERVAL_YEAR_MONTH == sqlTypeName.getFamily()) {
+        // Calcite represents YEAR-MONTH intervals in months.
+        final long months = ((Number) RexLiteral.value(rexNode)).longValue();
+        return DruidExpression.fromExpression(DruidExpression.numberLiteral(months));
+      } else if (SqlTypeName.STRING_TYPES.contains(sqlTypeName)) {
+        return DruidExpression.fromExpression(DruidExpression.stringLiteral(RexLiteral.stringValue(rexNode)));
+      } else if (SqlTypeName.TIMESTAMP == sqlTypeName || SqlTypeName.DATE == sqlTypeName) {
+        if (RexLiteral.isNullLiteral(rexNode)) {
+          return DruidExpression.fromExpression(DruidExpression.nullLiteral());
+        } else {
+          return DruidExpression.fromExpression(
+              DruidExpression.numberLiteral(
+                  Calcites.calciteDateTimeLiteralToJoda(rexNode, plannerContext.getTimeZone()).getMillis()
+              )
+          );
+        }
+      } else if (SqlTypeName.BOOLEAN == sqlTypeName) {
+        return DruidExpression.fromExpression(DruidExpression.numberLiteral(RexLiteral.booleanValue(rexNode) ? 1 : 0));
+      } else {
+        // Can't translate other literals.
+        return null;
+      }
+    } else {
+      // Can't translate.
+      return null;
+    }
+  }
+
+  @Nullable
+  public static DruidExpression toDruidExpressionWithPostAggOperands(
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final RexNode rexNode,
+      String outputNamePrefix,
+      AtomicInteger outputNameCounter
+  )
+  {
+    final SqlKind kind = rexNode.getKind();
+    final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
+
+    if (kind == SqlKind.INPUT_REF) {
+      // Translate field references.
+      final RexInputRef ref = (RexInputRef) rexNode;
+      final String columnName = rowSignature.getRowOrder().get(ref.getIndex());
+      if (columnName == null) {
+        throw new ISE("WTF?! Expression referred to nonexistent index[%d]", ref.getIndex());
+      }
+
+      return DruidExpression.fromColumn(columnName);
+    } else if (rexNode instanceof RexCall) {
+      final SqlOperator operator = ((RexCall) rexNode).getOperator();
+
+      final SqlOperatorConversion conversion = plannerContext.getOperatorTable()
+                                                             .lookupOperatorConversion(operator);
+
+      if (conversion == null) {
+        return null;
+      } else {
+        DruidExpression expression = conversion.toDruidExpression(plannerContext, rowSignature, rexNode);
+        if (expression == null) {
+          PostAggregator postAggregator = conversion.toPostAggregator(
+              plannerContext,
+              rowSignature,
+              rexNode,
+              outputNamePrefix,
+              outputNameCounter
+          );
+          if (postAggregator != null) {
+            String exprName = postAggregator.getName();
+            return DruidExre(exprName, exprName);
+
+          }
+        }
       }
     } else if (kind == SqlKind.LITERAL) {
       // Translate literal.
