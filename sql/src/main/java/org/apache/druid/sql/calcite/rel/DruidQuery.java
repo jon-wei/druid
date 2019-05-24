@@ -437,7 +437,17 @@ public class DruidQuery
           rowOrder.add(postAggregatorFieldRefExpression.getDirectColumn());
           continue;
         } else {
-          throw new CannotBuildQueryException(project, postAggregatorRexNode);
+          final String postAggregatorName = outputNamePrefix + outputNameCounter.getAndIncrement();
+          final PostAggregator postAggregator = new ExpressionPostAggregator(
+              postAggregatorName,
+              postAggregatorFieldRefExpression.getExpression(),
+              null,
+              plannerContext.getExprMacroTable()
+          );
+          aggregations.add(postAggregator);
+          rowOrder.add(postAggregator.getName());
+          continue;
+          //throw new CannotBuildQueryException(project, postAggregatorRexNode);
 
         }
       }
