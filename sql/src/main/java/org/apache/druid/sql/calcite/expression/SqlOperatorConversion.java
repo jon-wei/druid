@@ -29,6 +29,7 @@ import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.Null;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public interface SqlOperatorConversion
@@ -64,7 +65,9 @@ public interface SqlOperatorConversion
       RowSignature rowSignature,
       RexNode rexNode,
       String outputNamePrefix,
-      AtomicInteger outputNameCounter
+      AtomicInteger outputNameCounter,
+      List<PostAggregator> hackyPostAggList
+
   )
   {
     return toDruidExpression(plannerContext, rowSignature, rexNode);

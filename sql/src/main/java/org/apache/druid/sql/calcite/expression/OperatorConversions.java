@@ -118,7 +118,8 @@ public class OperatorConversions
       final RexNode rexNode,
       final Function<List<DruidExpression>, DruidExpression> expressionFunction,
       String outputNamePrefix,
-      AtomicInteger outputNameCounter
+      AtomicInteger outputNameCounter,
+      List<PostAggregator> hackyPostAggList
   )
   {
     final RexCall call = (RexCall) rexNode;
@@ -128,7 +129,8 @@ public class OperatorConversions
         rowSignature,
         call.getOperands(),
         outputNamePrefix,
-        outputNameCounter
+        outputNameCounter,
+        hackyPostAggList
     );
 
     if (druidExpressions == null) {

@@ -207,9 +207,8 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                        //+ "  LOG10(ABS(SUM(cnt))),\n"
                        //+ "  DS_HLL(dim2),\n" // uppercase
                        //+ "  HLL_SKETCH_ESTIMATE(DS_HLL(CONCAT(dim2, 'hello'))),\n" // uppercase
-                       //+ "  HLL_SKETCH_ESTIMATE(DS_HLL(dim2)),\n" // uppercase
-                       + "  LENGTH('Kansas ')\n"
-                       //+ "  ABS(HLL_SKETCH_ESTIMATE(DS_HLL(dim2)))\n" // uppercase
+                       + "  HLL_SKETCH_ESTIMATE(DS_HLL(dim2)),\n" // uppercase
+                       + "  ABS(HLL_SKETCH_ESTIMATE(DS_HLL(dim2)))\n" // uppercase
                        //+ "  ABS(HLL_SKETCH_ESTIMATE(DS_HLL(dim2)))\n" // uppercase
                        //+ "  APPROX_COUNT_DISTINCT_DS_HLL(dim2)\n" // uppercase
                        + "FROM druid.foo";

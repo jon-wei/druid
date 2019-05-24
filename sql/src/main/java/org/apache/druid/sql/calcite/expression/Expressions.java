@@ -136,13 +136,14 @@ public class Expressions
       final RowSignature rowSignature,
       final List<RexNode> rexNodes,
       String outputNamePrefix,
-      AtomicInteger outputNameCounter
+      AtomicInteger outputNameCounter,
+      List<PostAggregator> hackyPostAggList
   )
   {
     final List<DruidExpression> retVal = new ArrayList<>(rexNodes.size());
     for (RexNode rexNode : rexNodes) {
       final DruidExpression druidExpression = toDruidExpressionWithPostAggOperands(
-          plannerContext, rowSignature, rexNode, outputNamePrefix, outputNameCounter
+          plannerContext, rowSignature, rexNode, outputNamePrefix, outputNameCounter, hackyPostAggList
       );
       if (druidExpression == null) {
         return null;
@@ -236,7 +237,8 @@ public class Expressions
       final RowSignature rowSignature,
       final RexNode rexNode,
       String outputNamePrefix,
-      AtomicInteger outputNameCounter
+      AtomicInteger outputNameCounter,
+      List<PostAggregator> hackyPostAggList
   )
   {
     final SqlKind kind = rexNode.getKind();
@@ -260,7 +262,8 @@ public class Expressions
       if (conversion == null) {
         return null;
       } else {
-        DruidExpression expression = conversion.toDruidExpressionWithPostAggOperands(
+        // try making postagg first
+        PostAggregator postAggregator = conversion.toPostAggregator(
             plannerContext,
             rowSignature,
             rexNode,
@@ -268,21 +271,25 @@ public class Expressions
             outputNameCounter
         );
 
-        if (expression == null) {
-          PostAggregator postAggregator = conversion.toPostAggregator(
+        if (postAggregator != null) {
+          hackyPostAggList.add(postAggregator);
+          String exprName = postAggregator.getName();
+          return DruidExpression.of(SimpleExtraction.of(exprName, null), exprName);
+        } else {
+          DruidExpression expression = conversion.toDruidExpressionWithPostAggOperands(
               plannerContext,
               rowSignature,
               rexNode,
               outputNamePrefix,
-              outputNameCounter
+              outputNameCounter,
+              hackyPostAggList
           );
-          if (postAggregator != null) {
-            String exprName = postAggregator.getName();
-            return DruidExpression.of(null, exprName);
+
+          if (expression == null) {
+            return null;
+          } else {
+            return expression;
           }
-          return null;
-        } else {
-          return expression;
         }
       }
     } else if (kind == SqlKind.LITERAL) {

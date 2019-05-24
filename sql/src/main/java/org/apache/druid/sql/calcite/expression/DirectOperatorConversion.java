@@ -21,10 +21,12 @@ package org.apache.druid.sql.calcite.expression;
 
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class DirectOperatorConversion implements SqlOperatorConversion
@@ -66,7 +68,8 @@ public class DirectOperatorConversion implements SqlOperatorConversion
       RowSignature rowSignature,
       RexNode rexNode,
       String outputNamePrefix,
-      AtomicInteger outputNameCounter
+      AtomicInteger outputNameCounter,
+      List<PostAggregator> hackyPostAggList
   )
   {
     return OperatorConversions.convertCallPostAggs(
@@ -75,7 +78,8 @@ public class DirectOperatorConversion implements SqlOperatorConversion
         rexNode,
         operands -> DruidExpression.fromExpression(DruidExpression.functionCall(druidFunctionName, operands)),
         outputNamePrefix,
-        outputNameCounter
+        outputNameCounter,
+        hackyPostAggList
     );
   }
 }
