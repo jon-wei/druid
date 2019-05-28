@@ -204,7 +204,6 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
     SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
 
     final String sql = "SELECT\n"
-                       + "  LOG10(ABS(SUM(cnt))) + 2000,\n"
                        + "  DS_HLL(dim2),\n" // uppercase
                        + "  HLL_SKETCH_ESTIMATE(DS_HLL(CONCAT(dim2, 'hello'))),\n" // uppercase
                        + "  HLL_SKETCH_ESTIMATE(DS_HLL(dim2)) + 1,\n" // uppercase
