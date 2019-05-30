@@ -256,8 +256,8 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
   {
     SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
 
-    final String sql = "SELECT DS_HLL(dim2) as y FROM druid.foo GROUP BY dim1 ORDER BY HLL_SKETCH_ESTIMATE(DS_HLL(dim2))";
-    final String sql2 = StringUtils.format("SELECT ABS(HLL_SKETCH_ESTIMATE(y)) from (%s)", sql);
+    final String sql = "SELECT DS_HLL(dim2) as y FROM druid.foo ORDER BY HLL_SKETCH_ESTIMATE(DS_HLL(dim2)) DESC LIMIT 10";
+    final String sql2 = StringUtils.format("SELECT HLL_SKETCH_TO_STRING(y) from (%s)", sql);
 
     // Verify results
     final List<Object[]> results = sqlLifecycle.runSimple(sql2, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
