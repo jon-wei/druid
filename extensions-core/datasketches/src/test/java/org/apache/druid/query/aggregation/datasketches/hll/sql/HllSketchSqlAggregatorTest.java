@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Druids;
@@ -198,6 +199,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
     walker = null;
   }
 
+
   @Test
   public void testtHllSketchObject() throws Exception
   {
@@ -219,6 +221,46 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
 
     // Verify results
     final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> expectedResults;
+
+    if (NullHandling.replaceWithDefault()) {
+      expectedResults = ImmutableList.of(
+          new Object[]{
+              6L,
+              2L,
+              2L,
+              1L,
+              2L,
+              5L,
+              5L
+          }
+      );
+    } else {
+      expectedResults = ImmutableList.of(
+          new Object[]{
+              6L,
+              2L,
+              2L,
+              1L,
+              1L,
+              5L,
+              5L
+          }
+      );
+    }
+  }
+
+
+  @Test
+  public void testtHllSketchObject2() throws Exception
+  {
+    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
+
+    final String sql = "SELECT DS_HLL(dim2) as y FROM druid.foo GROUP BY dim1 ORDER BY HLL_SKETCH_ESTIMATE(DS_HLL(dim2))";
+    final String sql2 = StringUtils.format("SELECT ABS(HLL_SKETCH_ESTIMATE(y)) from (%s)", sql);
+
+    // Verify results
+    final List<Object[]> results = sqlLifecycle.runSimple(sql2, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
     final List<Object[]> expectedResults;
 
     if (NullHandling.replaceWithDefault()) {

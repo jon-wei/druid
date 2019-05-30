@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 
 import javax.annotation.Nullable;
@@ -78,7 +79,8 @@ public class HllSketchToEstimatePostAggregator implements PostAggregator
   @Override
   public Comparator<Double> getComparator()
   {
-    throw new IAE("Comparing arrays of estimates and error bounds is not supported");
+    return ArithmeticPostAggregator.DEFAULT_COMPARATOR;
+    //throw new IAE("Comparing arrays of estimates and error bounds is not supported");
   }
 
   @Override
