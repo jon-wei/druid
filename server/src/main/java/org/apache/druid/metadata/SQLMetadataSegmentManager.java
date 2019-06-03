@@ -24,6 +24,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.guice.ManageLifecycle;
@@ -65,6 +66,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -103,11 +105,10 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   private final SQLMetadataConnector connector;
 
   // Volatile since this reference is reassigned in "poll" and then read from in other threads.
-  // Starts null so we can differentiate "never polled" (null) from "polled, but empty" (empty map).
   // Note that this is not simply a lazy-initialized variable: it starts off as null, and may transition between
   // null and nonnull multiple times as stop() and start() are called.
   @Nullable
-  private volatile ConcurrentHashMap<String, DruidDataSource> dataSources = null;
+  private volatile DataSourcesSnapshot dataSourcesSnapshot = null;
 
   /**
    * The number of times this SQLMetadataSegmentManager was started.
@@ -206,8 +207,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       if (!isStarted()) {
         return;
       }
-
-      dataSources = null;
+      dataSourcesSnapshot = null;
       currentStartOrder = -1;
       exec.shutdownNow();
       exec = null;
@@ -449,8 +449,6 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           ).bind("dataSource", dataSource).execute()
       );
 
-      Optional.ofNullable(dataSources).ifPresent(m -> m.remove(dataSource));
-
       if (removed == 0) {
         return false;
       }
@@ -467,29 +465,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   public boolean removeSegment(String dataSourceName, final String segmentId)
   {
     try {
-      final boolean removed = removeSegmentFromTable(segmentId);
-
-      // Call iteratePossibleParsingsWithDataSource() outside of dataSources.computeIfPresent() because the former is a
-      // potentially expensive operation, while lambda to be passed into computeIfPresent() should preferably run fast.
-      List<SegmentId> possibleSegmentIds = SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId);
-      Optional.ofNullable(dataSources).ifPresent(
-          m ->
-              m.computeIfPresent(
-                  dataSourceName,
-                  (dsName, dataSource) -> {
-                    for (SegmentId possibleSegmentId : possibleSegmentIds) {
-                      if (dataSource.removeSegment(possibleSegmentId) != null) {
-                        break;
-                      }
-                    }
-                    // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
-                    //noinspection ReturnOfNull
-                    return dataSource.isEmpty() ? null : dataSource;
-                  }
-              )
-      );
-
-      return removed;
+      return removeSegmentFromTable(segmentId);
     }
     catch (Exception e) {
       log.error(e, e.toString());
@@ -501,20 +477,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   public boolean removeSegment(SegmentId segmentId)
   {
     try {
-      final boolean removed = removeSegmentFromTable(segmentId.toString());
-      Optional.ofNullable(dataSources).ifPresent(
-          m ->
-              m.computeIfPresent(
-                  segmentId.getDataSource(),
-                  (dsName, dataSource) -> {
-                    dataSource.removeSegment(segmentId);
-                    // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
-                    //noinspection ReturnOfNull
-                    return dataSource.isEmpty() ? null : dataSource;
-                  }
-              )
-      );
-      return removed;
+      return removeSegmentFromTable(segmentId.toString());
     }
     catch (Exception e) {
       log.error(e, e.toString());
@@ -607,37 +570,47 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @Nullable
   public ImmutableDruidDataSource getDataSource(String dataSourceName)
   {
-    final DruidDataSource dataSource = Optional.ofNullable(dataSources).map(m -> m.get(dataSourceName)).orElse(null);
-    return dataSource == null ? null : dataSource.toImmutableDruidDataSource();
+    final ImmutableDruidDataSource dataSource = Optional.ofNullable(dataSourcesSnapshot)
+                                                        .map(m -> m.getDataSourcesMap().get(dataSourceName))
+                                                        .orElse(null);
+    return dataSource == null ? null : dataSource;
   }
 
   @Override
   @Nullable
   public Collection<ImmutableDruidDataSource> getDataSources()
   {
-    return Optional.ofNullable(dataSources)
-                   .map(m ->
-                            m.values()
-                             .stream()
-                             .map(DruidDataSource::toImmutableDruidDataSource)
-                             .collect(Collectors.toList())
-                   )
-                   .orElse(null);
+    return Optional.ofNullable(dataSourcesSnapshot).map(m -> m.getDataSources()).orElse(null);
   }
 
   @Override
   @Nullable
   public Iterable<DataSegment> iterateAllSegments()
   {
-    final ConcurrentHashMap<String, DruidDataSource> dataSourcesSnapshot = dataSources;
-    if (dataSourcesSnapshot == null) {
+    final Collection<ImmutableDruidDataSource> dataSources = Optional.ofNullable(dataSourcesSnapshot)
+                                                                     .map(m -> m.getDataSources())
+                                                                     .orElse(null);
+    if (dataSources == null) {
       return null;
     }
 
-    return () -> dataSourcesSnapshot.values()
-                                    .stream()
-                                    .flatMap(dataSource -> dataSource.getSegments().stream())
-                                    .iterator();
+    return () -> dataSources.stream()
+                            .flatMap(dataSource -> dataSource.getSegments().stream())
+                            .iterator();
+  }
+
+  @Override
+  @Nullable
+  public Set<SegmentId> getOvershadowedSegments()
+  {
+    return Optional.ofNullable(dataSourcesSnapshot).map(m -> m.getOvershadowedSegments()).orElse(null);
+  }
+
+  @Nullable
+  @Override
+  public DataSourcesSnapshot getDataSourcesSnapshot()
+  {
+    return dataSourcesSnapshot;
   }
 
   @Override
@@ -742,14 +715,29 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
               .addSegmentIfAbsent(segment);
         });
 
-    // Replace "dataSources" atomically.
-    dataSources = newDataSources;
+    /**
+     * dataSourcesSnapshot is updated only here, please note that if datasources or segments are enabled or disabled
+     * outside of poll, the dataSourcesSnapshot can become invalid until the next poll cycle.
+     * {@link DataSourcesSnapshot} computes the overshadowed segments, which makes it an expensive operation if the
+     * snapshot is invalidated on each segment removal, especially if a user issues a lot of single segment remove
+     * calls in rapid succession. So the snapshot update is not done outside of poll at this time.
+     * Updates outside of poll(), were primarily for the user experience, so users would immediately see the effect of
+     * a segment remove call reflected in MetadataResource API calls. These updates outside of schecduled poll may be
+     * added back in removeDataSource and removeSegment methods after the on-demand polling changes from
+     * https://github.com/apache/incubator-druid/pull/7653 are in.
+     */
+    dataSourcesSnapshot = new DataSourcesSnapshot(newDataSources.entrySet()
+                                                                .stream()
+                                                                .collect(Collectors.toMap(
+                                                                    e -> e.getKey(),
+                                                                    e -> e.getValue().toImmutableDruidDataSource()
+                                                                )));
   }
 
   /**
    * For the garbage collector in Java, it's better to keep new objects short-living, but once they are old enough
    * (i. e. promoted to old generation), try to keep them alive. In {@link #poll()}, we fetch and deserialize all
-   * existing segments each time, and then replace them in {@link #dataSources}. This method allows to use already
+   * existing segments each time, and then replace them in {@link #dataSourcesSnapshot}. This method allows to use already
    * existing (old) segments when possible, effectively interning them a-la {@link String#intern} or {@link
    * com.google.common.collect.Interner}, aiming to make the majority of {@link DataSegment} objects garbage soon after
    * they are deserialized and to die in young generation. It allows to avoid fragmentation of the old generation and
@@ -757,7 +745,9 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
    */
   private DataSegment replaceWithExistingSegmentIfPresent(DataSegment segment)
   {
-    DruidDataSource dataSource = Optional.ofNullable(dataSources).map(m -> m.get(segment.getDataSource())).orElse(null);
+    ImmutableDruidDataSource dataSource = Optional.ofNullable(dataSourcesSnapshot)
+                                                  .map(m -> m.getDataSourcesMap().get(segment.getDataSource()))
+                                                  .orElse(null);
     if (dataSource == null) {
       return segment;
     }
