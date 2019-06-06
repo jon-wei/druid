@@ -19,9 +19,11 @@
 
 package org.apache.druid.math.expr;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -29,19 +31,54 @@ import org.joda.time.format.DateTimeFormat;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
+ * Base interface describing the mechanism used to evaluate a {@link FunctionExpr}
+ *
  * Do NOT remove "unused" members in this class. They are used by generated Antlr
  */
 @SuppressWarnings("unused")
 interface Function
 {
+  /**
+   * Name of the function.
+   */
   String name();
 
+  /**
+   * Evaluate the function, given a list of arguments and a set of bindings to provide values for {@link IdentifierExpr}.
+   */
   ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings);
 
-  abstract class SingleParam implements Function
+  /**
+   * Given a list of arguments to this {@link Function}, get the set of arguments that must evaluate to a scalar value
+   */
+  default Set<Expr> getScalarInputs(List<Expr> args)
+  {
+    return ImmutableSet.copyOf(args);
+  }
+
+  /**
+   * Given a list of arguments to this {@link Function}, get the set of arguments that must evaluate to an array
+   * value
+   */
+  default Set<Expr> getArrayInputs(List<Expr> args)
+  {
+    return Collections.emptySet();
+  }
+
+  /**
+   * Base class for a single variable input {@link Function} implementation
+   */
+  abstract class UnivariateFunction implements Function
   {
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
@@ -56,7 +93,10 @@ interface Function
     protected abstract ExprEval eval(ExprEval param);
   }
 
-  abstract class DoubleParam implements Function
+  /**
+   * Base class for a 2 variable input {@link Function} implementation
+   */
+  abstract class BivariateFunction implements Function
   {
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
@@ -72,7 +112,11 @@ interface Function
     protected abstract ExprEval eval(ExprEval x, ExprEval y);
   }
 
-  abstract class SingleParamMath extends SingleParam
+  /**
+   * Base class for a single variable input mathematical {@link Function}, with specialized 'eval' implementations that
+   * that operate on primitive number types
+   */
+  abstract class UnivariateMathFunction extends UnivariateFunction
   {
     @Override
     protected final ExprEval eval(ExprEval param)
@@ -99,7 +143,11 @@ interface Function
     }
   }
 
-  abstract class DoubleParamMath extends DoubleParam
+  /**
+   * Base class for a 2 variable input mathematical {@link Function}, with specialized 'eval' implementations that
+   * operate on primitive number types
+   */
+  abstract class BivariateMathFunction extends BivariateFunction
   {
     @Override
     protected final ExprEval eval(ExprEval x, ExprEval y)
@@ -125,7 +173,11 @@ interface Function
     }
   }
 
-  abstract class DoubleParamString extends DoubleParam
+  /**
+   * Base class for a 2 variable input {@link Function} whose first argument is a {@link ExprType#STRING} and second
+   * argument is {@link ExprType#LONG}
+   */
+  abstract class StringLongFunction extends BivariateFunction
   {
     @Override
     protected final ExprEval eval(ExprEval x, ExprEval y)
@@ -141,6 +193,90 @@ interface Function
 
     protected abstract ExprEval eval(String x, int y);
   }
+
+  /**
+   * {@link Function} that takes 1 array operand and 1 scalar operand
+   */
+  abstract class ArrayScalarFunction implements Function
+  {
+    void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 argument", name());
+      }
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      validateArguments(args);
+      return ImmutableSet.of(args.get(1));
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.of(args.get(0));
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      validateArguments(args);
+      final ExprEval arrayExpr = args.get(0).eval(bindings);
+      final ExprEval scalarExpr = args.get(1).eval(bindings);
+      if (arrayExpr.asArray() == null) {
+        return ExprEval.of(null);
+      }
+      return doApply(arrayExpr, scalarExpr);
+    }
+
+    abstract ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr);
+  }
+
+  /**
+   * {@link Function} that takes 2 array operands
+   */
+  abstract class ArraysFunction implements Function
+  {
+    void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 argument", name());
+      }
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      return Collections.emptySet();
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      validateArguments(args);
+      return ImmutableSet.copyOf(args);
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      validateArguments(args);
+      final ExprEval arrayExpr1 = args.get(0).eval(bindings);
+      final ExprEval arrayExpr2 = args.get(1).eval(bindings);
+
+      if (arrayExpr1.asArray() == null || arrayExpr2.asArray() == null) {
+        return ExprEval.of(null);
+      }
+
+      return doApply(arrayExpr1, arrayExpr2);
+    }
+
+    abstract ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr);
+  }
+
+  // ------------------------------ implementations ------------------------------
 
   class ParseLong implements Function
   {
@@ -197,7 +333,7 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      if (args.size() >= 1) {
+      if (args.size() > 0) {
         throw new IAE("Function[%s] needs 0 argument", name());
       }
 
@@ -205,7 +341,7 @@ interface Function
     }
   }
 
-  class Abs extends SingleParamMath
+  class Abs extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -226,7 +362,7 @@ interface Function
     }
   }
 
-  class Acos extends SingleParamMath
+  class Acos extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -241,7 +377,7 @@ interface Function
     }
   }
 
-  class Asin extends SingleParamMath
+  class Asin extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -256,7 +392,7 @@ interface Function
     }
   }
 
-  class Atan extends SingleParamMath
+  class Atan extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -271,7 +407,7 @@ interface Function
     }
   }
 
-  class Cbrt extends SingleParamMath
+  class Cbrt extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -286,7 +422,7 @@ interface Function
     }
   }
 
-  class Ceil extends SingleParamMath
+  class Ceil extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -301,7 +437,7 @@ interface Function
     }
   }
 
-  class Cos extends SingleParamMath
+  class Cos extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -316,7 +452,7 @@ interface Function
     }
   }
 
-  class Cosh extends SingleParamMath
+  class Cosh extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -331,7 +467,7 @@ interface Function
     }
   }
 
-  class Cot extends SingleParamMath
+  class Cot extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -346,7 +482,7 @@ interface Function
     }
   }
 
-  class Div extends DoubleParamMath
+  class Div extends BivariateMathFunction
   {
     @Override
     public String name()
@@ -367,7 +503,7 @@ interface Function
     }
   }
 
-  class Exp extends SingleParamMath
+  class Exp extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -382,7 +518,7 @@ interface Function
     }
   }
 
-  class Expm1 extends SingleParamMath
+  class Expm1 extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -397,7 +533,7 @@ interface Function
     }
   }
 
-  class Floor extends SingleParamMath
+  class Floor extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -412,7 +548,7 @@ interface Function
     }
   }
 
-  class GetExponent extends SingleParamMath
+  class GetExponent extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -427,7 +563,7 @@ interface Function
     }
   }
 
-  class Log extends SingleParamMath
+  class Log extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -442,7 +578,7 @@ interface Function
     }
   }
 
-  class Log10 extends SingleParamMath
+  class Log10 extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -457,7 +593,7 @@ interface Function
     }
   }
 
-  class Log1p extends SingleParamMath
+  class Log1p extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -472,7 +608,7 @@ interface Function
     }
   }
 
-  class NextUp extends SingleParamMath
+  class NextUp extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -487,7 +623,7 @@ interface Function
     }
   }
 
-  class Rint extends SingleParamMath
+  class Rint extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -550,7 +686,7 @@ interface Function
     }
   }
 
-  class Signum extends SingleParamMath
+  class Signum extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -565,7 +701,7 @@ interface Function
     }
   }
 
-  class Sin extends SingleParamMath
+  class Sin extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -580,7 +716,7 @@ interface Function
     }
   }
 
-  class Sinh extends SingleParamMath
+  class Sinh extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -595,7 +731,7 @@ interface Function
     }
   }
 
-  class Sqrt extends SingleParamMath
+  class Sqrt extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -610,7 +746,7 @@ interface Function
     }
   }
 
-  class Tan extends SingleParamMath
+  class Tan extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -625,7 +761,7 @@ interface Function
     }
   }
 
-  class Tanh extends SingleParamMath
+  class Tanh extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -640,7 +776,7 @@ interface Function
     }
   }
 
-  class ToDegrees extends SingleParamMath
+  class ToDegrees extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -655,7 +791,7 @@ interface Function
     }
   }
 
-  class ToRadians extends SingleParamMath
+  class ToRadians extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -670,7 +806,7 @@ interface Function
     }
   }
 
-  class Ulp extends SingleParamMath
+  class Ulp extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -685,7 +821,7 @@ interface Function
     }
   }
 
-  class Atan2 extends DoubleParamMath
+  class Atan2 extends BivariateMathFunction
   {
     @Override
     public String name()
@@ -700,7 +836,7 @@ interface Function
     }
   }
 
-  class CopySign extends DoubleParamMath
+  class CopySign extends BivariateMathFunction
   {
     @Override
     public String name()
@@ -715,7 +851,7 @@ interface Function
     }
   }
 
-  class Hypot extends DoubleParamMath
+  class Hypot extends BivariateMathFunction
   {
     @Override
     public String name()
@@ -730,7 +866,7 @@ interface Function
     }
   }
 
-  class Remainder extends DoubleParamMath
+  class Remainder extends BivariateMathFunction
   {
     @Override
     public String name()
@@ -745,7 +881,7 @@ interface Function
     }
   }
 
-  class Max extends DoubleParamMath
+  class Max extends BivariateMathFunction
   {
     @Override
     public String name()
@@ -766,7 +902,7 @@ interface Function
     }
   }
 
-  class Min extends DoubleParamMath
+  class Min extends BivariateMathFunction
   {
     @Override
     public String name()
@@ -787,7 +923,7 @@ interface Function
     }
   }
 
-  class NextAfter extends DoubleParamMath
+  class NextAfter extends BivariateMathFunction
   {
     @Override
     public String name()
@@ -802,7 +938,7 @@ interface Function
     }
   }
 
-  class Pow extends DoubleParamMath
+  class Pow extends BivariateMathFunction
   {
     @Override
     public String name()
@@ -817,7 +953,7 @@ interface Function
     }
   }
 
-  class Scalb extends DoubleParam
+  class Scalb extends BivariateFunction
   {
     @Override
     public String name()
@@ -916,7 +1052,7 @@ interface Function
     }
   }
 
-  class CastFunc extends DoubleParam
+  class CastFunc extends BivariateFunction
   {
     @Override
     public String name()
@@ -938,6 +1074,42 @@ interface Function
         throw new IAE("invalid type '%s'", y.asString());
       }
       return x.castTo(castTo);
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      if (args.get(1).isLiteral()) {
+        ExprType castTo = ExprType.valueOf(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()));
+        switch (castTo) {
+          case LONG_ARRAY:
+          case DOUBLE_ARRAY:
+          case STRING_ARRAY:
+            return Collections.emptySet();
+          default:
+            return ImmutableSet.of(args.get(0));
+        }
+      }
+      // unknown cast, can't safely assume either way
+      return Collections.emptySet();
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      if (args.get(1).isLiteral()) {
+        ExprType castTo = ExprType.valueOf(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()));
+        switch (castTo) {
+          case LONG:
+          case DOUBLE:
+          case STRING:
+            return Collections.emptySet();
+          default:
+            return ImmutableSet.of(args.get(0));
+        }
+      }
+      // unknown cast, can't safely assume either way
+      return Collections.emptySet();
     }
   }
 
@@ -1178,7 +1350,7 @@ interface Function
     }
   }
 
-  class RightFunc extends DoubleParamString
+  class RightFunc extends StringLongFunction
   {
     @Override
     public String name()
@@ -1200,7 +1372,7 @@ interface Function
     }
   }
 
-  class LeftFunc extends DoubleParamString
+  class LeftFunc extends StringLongFunction
   {
     @Override
     public String name()
@@ -1292,7 +1464,7 @@ interface Function
     }
   }
 
-  class ReverseFunc extends SingleParam
+  class ReverseFunc extends UnivariateFunction
   {
     @Override
     public String name()
@@ -1314,7 +1486,7 @@ interface Function
     }
   }
 
-  class RepeatFunc extends DoubleParamString
+  class RepeatFunc extends StringLongFunction
   {
     @Override
     public String name()
@@ -1383,7 +1555,7 @@ interface Function
       if (args.size() != 3) {
         throw new IAE("Function[%s] needs 3 arguments", name());
       }
-      
+
       String base = args.get(0).eval(bindings).asString();
       int len = args.get(1).eval(bindings).asInt();
       String pad = args.get(2).eval(bindings).asString();
@@ -1453,4 +1625,339 @@ interface Function
     }
   }
 
+  class ArrayLengthFunction implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "array_length";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs 1 argument", name());
+      }
+      final ExprEval expr = args.get(0).eval(bindings);
+      final Object[] array = expr.asArray();
+      if (array == null) {
+        return ExprEval.of(null);
+      }
+
+      return ExprEval.ofLong(array.length);
+    }
+
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs 1 argument", name());
+      }
+      return ImmutableSet.of(args.get(0));
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      return Collections.emptySet();
+    }
+  }
+
+  class StringToArrayFunction implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "string_to_array";
+    }
+
+    void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 argument", name());
+      }
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      validateArguments(args);
+
+      final ExprEval expr = args.get(0).eval(bindings);
+      final String arrayString = expr.asString();
+      if (arrayString == null) {
+        return ExprEval.of(null);
+      }
+
+      final String split = args.get(1).eval(bindings).asString();
+      return ExprEval.ofStringArray(arrayString.split(split != null ? split : ""));
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      validateArguments(args);
+      return ImmutableSet.copyOf(args);
+    }
+  }
+
+  class ArrayToStringFunction extends ArrayScalarFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_to_string";
+    }
+
+    @Override
+    ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
+    {
+      final String join = scalarExpr.asString();
+      return ExprEval.of(
+          Arrays.stream(arrayExpr.asArray()).map(String::valueOf).collect(Collectors.joining(join != null ? join : ""))
+      );
+    }
+  }
+
+  class ArrayOffsetFunction extends ArrayScalarFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_offset";
+    }
+
+    @Override
+    ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
+    {
+      final Object[] array = arrayExpr.asArray();
+      final int position = scalarExpr.asInt();
+
+      if (array.length > position) {
+        return ExprEval.bestEffortOf(array[position]);
+      }
+      return ExprEval.of(null);
+    }
+  }
+
+  class ArrayOrdinalFunction extends ArrayScalarFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_ordinal";
+    }
+
+    @Override
+    ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
+    {
+      final Object[] array = arrayExpr.asArray();
+      final int position = scalarExpr.asInt() - 1;
+
+      if (array.length > position) {
+        return ExprEval.bestEffortOf(array[position]);
+      }
+      return ExprEval.of(null);
+    }
+  }
+
+  class ArrayOffsetOfFunction extends ArrayScalarFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_offset_of";
+    }
+
+    @Override
+    ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
+    {
+      final Object[] array = arrayExpr.asArray();
+
+      switch (scalarExpr.type()) {
+        case STRING:
+        case LONG:
+        case DOUBLE:
+          int index = -1;
+          for (int i = 0; i < array.length; i++) {
+            if (Objects.equals(array[i], scalarExpr.value())) {
+              index = i;
+              break;
+            }
+          }
+          return index < 0 ? ExprEval.of(null) : ExprEval.ofLong(index);
+        default:
+          throw new IAE("Function[%s] 2nd argument must be a a scalar type", name());
+      }
+    }
+  }
+
+  class ArrayOrdinalOfFunction extends ArrayScalarFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_ordinal_of";
+    }
+
+    @Override
+    ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
+    {
+      final Object[] array = arrayExpr.asArray();
+      switch (scalarExpr.type()) {
+        case STRING:
+        case LONG:
+        case DOUBLE:
+          int index = -1;
+          for (int i = 0; i < array.length; i++) {
+            if (Objects.equals(array[i], scalarExpr.value())) {
+              index = i;
+              break;
+            }
+          }
+          return index < 0 ? ExprEval.of(null) : ExprEval.ofLong(index + 1);
+        default:
+          throw new IAE("Function[%s] 2nd argument must be a a scalar type", name());
+      }
+    }
+  }
+
+  class ArrayAppendFunction extends ArrayScalarFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_append";
+    }
+
+    @Override
+    ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
+    {
+      switch (arrayExpr.type()) {
+        case STRING:
+        case STRING_ARRAY:
+          return ExprEval.ofStringArray(this.append(arrayExpr.asStringArray(), scalarExpr.asString()).toArray(String[]::new));
+        case LONG:
+        case LONG_ARRAY:
+          return ExprEval.ofLongArray(
+              this.append(
+                  arrayExpr.asLongArray(),
+                  scalarExpr.isNumericNull() ? null : scalarExpr.asLong()).toArray(Long[]::new
+              )
+          );
+        case DOUBLE:
+        case DOUBLE_ARRAY:
+          return ExprEval.ofDoubleArray(
+              this.append(
+                  arrayExpr.asDoubleArray(),
+                  scalarExpr.isNumericNull() ? null : scalarExpr.asDouble()).toArray(Double[]::new
+              )
+          );
+      }
+
+      throw new RE("Unable to append to unknown type %s", arrayExpr.type());
+    }
+
+    private <T> Stream<T> append(T[] array, T val)
+    {
+      List<T> l = new ArrayList<>(Arrays.asList(array));
+      l.add(val);
+      return l.stream();
+    }
+  }
+
+  class ArrayConcatFunction extends ArraysFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_concat";
+    }
+
+    @Override
+    ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
+    {
+      final Object[] array1 = lhsExpr.asArray();
+      final Object[] array2 = rhsExpr.asArray();
+
+      if (array1 == null) {
+        return ExprEval.of(null);
+      }
+      if (array2 == null) {
+        return lhsExpr;
+      }
+
+      switch (lhsExpr.type()) {
+        case STRING:
+        case STRING_ARRAY:
+          return ExprEval.ofStringArray(
+              cat(lhsExpr.asStringArray(), rhsExpr.asStringArray()).toArray(String[]::new)
+          );
+        case LONG:
+        case LONG_ARRAY:
+          return ExprEval.ofLongArray(
+              cat(lhsExpr.asLongArray(), rhsExpr.asLongArray()).toArray(Long[]::new)
+          );
+        case DOUBLE:
+        case DOUBLE_ARRAY:
+          return ExprEval.ofDoubleArray(
+              cat(lhsExpr.asDoubleArray(), rhsExpr.asDoubleArray()).toArray(Double[]::new)
+          );
+      }
+      throw new RE("Unable to concatenate to unknown type %s", lhsExpr.type());
+    }
+
+    private <T> Stream<T> cat(T[] array1, T[] array2)
+    {
+      List<T> l = new ArrayList<>(Arrays.asList(array1));
+      l.addAll(Arrays.asList(array2));
+      return l.stream();
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.copyOf(args);
+    }
+  }
+
+  class ArrayContainsFunction extends ArraysFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_contains";
+    }
+
+    @Override
+    ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
+    {
+      final Object[] array1 = lhsExpr.asArray();
+      final Object[] array2 = rhsExpr.asArray();
+      return ExprEval.bestEffortOf(Arrays.asList(array1).containsAll(Arrays.asList(array2)));
+    }
+  }
+
+  class ArrayOverlapFunction extends ArraysFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_overlap";
+    }
+
+    @Override
+    ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
+    {
+      final Object[] array1 = lhsExpr.asArray();
+      final List<Object> array2 = Arrays.asList(rhsExpr.asArray());
+      boolean any = false;
+      for (Object check : array1) {
+        any |= array2.contains(check);
+      }
+      return ExprEval.bestEffortOf(any);
+    }
+  }
 }
