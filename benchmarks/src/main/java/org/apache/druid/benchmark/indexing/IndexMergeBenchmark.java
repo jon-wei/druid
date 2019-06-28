@@ -198,6 +198,5 @@ public class IndexMergeBenchmark
       tmpFile.delete();
 
     }
-
   }
 }
