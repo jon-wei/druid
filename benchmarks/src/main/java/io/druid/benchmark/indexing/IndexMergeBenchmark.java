@@ -67,7 +67,7 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 25)
 public class IndexMergeBenchmark
 {
-  @Param({"5"})
+  @Param({"10"})
   private int numSegments;
 
   @Param({"75000"})
