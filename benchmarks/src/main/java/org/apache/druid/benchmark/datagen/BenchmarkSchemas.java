@@ -78,6 +78,22 @@ public class BenchmarkSchemas
         BenchmarkColumnSchema.makeZipf("metFloatZipf", ValueType.FLOAT, true, 1, null, 0, 1000, 1.0)
     );
 
+    basicSchemaColumns = new ArrayList<>(basicSchemaColumns);
+
+    for (int i = 0; i < 30; i++) {
+      basicSchemaColumns.add(
+          BenchmarkColumnSchema.makeDiscreteUniform(
+              "dimUniform" + i,
+              ValueType.STRING,
+              false,
+              1,
+              null,
+              1,
+              1000 * (i + 1)
+          )
+      );
+    }
+
     List<AggregatorFactory> basicSchemaIngestAggs = new ArrayList<>();
     basicSchemaIngestAggs.add(new CountAggregatorFactory("rows"));
     basicSchemaIngestAggs.add(new LongSumAggregatorFactory("sumLongSequential", "metLongSequential"));
