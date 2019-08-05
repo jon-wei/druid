@@ -99,6 +99,11 @@ public class TaskQueue
           .setDaemon(false)
           .setNameFormat("TaskQueue-StorageSync").build()
   );
+  private final ExecutorService taskReportUploadExec = Executors.newSingleThreadExecutor(
+      new ThreadFactoryBuilder()
+          .setDaemon(false)
+          .setNameFormat("TaskQueue-TaskReportUpload").build()
+  );
 
   private volatile boolean active = false;
 
@@ -471,6 +476,20 @@ public class TaskQueue
     finally {
       giant.unlock();
     }
+  }
+
+  private void scheduleTaskReportUpload(TaskStatus status)
+  {
+    taskReportUploadExec.submit(
+        new Callable<Void>()
+        {
+          @Override
+          public Void call()
+          {
+
+          }
+        }
+    );
   }
 
   /**
