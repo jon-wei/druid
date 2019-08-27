@@ -36,4 +36,31 @@ public class PostAggregatorVisitor
   {
     this.outputNamePrefix = outputNamePrefix;
   }
+
+  public int getAndIncrementCounter()
+  {
+    int oldVal = counter;
+    counter++;
+    return oldVal;
+  }
+
+  public int getCounter()
+  {
+    return counter;
+  }
+
+  public String getOutputNamePrefix()
+  {
+    return outputNamePrefix;
+  }
+
+  public List<PostAggregator> getPostAggs()
+  {
+    return postAggs;
+  }
+
+  public void addPostAgg(PostAggregator postAggregator)
+  {
+    postAggs.add(postAggregator);
+  }
 }
