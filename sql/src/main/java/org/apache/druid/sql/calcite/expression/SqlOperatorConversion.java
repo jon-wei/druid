@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.expression;
 
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -64,7 +65,7 @@ public interface SqlOperatorConversion
       RowSignature rowSignature,
       RexNode rexNode,
       String outputNamePrefix,
-      AtomicInteger outputNameCounter,
+      MutableInt outputNameCounter,
       List<PostAggregator> hackyPostAggList
 
   )
@@ -109,7 +110,7 @@ public interface SqlOperatorConversion
       RowSignature querySignature,
       RexNode rexNode,
       final String outputNamePrefix,
-      final AtomicInteger outputNameCounter
+      final MutableInt outputNameCounter
   )
   {
     return null;

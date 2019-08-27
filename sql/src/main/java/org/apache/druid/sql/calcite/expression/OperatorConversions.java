@@ -44,6 +44,7 @@ import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Static;
+import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -148,7 +149,7 @@ public class OperatorConversions
       final RexNode rexNode,
       final Function<List<DruidExpression>, DruidExpression> expressionFunction,
       String outputNamePrefix,
-      AtomicInteger outputNameCounter,
+      MutableInt outputNameCounter,
       List<PostAggregator> hackyPostAggList
   )
   {
@@ -185,7 +186,7 @@ public class OperatorConversions
       final RowSignature rowSignature,
       final RexNode rexNode,
       final String outputNamePrefix,
-      final AtomicInteger outputNameCounter
+      final MutableInt outputNameCounter
   )
   {
     final SqlKind kind = rexNode.getKind();
@@ -199,10 +200,10 @@ public class OperatorConversions
         throw new ISE("WTF?! PostAgg referred to nonexistent index[%d]", ref.getIndex());
       }
 
-      //return null;
-
+      int currentCounterVal = outputNameCounter.intValue();
+      outputNameCounter.increment();
       return new FieldAccessPostAggregator(
-          outputNamePrefix + outputNameCounter.getAndIncrement(),
+          outputNamePrefix + currentCounterVal,
           columnName
       );
     } else if (rexNode instanceof RexCall) {

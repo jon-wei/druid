@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.expression;
 import com.google.common.base.Joiner;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -87,7 +88,7 @@ public class BinaryOperatorConversion implements SqlOperatorConversion
       RowSignature rowSignature,
       RexNode rexNode,
       String outputNamePrefix,
-      AtomicInteger outputNameCounter,
+      MutableInt outputNameCounter,
       List<PostAggregator> hackyPostAggList
   )
   {

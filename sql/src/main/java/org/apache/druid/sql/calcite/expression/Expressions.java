@@ -31,6 +31,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -136,7 +137,7 @@ public class Expressions
       final RowSignature rowSignature,
       final List<RexNode> rexNodes,
       String outputNamePrefix,
-      AtomicInteger outputNameCounter,
+      MutableInt outputNameCounter,
       List<PostAggregator> hackyPostAggList
   )
   {
@@ -242,7 +243,7 @@ public class Expressions
       final RowSignature rowSignature,
       final RexNode rexNode,
       String outputNamePrefix,
-      AtomicInteger outputNameCounter,
+      MutableInt outputNameCounter,
       List<PostAggregator> hackyPostAggList
   )
   {

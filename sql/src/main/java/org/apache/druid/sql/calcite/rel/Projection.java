@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -91,7 +92,7 @@ public class Projection
       final List<PostAggregator> postAggregators,
       final List<String> rowOrder,
       final String outputNamePrefix,
-      final AtomicInteger outputNameCounter
+      final MutableInt outputNameCounter
   )
   {
     // Attempt to convert to PostAggregator.
@@ -109,9 +110,10 @@ public class Projection
       // Direct column access on a COMPLEX column, expressions cannot operate on complex columns, only postaggs
       // Wrap the column access in a field access postagg so that other postaggs can use it
       final PostAggregator postAggregator = new FieldAccessPostAggregator(
-          outputNamePrefix + outputNameCounter.getAndIncrement(),
+          outputNamePrefix + outputNameCounter.intValue(),
           postAggregatorExpression.getDirectColumn()
       );
+      outputNameCounter.increment();
       postAggregators.add(postAggregator);
       rowOrder.add(postAggregator.getName());
     } else if (postAggregatorDirectColumnIsOk(inputRowSignature, postAggregatorExpression, postAggregatorRexNode)) {
@@ -119,7 +121,8 @@ public class Projection
       // (There might be a SQL-level type cast that we don't care about)
       rowOrder.add(postAggregatorExpression.getDirectColumn());
     } else {
-      final String postAggregatorName = outputNamePrefix + outputNameCounter.getAndIncrement();
+      final String postAggregatorName = outputNamePrefix + outputNameCounter.intValue();
+      outputNameCounter.increment();
       final PostAggregator postAggregator = new ExpressionPostAggregator(
           postAggregatorName,
           postAggregatorExpression.getExpression(),
@@ -139,7 +142,7 @@ public class Projection
       final List<PostAggregator> postAggregators,
       final List<String> rowOrder,
       final String outputNamePrefix,
-      final AtomicInteger outputNameCounter
+      final MutableInt outputNameCounter
   )
   {
     PostAggregator pagg = OperatorConversions.toPostAggregator(
@@ -150,17 +153,11 @@ public class Projection
         outputNameCounter
     );
 
-    //pagg = null;
-
     if (pagg != null) {
       postAggregators.add(pagg);
       rowOrder.add(pagg.getName());
     } else {
-
       final List<PostAggregator> hackyPostAggList = new ArrayList<>();
-
-      // Attempt to convert to PostAggregator.
-
       final DruidExpression postAggregatorExpression = Expressions.toDruidExpressionWithPostAggOperands(
           plannerContext,
           inputRowSignature,
@@ -169,16 +166,6 @@ public class Projection
           outputNameCounter,
           hackyPostAggList
       );
-
-
-         /*
-        // Attempt to convert to PostAggregator.
-        final DruidExpression postAggregatorExpression = Expressions.toDruidExpression(
-            plannerContext,
-            inputRowSignature,
-            postAggregatorRexNode
-        );
-        */
 
       if (postAggregatorExpression != null) {
         for (PostAggregator postAggWithinExpression : hackyPostAggList) {
@@ -189,9 +176,10 @@ public class Projection
           // Direct column access on a COMPLEX column, expressions cannot operate on complex columns, only postaggs
           // Wrap the column access in a field access postagg so that other postaggs can use it
           final PostAggregator postAggregator = new FieldAccessPostAggregator(
-              outputNamePrefix + outputNameCounter.getAndIncrement(),
+              outputNamePrefix + outputNameCounter.intValue(),
               postAggregatorExpression.getDirectColumn()
           );
+          outputNameCounter.increment();
           postAggregators.add(postAggregator);
           rowOrder.add(postAggregator.getName());
         } else if (postAggregatorDirectColumnIsOk(inputRowSignature, postAggregatorExpression, postAggregatorRexNode)) {
@@ -199,7 +187,8 @@ public class Projection
           // (There might be a SQL-level type cast that we don't care about)
           rowOrder.add(postAggregatorExpression.getDirectColumn());
         } else {
-          final String postAggregatorName = outputNamePrefix + outputNameCounter.getAndIncrement();
+          final String postAggregatorName = outputNamePrefix + outputNameCounter.intValue();
+          outputNameCounter.increment();
           final PostAggregator postAggregator = new ExpressionPostAggregator(
               postAggregatorName,
               postAggregatorExpression.getExpression(),
@@ -230,7 +219,7 @@ public class Projection
     );
 
     //int outputNameCounter = 0;
-    AtomicInteger outputNameCounter = new AtomicInteger(0);
+    MutableInt outputNameCounter = new MutableInt(0);
     for (final RexNode postAggregatorRexNode : project.getChildExps()) {
       if (postAggregatorRexNode.getKind() == SqlKind.INPUT_REF || postAggregatorRexNode.getKind() == SqlKind.LITERAL) {
         postAggregationHandleInputRefOrLiteral(

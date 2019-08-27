@@ -26,6 +26,7 @@ import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchEstimatePostAggregator;
@@ -77,7 +78,7 @@ public class ThetaSketchEstimateWithErrorBoundsOperatorConversion extends Direct
       RowSignature rowSignature,
       RexNode rexNode,
       final String outputNamePrefix,
-      final AtomicInteger outputNameCounter
+      final MutableInt outputNameCounter
   )
   {
     final List<RexNode> operands = ((RexCall) rexNode).getOperands();
