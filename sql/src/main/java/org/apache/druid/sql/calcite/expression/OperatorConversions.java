@@ -148,9 +148,7 @@ public class OperatorConversions
       final RowSignature rowSignature,
       final RexNode rexNode,
       final Function<List<DruidExpression>, DruidExpression> expressionFunction,
-      String outputNamePrefix,
-      MutableInt outputNameCounter,
-      List<PostAggregator> hackyPostAggList
+      final PostAggregatorVisitor postAggregatorVisitor
   )
   {
     final RexCall call = (RexCall) rexNode;
@@ -159,9 +157,7 @@ public class OperatorConversions
         plannerContext,
         rowSignature,
         call.getOperands(),
-        outputNamePrefix,
-        outputNameCounter,
-        hackyPostAggList
+        postAggregatorVisitor
     );
 
     if (druidExpressions == null) {
@@ -178,6 +174,7 @@ public class OperatorConversions
    * @param rowSignature   signature of the rows to be extracted from
    * @param rexNode        expression meant to be applied on top of the rows
    *
+   * @param postAggregatorVisitor
    * @return rexNode referring to fields in rowOrder, or null if not possible
    */
   @Nullable
@@ -185,8 +182,7 @@ public class OperatorConversions
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode rexNode,
-      final String outputNamePrefix,
-      final MutableInt outputNameCounter
+      final PostAggregatorVisitor postAggregatorVisitor
   )
   {
     final SqlKind kind = rexNode.getKind();
@@ -200,10 +196,8 @@ public class OperatorConversions
         throw new ISE("WTF?! PostAgg referred to nonexistent index[%d]", ref.getIndex());
       }
 
-      int currentCounterVal = outputNameCounter.intValue();
-      outputNameCounter.increment();
       return new FieldAccessPostAggregator(
-          outputNamePrefix + currentCounterVal,
+          postAggregatorVisitor.getOutputNamePrefix() + postAggregatorVisitor.getAndIncrementCounter(),
           columnName
       );
     } else if (rexNode instanceof RexCall) {
@@ -218,8 +212,7 @@ public class OperatorConversions
             plannerContext,
             rowSignature,
             rexNode,
-            outputNamePrefix,
-            outputNameCounter
+            postAggregatorVisitor
         );
       }
     } else if (kind == SqlKind.LITERAL) {

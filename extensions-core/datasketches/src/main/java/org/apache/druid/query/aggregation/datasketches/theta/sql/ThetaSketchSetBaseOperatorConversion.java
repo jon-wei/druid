@@ -29,12 +29,12 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchSetPostAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
+import org.apache.druid.sql.calcite.expression.PostAggregatorVisitor;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -43,7 +43,6 @@ import org.apache.druid.sql.calcite.table.RowSignature;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class ThetaSketchSetBaseOperatorConversion implements SqlOperatorConversion
 {
@@ -74,8 +73,7 @@ public abstract class ThetaSketchSetBaseOperatorConversion implements SqlOperato
       PlannerContext plannerContext,
       RowSignature rowSignature,
       RexNode rexNode,
-      final String outputNamePrefix,
-      final MutableInt outputNameCounter
+      PostAggregatorVisitor postAggregatorVisitor
   )
   {
     final List<RexNode> operands = ((RexCall) rexNode).getOperands();
@@ -88,8 +86,7 @@ public abstract class ThetaSketchSetBaseOperatorConversion implements SqlOperato
           plannerContext,
           rowSignature,
           operand,
-          outputNamePrefix,
-          outputNameCounter
+          postAggregatorVisitor
       );
       if (convertedPostAgg == null) {
         if (operandCounter == 0) {
@@ -109,7 +106,7 @@ public abstract class ThetaSketchSetBaseOperatorConversion implements SqlOperato
     }
 
     return new SketchSetPostAggregator(
-        outputNamePrefix + outputNameCounter.getAndIncrement(),
+        postAggregatorVisitor.getOutputNamePrefix() + postAggregatorVisitor.getAndIncrementCounter(),
         getSetOperationName(),
         size,
         inputPostAggs

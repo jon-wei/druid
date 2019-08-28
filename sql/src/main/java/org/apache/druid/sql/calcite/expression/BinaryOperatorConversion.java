@@ -87,9 +87,7 @@ public class BinaryOperatorConversion implements SqlOperatorConversion
       PlannerContext plannerContext,
       RowSignature rowSignature,
       RexNode rexNode,
-      String outputNamePrefix,
-      MutableInt outputNameCounter,
-      List<PostAggregator> hackyPostAggList
+      PostAggregatorVisitor postAggregatorVisitor
   )
   {
     return OperatorConversions.convertCallPostAggs(
@@ -112,9 +110,7 @@ public class BinaryOperatorConversion implements SqlOperatorConversion
               )
           );
         },
-        outputNamePrefix,
-        outputNameCounter,
-        hackyPostAggList
+        postAggregatorVisitor
     );
   }
 }

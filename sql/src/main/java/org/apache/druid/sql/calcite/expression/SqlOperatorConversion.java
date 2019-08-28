@@ -30,7 +30,6 @@ import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public interface SqlOperatorConversion
 {
@@ -64,9 +63,7 @@ public interface SqlOperatorConversion
       PlannerContext plannerContext,
       RowSignature rowSignature,
       RexNode rexNode,
-      String outputNamePrefix,
-      MutableInt outputNameCounter,
-      List<PostAggregator> hackyPostAggList
+      PostAggregatorVisitor postAggregatorVisitor
 
   )
   {
@@ -102,6 +99,7 @@ public interface SqlOperatorConversion
    * @param querySignature   signature of the rows to be extracted from
    * @param rexNode          expression meant to be applied on top of the rows
    *
+   * @param postAggregatorVisitor
    * @return filter, or null if the call cannot be translated
    */
   @Nullable
@@ -109,8 +107,7 @@ public interface SqlOperatorConversion
       PlannerContext plannerContext,
       RowSignature querySignature,
       RexNode rexNode,
-      final String outputNamePrefix,
-      final MutableInt outputNameCounter
+      PostAggregatorVisitor postAggregatorVisitor
   )
   {
     return null;

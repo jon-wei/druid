@@ -33,6 +33,7 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchUnionPostAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
+import org.apache.druid.sql.calcite.expression.PostAggregatorVisitor;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -83,8 +84,7 @@ public class HllSketchSetUnionOperatorConversion implements SqlOperatorConversio
       PlannerContext plannerContext,
       RowSignature rowSignature,
       RexNode rexNode,
-      final String outputNamePrefix,
-      final AtomicInteger outputNameCounter
+      PostAggregatorVisitor postAggregatorVisitor
   )
   {
     final List<RexNode> operands = ((RexCall) rexNode).getOperands();
@@ -98,8 +98,7 @@ public class HllSketchSetUnionOperatorConversion implements SqlOperatorConversio
           plannerContext,
           rowSignature,
           operand,
-          outputNamePrefix,
-          outputNameCounter
+          postAggregatorVisitor
       );
       if (convertedPostAgg == null) {
         if (operandCounter == 0) {
@@ -130,7 +129,7 @@ public class HllSketchSetUnionOperatorConversion implements SqlOperatorConversio
     }
 
     return new HllSketchUnionPostAggregator(
-        outputNamePrefix + outputNameCounter.getAndIncrement(),
+        postAggregatorVisitor.getOutputNamePrefix() + postAggregatorVisitor.getAndIncrementCounter(),
         inputPostAggs,
         lgK,
         tgtHllType

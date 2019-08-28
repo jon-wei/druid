@@ -35,6 +35,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
+import org.apache.druid.sql.calcite.expression.PostAggregatorVisitor;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
@@ -46,7 +47,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Used to represent projections (Calcite "Project"). These are embedded in {@link Sorting} and {@link Grouping} to
@@ -89,10 +89,8 @@ public class Projection
       final PlannerContext plannerContext,
       final RowSignature inputRowSignature,
       final RexNode postAggregatorRexNode,
-      final List<PostAggregator> postAggregators,
       final List<String> rowOrder,
-      final String outputNamePrefix,
-      final MutableInt outputNameCounter
+      final PostAggregatorVisitor postAggregatorVisitor
   )
   {
     // Attempt to convert to PostAggregator.
@@ -110,26 +108,23 @@ public class Projection
       // Direct column access on a COMPLEX column, expressions cannot operate on complex columns, only postaggs
       // Wrap the column access in a field access postagg so that other postaggs can use it
       final PostAggregator postAggregator = new FieldAccessPostAggregator(
-          outputNamePrefix + outputNameCounter.intValue(),
+          postAggregatorVisitor.getOutputNamePrefix() + postAggregatorVisitor.getAndIncrementCounter(),
           postAggregatorExpression.getDirectColumn()
       );
-      outputNameCounter.increment();
-      postAggregators.add(postAggregator);
+      postAggregatorVisitor.addPostAgg(postAggregator);
       rowOrder.add(postAggregator.getName());
     } else if (postAggregatorDirectColumnIsOk(inputRowSignature, postAggregatorExpression, postAggregatorRexNode)) {
       // Direct column access, without any type cast as far as Druid's runtime is concerned.
       // (There might be a SQL-level type cast that we don't care about)
       rowOrder.add(postAggregatorExpression.getDirectColumn());
     } else {
-      final String postAggregatorName = outputNamePrefix + outputNameCounter.intValue();
-      outputNameCounter.increment();
       final PostAggregator postAggregator = new ExpressionPostAggregator(
-          postAggregatorName,
+          postAggregatorVisitor.getOutputNamePrefix() + postAggregatorVisitor.getAndIncrementCounter(),
           postAggregatorExpression.getExpression(),
           null,
           plannerContext.getExprMacroTable()
       );
-      postAggregators.add(postAggregator);
+      postAggregatorVisitor.addPostAgg(postAggregator);
       rowOrder.add(postAggregator.getName());
     }
   }
@@ -139,63 +134,57 @@ public class Projection
       final PlannerContext plannerContext,
       final RowSignature inputRowSignature,
       final RexNode postAggregatorRexNode,
-      final List<PostAggregator> postAggregators,
       final List<String> rowOrder,
-      final String outputNamePrefix,
-      final MutableInt outputNameCounter
+      final PostAggregatorVisitor postAggregatorVisitor
   )
   {
     PostAggregator pagg = OperatorConversions.toPostAggregator(
         plannerContext,
         inputRowSignature,
         postAggregatorRexNode,
-        outputNamePrefix,
-        outputNameCounter
+        postAggregatorVisitor
     );
 
     if (pagg != null) {
-      postAggregators.add(pagg);
+      postAggregatorVisitor.addPostAgg(pagg);
       rowOrder.add(pagg.getName());
     } else {
-      final List<PostAggregator> hackyPostAggList = new ArrayList<>();
       final DruidExpression postAggregatorExpression = Expressions.toDruidExpressionWithPostAggOperands(
           plannerContext,
           inputRowSignature,
           postAggregatorRexNode,
-          outputNamePrefix,
-          outputNameCounter,
-          hackyPostAggList
+          postAggregatorVisitor
       );
 
       if (postAggregatorExpression != null) {
+        /*
         for (PostAggregator postAggWithinExpression : hackyPostAggList) {
           postAggregators.add(postAggWithinExpression);
         }
+        */
 
         if (postAggregatorComplexDirectColumnIsOk(inputRowSignature, postAggregatorExpression, postAggregatorRexNode)) {
           // Direct column access on a COMPLEX column, expressions cannot operate on complex columns, only postaggs
           // Wrap the column access in a field access postagg so that other postaggs can use it
           final PostAggregator postAggregator = new FieldAccessPostAggregator(
-              outputNamePrefix + outputNameCounter.intValue(),
+              postAggregatorVisitor.getOutputNamePrefix() + postAggregatorVisitor.getAndIncrementCounter(),
               postAggregatorExpression.getDirectColumn()
           );
-          outputNameCounter.increment();
-          postAggregators.add(postAggregator);
+
+          postAggregatorVisitor.addPostAgg(postAggregator);
           rowOrder.add(postAggregator.getName());
         } else if (postAggregatorDirectColumnIsOk(inputRowSignature, postAggregatorExpression, postAggregatorRexNode)) {
           // Direct column access, without any type cast as far as Druid's runtime is concerned.
           // (There might be a SQL-level type cast that we don't care about)
           rowOrder.add(postAggregatorExpression.getDirectColumn());
         } else {
-          final String postAggregatorName = outputNamePrefix + outputNameCounter.intValue();
-          outputNameCounter.increment();
           final PostAggregator postAggregator = new ExpressionPostAggregator(
-              postAggregatorName,
+              postAggregatorVisitor.getOutputNamePrefix() + postAggregatorVisitor.getAndIncrementCounter(),
               postAggregatorExpression.getExpression(),
               null,
               plannerContext.getExprMacroTable()
           );
-          postAggregators.add(postAggregator);
+          postAggregatorVisitor.addPostAgg(postAggregator);
           rowOrder.add(postAggregator.getName());
         }
       } else {
@@ -218,6 +207,8 @@ public class Projection
         new TreeSet<>(inputRowSignature.getRowOrder())
     );
 
+    PostAggregatorVisitor postAggVisitor = new PostAggregatorVisitor(outputNamePrefix);
+
     //int outputNameCounter = 0;
     MutableInt outputNameCounter = new MutableInt(0);
     for (final RexNode postAggregatorRexNode : project.getChildExps()) {
@@ -227,10 +218,8 @@ public class Projection
             plannerContext,
             inputRowSignature,
             postAggregatorRexNode,
-            postAggregators,
             rowOrder,
-            outputNamePrefix,
-            outputNameCounter
+            postAggVisitor
         );
       } else {
         postAggregationHandleOtherKinds(
@@ -238,10 +227,8 @@ public class Projection
             plannerContext,
             inputRowSignature,
             postAggregatorRexNode,
-            postAggregators,
             rowOrder,
-            outputNamePrefix,
-            outputNameCounter
+            postAggVisitor
         );
       }
     }

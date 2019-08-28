@@ -32,6 +32,7 @@ import org.apache.druid.query.aggregation.datasketches.hll.HllSketchToEstimateWi
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
+import org.apache.druid.sql.calcite.expression.PostAggregatorVisitor;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
@@ -76,8 +77,7 @@ public class HllSketchEstimateWithErrorBoundsOperatorConversion extends DirectOp
       PlannerContext plannerContext,
       RowSignature rowSignature,
       RexNode rexNode,
-      final String outputNamePrefix,
-      final AtomicInteger outputNameCounter
+      PostAggregatorVisitor postAggregatorVisitor
   )
   {
     final List<RexNode> operands = ((RexCall) rexNode).getOperands();
@@ -85,8 +85,7 @@ public class HllSketchEstimateWithErrorBoundsOperatorConversion extends DirectOp
         plannerContext,
         rowSignature,
         operands.get(0),
-        outputNamePrefix,
-        outputNameCounter
+        postAggregatorVisitor
     );
 
     if (firstOperand == null) {
@@ -96,7 +95,7 @@ public class HllSketchEstimateWithErrorBoundsOperatorConversion extends DirectOp
     final int numStdDev = ((Number) RexLiteral.value(operands.get(1))).intValue();
 
     return new HllSketchToEstimateWithBoundsPostAggregator(
-        outputNamePrefix + outputNameCounter.getAndIncrement(),
+        postAggregatorVisitor.getOutputNamePrefix() + postAggregatorVisitor.getAndIncrementCounter(),
         firstOperand,
         numStdDev
     );

@@ -67,7 +67,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A collection of functions for translating from Calcite expressions into Druid objects.
@@ -136,9 +135,7 @@ public class Expressions
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final List<RexNode> rexNodes,
-      String outputNamePrefix,
-      MutableInt outputNameCounter,
-      List<PostAggregator> hackyPostAggList
+      final PostAggregatorVisitor postAggregatorVisitor
   )
   {
     final List<DruidExpression> retVal = new ArrayList<>(rexNodes.size());
@@ -147,9 +144,7 @@ public class Expressions
           plannerContext,
           rowSignature,
           rexNode,
-          outputNamePrefix,
-          outputNameCounter,
-          hackyPostAggList
+          postAggregatorVisitor
       );
       if (druidExpression == null) {
         return null;
@@ -242,9 +237,7 @@ public class Expressions
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode rexNode,
-      String outputNamePrefix,
-      MutableInt outputNameCounter,
-      List<PostAggregator> hackyPostAggList
+      final PostAggregatorVisitor postAggregatorVisitor
   )
   {
     final SqlKind kind = rexNode.getKind();
@@ -273,12 +266,11 @@ public class Expressions
             plannerContext,
             rowSignature,
             rexNode,
-            outputNamePrefix,
-            outputNameCounter
+            postAggregatorVisitor
         );
 
         if (postAggregator != null) {
-          hackyPostAggList.add(postAggregator);
+          postAggregatorVisitor.addPostAgg(postAggregator);
           String exprName = postAggregator.getName();
           return DruidExpression.of(SimpleExtraction.of(exprName, null), exprName);
         } else {
@@ -286,9 +278,7 @@ public class Expressions
               plannerContext,
               rowSignature,
               rexNode,
-              outputNamePrefix,
-              outputNameCounter,
-              hackyPostAggList
+              postAggregatorVisitor
           );
 
           if (expression == null) {

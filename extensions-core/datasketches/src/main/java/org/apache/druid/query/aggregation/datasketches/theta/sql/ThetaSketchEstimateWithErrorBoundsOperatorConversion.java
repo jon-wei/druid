@@ -26,19 +26,18 @@ import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchEstimatePostAggregator;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
+import org.apache.druid.sql.calcite.expression.PostAggregatorVisitor;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class ThetaSketchEstimateWithErrorBoundsOperatorConversion extends DirectOperatorConversion
 {
@@ -77,8 +76,7 @@ public class ThetaSketchEstimateWithErrorBoundsOperatorConversion extends Direct
       PlannerContext plannerContext,
       RowSignature rowSignature,
       RexNode rexNode,
-      final String outputNamePrefix,
-      final MutableInt outputNameCounter
+      PostAggregatorVisitor postAggregatorVisitor
   )
   {
     final List<RexNode> operands = ((RexCall) rexNode).getOperands();
@@ -86,8 +84,7 @@ public class ThetaSketchEstimateWithErrorBoundsOperatorConversion extends Direct
         plannerContext,
         rowSignature,
         operands.get(0),
-        outputNamePrefix,
-        outputNameCounter
+        postAggregatorVisitor
     );
 
     if (firstOperand == null) {
@@ -97,7 +94,7 @@ public class ThetaSketchEstimateWithErrorBoundsOperatorConversion extends Direct
     final int errorBoundsStdDev = ((Number) RexLiteral.value(operands.get(1))).intValue();
 
     return new SketchEstimatePostAggregator(
-        outputNamePrefix + outputNameCounter.getAndIncrement(),
+        postAggregatorVisitor.getOutputNamePrefix() + postAggregatorVisitor.getAndIncrementCounter(),
         firstOperand,
         errorBoundsStdDev
     );

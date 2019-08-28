@@ -31,6 +31,7 @@ import org.apache.druid.query.aggregation.datasketches.hll.HllSketchToStringPost
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
+import org.apache.druid.sql.calcite.expression.PostAggregatorVisitor;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
@@ -74,8 +75,7 @@ public class HllSketchToStringOperatorConversion extends DirectOperatorConversio
       PlannerContext plannerContext,
       RowSignature rowSignature,
       RexNode rexNode,
-      final String outputNamePrefix,
-      final AtomicInteger outputNameCounter
+      PostAggregatorVisitor postAggregatorVisitor
   )
   {
     final List<RexNode> operands = ((RexCall) rexNode).getOperands();
@@ -83,8 +83,7 @@ public class HllSketchToStringOperatorConversion extends DirectOperatorConversio
         plannerContext,
         rowSignature,
         operands.get(0),
-        outputNamePrefix,
-        outputNameCounter
+        postAggregatorVisitor
     );
 
     if (firstOperand == null) {
@@ -92,7 +91,7 @@ public class HllSketchToStringOperatorConversion extends DirectOperatorConversio
     }
 
     return new HllSketchToStringPostAggregator(
-        outputNamePrefix + outputNameCounter.getAndIncrement(),
+        postAggregatorVisitor.getOutputNamePrefix() + postAggregatorVisitor.getAndIncrementCounter(),
         firstOperand
     );
   }
