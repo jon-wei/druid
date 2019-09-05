@@ -48,7 +48,7 @@ public class StringDimensionIndexerBenchmark
   @Param({"10000"})
   public int cardinality;
 
-  @Param({"8"})
+  @Param({"1"})
   public int rowSize;
 
   @Setup
