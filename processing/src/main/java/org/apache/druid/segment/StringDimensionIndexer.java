@@ -55,7 +55,6 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], String>
 {
@@ -78,63 +77,50 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
     private final Object2IntMap<String> valueToId = new Object2IntOpenHashMap<>();
 
-    private final List<String> idToValue = new ArrayList<>();
-    private final ReentrantReadWriteLock lock;
+    private final List<String> idToValue = Lists.newArrayList();
+    private final Object lock;
 
     public DimensionDictionary()
     {
-      this.lock = new ReentrantReadWriteLock();
+      this.lock = new Object();
       valueToId.defaultReturnValue(-1);
     }
 
     public int getId(@Nullable String value)
     {
-      lock.readLock().lock();
-      try {
+      synchronized (lock) {
         if (value == null) {
           return idForNull;
         }
         return valueToId.getInt(value);
-      }
-      finally {
-        lock.readLock().unlock();
       }
     }
 
     @Nullable
     public String getValue(int id)
     {
-      lock.readLock().lock();
-      try {
+      synchronized (lock) {
         if (id == idForNull) {
           return null;
         }
         return idToValue.get(id);
       }
-      finally {
-        lock.readLock().unlock();
-      }
     }
 
     public int size()
     {
-      lock.readLock().lock();
-      try {
+      synchronized (lock) {
         // using idToValue rather than valueToId because the valueToId doesn't account null value, if it is present.
         return idToValue.size();
-      }
-      finally {
-        lock.readLock().unlock();
       }
     }
 
     public int add(@Nullable String originalValue)
     {
-      lock.writeLock().lock();
-      try {
+      synchronized (lock) {
         if (originalValue == null) {
           if (idForNull == ABSENT_VALUE_ID) {
-            idForNull = idToValue.size();
+            idForNull = size();
             idToValue.add(null);
           }
           return idForNull;
@@ -143,48 +129,33 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
         if (prev >= 0) {
           return prev;
         }
-        final int index = idToValue.size();
+        final int index = size();
         valueToId.put(originalValue, index);
         idToValue.add(originalValue);
         minValue = minValue == null || minValue.compareTo(originalValue) > 0 ? originalValue : minValue;
         maxValue = maxValue == null || maxValue.compareTo(originalValue) < 0 ? originalValue : maxValue;
         return index;
       }
-      finally {
-        lock.writeLock().unlock();
-      }
     }
 
     public String getMinValue()
     {
-      lock.readLock().lock();
-      try {
+      synchronized (lock) {
         return minValue;
-      }
-      finally {
-        lock.readLock().unlock();
       }
     }
 
     public String getMaxValue()
     {
-      lock.readLock().lock();
-      try {
+      synchronized (lock) {
         return maxValue;
-      }
-      finally {
-        lock.readLock().unlock();
       }
     }
 
     public SortedDimensionDictionary sort()
     {
-      lock.readLock().lock();
-      try {
-        return new SortedDimensionDictionary(idToValue, idToValue.size());
-      }
-      finally {
-        lock.readLock().unlock();
+      synchronized (lock) {
+        return new SortedDimensionDictionary(idToValue, size());
       }
     }
   }
