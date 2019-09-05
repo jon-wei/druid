@@ -34,6 +34,8 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -44,8 +46,9 @@ public class StringDimensionIndexerBenchmark
 {
   StringDimensionIndexer indexer;
   int[] exampleArray;
+  List<Object> rowVals;
 
-  @Param({"10000"})
+  @Param({"100000"})
   public int cardinality;
 
   @Param({"1"})
@@ -54,10 +57,13 @@ public class StringDimensionIndexerBenchmark
   @Setup
   public void setup()
   {
+    rowVals = new ArrayList<>();
     indexer = new StringDimensionIndexer(DimensionSchema.MultiValueHandling.ofDefault(), true);
 
     for (int i = 0; i < cardinality; i++) {
-      indexer.processRowValsToUnsortedEncodedKeyComponent("abcd-" + i, true);
+      String val = "abcd-" + i;
+      indexer.processRowValsToUnsortedEncodedKeyComponent(val, true);
+      rowVals.add(val);
     }
 
     exampleArray = new int[rowSize];
@@ -74,5 +80,17 @@ public class StringDimensionIndexerBenchmark
   {
     long sz = indexer.estimateEncodedKeyComponentSize(exampleArray);
     blackhole.consume(sz);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void processRowValsToUnsortedEncodedKeyComponent(Blackhole blackhole)
+  {
+    StringDimensionIndexer indexer2 = new StringDimensionIndexer(DimensionSchema.MultiValueHandling.ofDefault(), true);
+    for (Object rowVal : rowVals) {
+      int[] rowVals = indexer2.processRowValsToUnsortedEncodedKeyComponent(rowVal, true);
+      blackhole.consume(rowVals);
+    }
   }
 }
