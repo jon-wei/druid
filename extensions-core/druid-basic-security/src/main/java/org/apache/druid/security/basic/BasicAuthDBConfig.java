@@ -27,6 +27,9 @@ public class BasicAuthDBConfig
 
   private final PasswordProvider initialAdminPassword;
   private final PasswordProvider initialInternalClientPassword;
+  private final String initialAdminUser;
+  private final String initialAdminRole;
+  private final String initialAdminGroupMapping;
   private final boolean enableCacheNotifications;
   private final long cacheNotificationTimeout;
   private final int iterations;
@@ -34,16 +37,22 @@ public class BasicAuthDBConfig
   public BasicAuthDBConfig(
       final PasswordProvider initialAdminPassword,
       final PasswordProvider initialInternalClientPassword,
-      final Boolean enableCacheNotifications,
-      final Long cacheNotificationTimeout,
-      final int iterations
+      final String initialAdminUser,
+      final String initialAdminRole,
+      final String initialAdminGroupMapping,
+      final boolean enableCacheNotifications,
+      final long cacheNotificationTimeout,
+      final int credentialIterations
   )
   {
     this.initialAdminPassword = initialAdminPassword;
     this.initialInternalClientPassword = initialInternalClientPassword;
+    this.initialAdminUser = initialAdminUser;
+    this.initialAdminRole = initialAdminRole;
+    this.initialAdminGroupMapping = initialAdminGroupMapping;
     this.enableCacheNotifications = enableCacheNotifications;
     this.cacheNotificationTimeout = cacheNotificationTimeout;
-    this.iterations = iterations;
+    this.iterations = credentialIterations;
   }
 
   public PasswordProvider getInitialAdminPassword()
@@ -54,6 +63,21 @@ public class BasicAuthDBConfig
   public PasswordProvider getInitialInternalClientPassword()
   {
     return initialInternalClientPassword;
+  }
+
+  public String getInitialAdminUser()
+  {
+    return initialAdminUser;
+  }
+
+  public String getInitialAdminRole()
+  {
+    return initialAdminRole;
+  }
+
+  public String getInitialAdminGroupMapping()
+  {
+    return initialAdminGroupMapping;
   }
 
   public boolean isEnableCacheNotifications()

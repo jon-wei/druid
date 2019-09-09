@@ -17,18 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.security.basic.authentication.db.cache;
+package org.apache.druid.security.basic.authorization;
 
-/**
- * Sends a notification to druid services, containing updated authenticator user map state.
- */
-public interface BasicAuthenticatorCacheNotifier
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRole;
+import org.apache.druid.server.security.AuthenticationResult;
+
+import java.util.Map;
+import java.util.Set;
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DBRoleProvider.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "db", value = DBRoleProvider.class),
+    @JsonSubTypes.Type(name = "ldap", value = LDAPRoleProvider.class),
+})
+public interface RoleProvider
 {
-  /**
-   * Send the user map state contained in updatedUserMap to all non-coordinator Druid services
-   *
-   * @param updatedAuthenticatorPrefix Name of authenticator being updated
-   * @param updatedUserMap User map state
-   */
-  void addUserUpdate(String updatedAuthenticatorPrefix, byte[] updatedUserMap);
+  Set<String> getRoles(String authorizerPrefix, AuthenticationResult authenticationResult);
+  Map<String, BasicAuthorizerRole> getRoleMap(String authorizerPrefix);
 }
