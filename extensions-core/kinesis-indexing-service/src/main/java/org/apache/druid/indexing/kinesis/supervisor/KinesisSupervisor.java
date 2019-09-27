@@ -53,9 +53,11 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
 import org.apache.druid.indexing.seekablestream.utils.RandomIdUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.joda.time.DateTime;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -74,6 +76,8 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 {
+  private static final EmittingLogger log = new EmittingLogger(KinesisSupervisor.class);
+
   public static final TypeReference<TreeMap<Integer, Map<String, String>>> CHECKPOINTS_TYPE_REF =
       new TypeReference<TreeMap<Integer, Map<String, String>>>()
       {
@@ -313,5 +317,21 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   protected boolean useExclusiveStartSequenceNumberForNonFirstSequence()
   {
     return true;
+  }
+
+  @Override
+  protected Map<String, OrderedSequenceNumber<String>> filterDeadShardsFromStartingOffsets(
+      Map<String, OrderedSequenceNumber<String>> startingOffsets
+  )
+  {
+    Map<String, OrderedSequenceNumber<String>> filteredOffsets = new HashMap<>();
+    for (Map.Entry<String, OrderedSequenceNumber<String>> entry : startingOffsets.entrySet()) {
+      if (!entry.getValue().get().equals(KinesisSequenceNumber.END_OF_SHARD_MARKER)) {
+        filteredOffsets.put(entry.getKey(), entry.getValue());
+      } else {
+        log.info("Excluding shard[%s] because it has reached EOS.", entry.getKey());
+      }
+    }
+    return filteredOffsets;
   }
 }

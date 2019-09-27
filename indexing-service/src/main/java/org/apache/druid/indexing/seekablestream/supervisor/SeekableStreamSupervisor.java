@@ -1851,7 +1851,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       return false;
     }
 
-    log.debug("Found [%d] partitions for stream [%s]", partitionIds.size(), ioConfig.getStream());
+    log.info("Found [%d] partitions for stream [%s]", partitionIds.size(), ioConfig.getStream());
 
     Set<PartitionIdType> closedPartitions = getOffsetsFromMetadataStorage()
         .entrySet()
@@ -2368,6 +2368,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
   }
 
+  protected Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> filterDeadShardsFromStartingOffsets(
+      Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> startingOffsets
+  )
+  {
+    return startingOffsets;
+  }
+
   private void createNewTasks()
       throws JsonProcessingException
   {
@@ -2394,7 +2401,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
 
         final Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> startingOffsets =
-            generateStartingSequencesForPartitionGroup(groupId);
+            filterDeadShardsFromStartingOffsets(
+                generateStartingSequencesForPartitionGroup(groupId)
+            );
 
         ImmutableMap<PartitionIdType, SequenceOffsetType> simpleStartingOffsets = startingOffsets
             .entrySet()
