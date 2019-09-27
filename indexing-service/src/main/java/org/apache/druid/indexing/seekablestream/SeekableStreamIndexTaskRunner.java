@@ -286,11 +286,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     this.toolbox = toolbox;
   }
 
-  protected void adjustEndOffsets()
-  {
-
-  }
-
   @VisibleForTesting
   public void initializeSequences() throws IOException
   {
@@ -1154,38 +1149,21 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     }
 
     if (!isEndOffsetExclusive() && !sequences.isEmpty()) {
-      checkLastMetadataAgainstExclusiveStartPartitions(sequenceMetadata);
-      /*
       final SequenceMetadata<PartitionIdType, SequenceOffsetType> lastMetadata = getLastSequenceMetadata();
-        if (!lastMetadata.endOffsets.keySet().equals(sequenceMetadata.getExclusiveStartPartitions())) {
-          throw new ISE(
-              "Exclusive start partitions[%s] for new sequence don't match to the prior offset[%s]",
-              sequenceMetadata.getExclusiveStartPartitions(),
-              lastMetadata
-          );
+      if (!lastMetadata.endOffsets.keySet().equals(sequenceMetadata.getExclusiveStartPartitions())) {
+        throw new ISE(
+            "Exclusive start partitions[%s] for new sequence don't match to the prior offset[%s]",
+            sequenceMetadata.getExclusiveStartPartitions(),
+            lastMetadata
+        );
       }
-      */
     }
 
     // Actually do the add.
     sequences.add(sequenceMetadata);
   }
 
-  protected void checkLastMetadataAgainstExclusiveStartPartitions(
-      final SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata
-  )
-  {
-    final SequenceMetadata<PartitionIdType, SequenceOffsetType> lastMetadata = getLastSequenceMetadata();
-    if (!lastMetadata.endOffsets.keySet().equals(sequenceMetadata.getExclusiveStartPartitions())) {
-      throw new ISE(
-          "Exclusive start partitions[%s] for new sequence don't match to the prior offset[%s]",
-          sequenceMetadata.getExclusiveStartPartitions(),
-          lastMetadata
-      );
-    }
-  }
-
-  protected SequenceMetadata<PartitionIdType, SequenceOffsetType> getLastSequenceMetadata()
+  private SequenceMetadata<PartitionIdType, SequenceOffsetType> getLastSequenceMetadata()
   {
     Preconditions.checkState(!sequences.isEmpty(), "Empty sequences");
     return sequences.get(sequences.size() - 1);
@@ -1590,7 +1568,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       boolean finish // this field is only for internal purposes, shouldn't be usually set by users
   ) throws InterruptedException
   {
-    log.info("##################################### SETTING END OFFSETS ######################################");
     if (sequenceNumbers == null) {
       return Response.status(Response.Status.BAD_REQUEST)
                      .entity("Request body must contain a map of { partition:endOffset }")
