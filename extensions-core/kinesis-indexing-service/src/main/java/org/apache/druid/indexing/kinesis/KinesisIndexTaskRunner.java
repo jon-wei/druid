@@ -206,28 +206,4 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
       return null;
     }
   }
-
-
-  /*
-  @Override
-  protected void checkLastMetadataAgainstExclusiveStartPartitions(SequenceMetadata<String, String> sequenceMetadata)
-  {
-    final SequenceMetadata<String, String> lastMetadata = getLastSequenceMetadata();
-
-    Set<String> filteredEndOffsets = new HashSet<>();
-    for (Map.Entry<String, String> endOffset : lastMetadata.getEndOffsets().entrySet()) {
-      if (!endOffset.getValue().equals(KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER)) {
-        filteredEndOffsets.add(endOffset.getKey());
-      }
-    }
-
-    if (!filteredEndOffsets.equals(sequenceMetadata.getExclusiveStartPartitions())) {
-      throw new ISE(
-          "Exclusive start partitions[%s] for new sequence don't match to the prior offset[%s]",
-          sequenceMetadata.getExclusiveStartPartitions(),
-          lastMetadata
-      );
-    }
-  }
-  */
 }
