@@ -474,14 +474,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   protected final SeekableStreamSupervisorStateManager stateManager;
   protected volatile DateTime sequenceLastUpdated;
 
+  private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
+  protected final String dataSource;
 
   private final Set<PartitionIdType> subsequentlyDiscoveredPartitions = new HashSet<>();
   private final TaskStorage taskStorage;
   private final TaskMaster taskMaster;
-  private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private final SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetType> taskClient;
   private final SeekableStreamSupervisorSpec spec;
-  private final String dataSource;
   private final SeekableStreamSupervisorIOConfig ioConfig;
   private final SeekableStreamSupervisorTuningConfig tuningConfig;
   private final SeekableStreamIndexTaskTuningConfig taskTuningConfig;
@@ -507,6 +507,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private volatile boolean started = false;
   private volatile boolean stopped = false;
   private volatile boolean lifecycleStarted = false;
+
+  private final Set<PartitionIdType> simulateExpiredPartitionsHack = new HashSet();
 
   public SeekableStreamSupervisor(
       final String supervisorId,
@@ -1829,6 +1831,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   protected abstract String baseTaskName();
 
+  protected void cleanupDeadShardsFromMetadata(Set<PartitionIdType> expiredShards)
+  {
+
+  }
+
   private boolean updatePartitionDataFromStream()
   {
     Set<PartitionIdType> partitionIds;
@@ -1887,6 +1894,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             taskGroupId
         );
       }
+    }
+
+    // Look for expired shards and remove them from metadata storage
+    Set<PartitionIdType> expiredShards = new HashSet<>();
+    for (PartitionIdType partitionTd : closedPartitions) {
+      if (!partitionIds.contains(partitionTd) || simulateExpiredPartitionsHack.contains(partitionTd)) {
+        expiredShards.add(partitionTd);
+      } else {
+        log.info("simulating expired partition for: " + partitionTd);
+        simulateExpiredPartitionsHack.add(partitionTd);
+      }
+    }
+
+    if (expiredShards.size() > 0) {
+      cleanupDeadShardsFromMetadata(expiredShards);
     }
 
     return true;
@@ -2465,7 +2487,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       // just created. This is mainly for the benefit of the status API in situations where the run period is lengthy.
       scheduledExec.schedule(buildRunTask(), 5000, TimeUnit.MILLISECONDS);
     }
-
   }
 
   private void addNotice(Notice notice)
@@ -2753,6 +2774,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             Entry::getValue,
             (v1, v2) -> makeSequenceNumber(v1).compareTo(makeSequenceNumber(v2)) > 0 ? v1 : v2
         ));
+  }
+
+  protected IndexerMetadataStorageCoordinator getIndexerMetadataStorageCoordinator()
+  {
+    return indexerMetadataStorageCoordinator;
   }
 
   private OrderedSequenceNumber<SequenceOffsetType> makeSequenceNumber(SequenceOffsetType seq)
