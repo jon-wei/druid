@@ -44,6 +44,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -56,8 +57,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.joda.time.DateTime;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -333,5 +336,66 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       }
     }
     return filteredOffsets;
+  }
+
+  @Override
+  protected void cleanupDeadShardsFromMetadata(Set<String> expiredShards)
+  {
+    log.info("Cleaning up dead shards: " + expiredShards);
+
+    final KinesisDataSourceMetadata dataSourceMetadata =
+        (KinesisDataSourceMetadata) getIndexerMetadataStorageCoordinator().getDataSourceMetadata(dataSource);
+
+    SeekableStreamSequenceNumbers<String, String> old = dataSourceMetadata.getSeekableStreamSequenceNumbers();
+    log.info("OLD CLASS: " + old.getClass());
+
+    Map<String, String> oldPartitionSequenceNumberMap = old.getPartitionSequenceNumberMap();
+    Map<String, String> newPartitionSequenceNumberMap = new HashMap<>();
+    for (Map.Entry<String, String> entry : oldPartitionSequenceNumberMap.entrySet()) {
+      if (!expiredShards.contains(entry.getKey())) {
+        newPartitionSequenceNumberMap.put(entry.getKey(), entry.getValue());
+      }
+    }
+
+    Set<String> oldExclusiveStartPartitions = null;
+    Set<String> newExclusiveStartPartitions = null;
+    if (old instanceof SeekableStreamStartSequenceNumbers) {
+      newExclusiveStartPartitions = new HashSet<>();
+      oldExclusiveStartPartitions = ((SeekableStreamStartSequenceNumbers<String, String>) old).getExclusivePartitions();
+      for (String partitionId : oldExclusiveStartPartitions) {
+        if (!expiredShards.contains(partitionId)) {
+          newExclusiveStartPartitions.add(partitionId);
+        }
+      }
+    }
+
+    SeekableStreamSequenceNumbers<String, String> newSequences;
+    if (old instanceof SeekableStreamStartSequenceNumbers) {
+      newSequences = new SeekableStreamStartSequenceNumbers<String, String>(
+          old.getStream(),
+          null,
+          newPartitionSequenceNumberMap,
+          null,
+          newExclusiveStartPartitions
+      );
+    } else {
+      newSequences = new SeekableStreamEndSequenceNumbers<String, String>(
+          old.getStream(),
+          null,
+          newPartitionSequenceNumberMap,
+          null
+      );
+    }
+
+    try {
+      boolean success = getIndexerMetadataStorageCoordinator().resetDataSourceMetadata(
+          dataSource,
+          new KinesisDataSourceMetadata(newSequences)
+      );
+      log.info("cleanupDeadShardsFromMetadata result: " + success);
+    }
+    catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    }
   }
 }
