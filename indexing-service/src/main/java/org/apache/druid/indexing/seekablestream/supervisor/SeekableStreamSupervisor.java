@@ -467,21 +467,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   // start up successive tasks without waiting for the previous tasks to succeed and still be able to handle task
   // failures during publishing.
   // Map<{group RandomIdUtils}, Map<{partition RandomIdUtils}, {startingOffset}>>
-  private final ConcurrentHashMap<Integer, ConcurrentHashMap<PartitionIdType, SequenceOffsetType>> partitionGroups = new ConcurrentHashMap<>();
+  protected final ConcurrentHashMap<Integer, ConcurrentHashMap<PartitionIdType, SequenceOffsetType>> partitionGroups = new ConcurrentHashMap<>();
 
   protected final ObjectMapper sortingMapper;
   protected final List<PartitionIdType> partitionIds = new CopyOnWriteArrayList<>();
   protected final SeekableStreamSupervisorStateManager stateManager;
   protected volatile DateTime sequenceLastUpdated;
 
+  private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
+  protected final String dataSource;
 
   private final Set<PartitionIdType> subsequentlyDiscoveredPartitions = new HashSet<>();
   private final TaskStorage taskStorage;
   private final TaskMaster taskMaster;
-  private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private final SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetType> taskClient;
   private final SeekableStreamSupervisorSpec spec;
-  private final String dataSource;
   private final SeekableStreamSupervisorIOConfig ioConfig;
   private final SeekableStreamSupervisorTuningConfig tuningConfig;
   private final SeekableStreamIndexTaskTuningConfig taskTuningConfig;
@@ -1803,7 +1803,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     for (Entry<PartitionIdType, SequenceOffsetType> entry : startPartitions.entrySet()) {
       sb.append(StringUtils.format("+%s(%s)", entry.getKey().toString(), entry.getValue().toString()));
     }
-    String partitionOffsetStr = sb.toString().substring(1);
+    String partitionOffsetStr = startPartitions.size() == 0 ? "" : sb.toString().substring(1);
 
     String minMsgTimeStr = (minimumMessageTime.isPresent() ? String.valueOf(minimumMessageTime.get().getMillis()) : "");
     String maxMsgTimeStr = (maximumMessageTime.isPresent() ? String.valueOf(maximumMessageTime.get().getMillis()) : "");
@@ -1829,6 +1829,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   protected abstract String baseTaskName();
 
+  protected void cleanupDeadShardsFromMetadata(Set<PartitionIdType> expiredShards)
+  {
+
+  }
+
   private boolean updatePartitionDataFromStream()
   {
     Set<PartitionIdType> partitionIds;
@@ -1851,7 +1856,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       return false;
     }
 
-    log.debug("Found [%d] partitions for stream [%s]", partitionIds.size(), ioConfig.getStream());
+    log.info("Found [%d] partitions for stream [%s]", partitionIds.size(), ioConfig.getStream());
+    log.info("Found [%s] partitions for stream [%s]", partitionIds, ioConfig.getStream());
+
 
     Set<PartitionIdType> closedPartitions = getOffsetsFromMetadataStorage()
         .entrySet()
@@ -1859,6 +1866,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         .filter(x -> isEndOfShard(x.getValue()))
         .map(Entry::getKey)
         .collect(Collectors.toSet());
+
+    log.info("Closed partitions: [%s]", closedPartitions);
 
     boolean initialPartitionDiscovery = this.partitionIds.isEmpty();
     for (PartitionIdType partitionId : partitionIds) {
@@ -1887,6 +1896,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             taskGroupId
         );
       }
+    }
+
+    // Look for expired shards and remove them from metadata storage
+    Set<PartitionIdType> expiredShards = new HashSet<>();
+    for (PartitionIdType partitionTd : closedPartitions) {
+      if (!partitionIds.contains(partitionTd)) {
+        expiredShards.add(partitionTd);
+      } else {
+        log.info("simulating expired partition for: " + partitionTd);
+        recordSupplier.addBannedId(partitionTd);
+      }
+    }
+
+    if (expiredShards.size() > 0) {
+      cleanupDeadShardsFromMetadata(expiredShards);
     }
 
     return true;
@@ -2368,6 +2392,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
   }
 
+  protected Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> filterDeadShardsFromStartingOffsets(
+      Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> startingOffsets
+  )
+  {
+    return startingOffsets;
+  }
+
   private void createNewTasks()
       throws JsonProcessingException
   {
@@ -2392,9 +2423,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             DateTimes.nowUtc().plus(ioConfig.getTaskDuration()).plus(ioConfig.getEarlyMessageRejectionPeriod().get())
         ) : Optional.absent());
 
+        final Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> unfilteredStartingOffsets =
+            generateStartingSequencesForPartitionGroup(groupId);
 
         final Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> startingOffsets =
-            generateStartingSequencesForPartitionGroup(groupId);
+            filterDeadShardsFromStartingOffsets(unfilteredStartingOffsets);
 
         ImmutableMap<PartitionIdType, SequenceOffsetType> simpleStartingOffsets = startingOffsets
             .entrySet()
@@ -2435,8 +2468,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       TaskGroup taskGroup = entry.getValue();
       Integer groupId = entry.getKey();
 
-      if (taskGroup.startingSequences == null || taskGroup.startingSequences
-          .values().stream().allMatch(x -> x == null || isEndOfShard(x))) {
+      if (taskGroup.startingSequences == null ||
+          taskGroup.startingSequences.size() == 0 ||
+          taskGroup.startingSequences.values().stream().allMatch(x -> x == null || isEndOfShard(x))) {
         log.debug("Nothing to read in any partition for taskGroup [%d], skipping task creation", groupId);
         continue;
       }
@@ -2456,7 +2490,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       // just created. This is mainly for the benefit of the status API in situations where the run period is lengthy.
       scheduledExec.schedule(buildRunTask(), 5000, TimeUnit.MILLISECONDS);
     }
-
   }
 
   private void addNotice(Notice notice)
@@ -2744,6 +2777,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             Entry::getValue,
             (v1, v2) -> makeSequenceNumber(v1).compareTo(makeSequenceNumber(v2)) > 0 ? v1 : v2
         ));
+  }
+
+  protected IndexerMetadataStorageCoordinator getIndexerMetadataStorageCoordinator()
+  {
+    return indexerMetadataStorageCoordinator;
   }
 
   private OrderedSequenceNumber<SequenceOffsetType> makeSequenceNumber(SequenceOffsetType seq)

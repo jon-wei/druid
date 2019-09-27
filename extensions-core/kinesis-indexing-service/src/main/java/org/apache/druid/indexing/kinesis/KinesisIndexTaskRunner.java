@@ -206,5 +206,4 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
       return null;
     }
   }
-
 }

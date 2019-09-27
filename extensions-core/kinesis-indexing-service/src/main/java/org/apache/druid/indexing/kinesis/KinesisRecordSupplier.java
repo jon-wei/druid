@@ -93,6 +93,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   private static final long PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS = 3000;
   private static final long EXCEPTION_RETRY_DELAY_MS = 10000;
 
+  private Set<String> bannedShardIdsHack = new HashSet<>();
+
   private static boolean isServiceExceptionRecoverable(AmazonServiceException ex)
   {
     final boolean isIOException = ex.getCause() instanceof IOException;
@@ -166,8 +168,14 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
         OrderedPartitionableRecord<String, String> currRecord;
 
         try {
+          boolean useHack = false;
+          String peonHack = System.getProperty("peon.hack");
+          if ("yes".equals(peonHack)) {
+            log.info("using peon hack");
+            useHack = true;
+          }
 
-          if (shardIterator == null) {
+          if (shardIterator == null || useHack) {
             log.info("shardIterator[%s] has been closed and has no more records", streamPartition.getPartitionId());
 
             // add an end-of-shard marker so caller knows this shard is closed
@@ -586,6 +594,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   @Override
   public Set<String> getPartitionIds(String stream)
   {
+    log.info("Getting partitions IDs, banned IDs: " + bannedShardIdsHack);
     return wrapExceptions(
         () -> {
           final Set<String> retVal = new HashSet<>();
@@ -598,7 +607,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
             final List<Shard> shards = streamDescription.getShards();
 
             for (Shard shard : shards) {
-              retVal.add(shard.getShardId());
+              if (!bannedShardIdsHack.contains(shard.getShardId())) {
+                retVal.add(shard.getShardId());
+              }
             }
 
             if (streamDescription.isHasMoreShards()) {
@@ -635,6 +646,12 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     }
 
     this.closed = true;
+  }
+
+  @Override
+  public void addBannedId(String shardId)
+  {
+    //bannedShardIdsHack.add(shardId);
   }
 
   private void seekInternal(StreamPartition<String> partition, String sequenceNumber, ShardIteratorType iteratorEnum)
