@@ -1805,7 +1805,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     for (Entry<PartitionIdType, SequenceOffsetType> entry : startPartitions.entrySet()) {
       sb.append(StringUtils.format("+%s(%s)", entry.getKey().toString(), entry.getValue().toString()));
     }
-    String partitionOffsetStr = sb.toString().substring(1);
+    String partitionOffsetStr = startPartitions.size() == 0 ? "" : sb.toString().substring(1);
 
     String minMsgTimeStr = (minimumMessageTime.isPresent() ? String.valueOf(minimumMessageTime.get().getMillis()) : "");
     String maxMsgTimeStr = (maximumMessageTime.isPresent() ? String.valueOf(maximumMessageTime.get().getMillis()) : "");
@@ -2421,11 +2421,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             DateTimes.nowUtc().plus(ioConfig.getTaskDuration()).plus(ioConfig.getEarlyMessageRejectionPeriod().get())
         ) : Optional.absent());
 
+        final Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> unfilteredStartingOffsets =
+            generateStartingSequencesForPartitionGroup(groupId);
 
         final Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> startingOffsets =
-            filterDeadShardsFromStartingOffsets(
-                generateStartingSequencesForPartitionGroup(groupId)
-            );
+            filterDeadShardsFromStartingOffsets(unfilteredStartingOffsets);
 
         ImmutableMap<PartitionIdType, SequenceOffsetType> simpleStartingOffsets = startingOffsets
             .entrySet()
@@ -2466,8 +2466,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       TaskGroup taskGroup = entry.getValue();
       Integer groupId = entry.getKey();
 
-      if (taskGroup.startingSequences == null || taskGroup.startingSequences
-          .values().stream().allMatch(x -> x == null || isEndOfShard(x))) {
+      if (taskGroup.startingSequences == null ||
+          taskGroup.startingSequences.size() == 0 ||
+          taskGroup.startingSequences.values().stream().allMatch(x -> x == null || isEndOfShard(x))) {
         log.debug("Nothing to read in any partition for taskGroup [%d], skipping task creation", groupId);
         continue;
       }
