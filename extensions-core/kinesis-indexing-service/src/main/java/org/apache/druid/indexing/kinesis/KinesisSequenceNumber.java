@@ -45,18 +45,28 @@ public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
   // this flag is used to indicate either END_OF_SHARD_MARKER
   // or NO_END_SEQUENCE_NUMBER so that they can be properly compared
   // with other sequence numbers
-  private final boolean isMaxSequenceNumber;
+  //private final boolean isMaxSequenceNumber;
+
+  private final boolean isEndOfShardMarker;
+  private final boolean isNoEndSequenceNumber;
+
   private final BigInteger intSequence;
 
   private KinesisSequenceNumber(String sequenceNumber, boolean isExclusive)
   {
     super(sequenceNumber, isExclusive);
-    if (END_OF_SHARD_MARKER.equals(sequenceNumber)
-        || NO_END_SEQUENCE_NUMBER.equals(sequenceNumber)) {
-      isMaxSequenceNumber = true;
+
+    if (END_OF_SHARD_MARKER.equals(sequenceNumber)) {
+      this.isEndOfShardMarker = true;
+      this.isNoEndSequenceNumber = false;
+      this.intSequence = null;
+    } else if (NO_END_SEQUENCE_NUMBER.equals(sequenceNumber)) {
+      this.isEndOfShardMarker = false;
+      this.isNoEndSequenceNumber = true;
       this.intSequence = null;
     } else {
-      isMaxSequenceNumber = false;
+      this.isEndOfShardMarker = false;
+      this.isNoEndSequenceNumber = false;
       this.intSequence = new BigInteger(sequenceNumber);
     }
   }
@@ -75,14 +85,35 @@ public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
   public int compareTo(OrderedSequenceNumber<String> o)
   {
     KinesisSequenceNumber num = (KinesisSequenceNumber) o;
-    if (isMaxSequenceNumber && num.isMaxSequenceNumber) {
-      return 0;
-    } else if (isMaxSequenceNumber) {
-      return 1;
-    } else if (num.isMaxSequenceNumber) {
-      return -1;
-    } else {
-      return this.intSequence.compareTo(new BigInteger(o.get()));
+
+    if (isEndOfShardMarker) {
+      if (num.isEndOfShardMarker) {
+        return 0;
+      } else {
+        // EOS is less than anything else
+        return -1;
+      }
     }
+
+    if (isNoEndSequenceNumber) {
+      if (num.isNoEndSequenceNumber) {
+        return 0;
+      } else {
+        // no end is greater than anything else
+        return 1;
+      }
+    }
+
+    if (num.isEndOfShardMarker) {
+      // numbered offset is greater than EOS
+      return 1;
+    }
+
+    if (num.isNoEndSequenceNumber) {
+      // numbered offset is less than NO_END
+      return -1;
+    }
+
+    return this.intSequence.compareTo(new BigInteger(o.get()));
   }
 }
