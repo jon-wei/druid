@@ -93,6 +93,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   private static final long PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS = 3000;
   private static final long EXCEPTION_RETRY_DELAY_MS = 10000;
 
+  private Set<String> bannedShardIdsHack = new HashSet<>();
+
   private static boolean isServiceExceptionRecoverable(AmazonServiceException ex)
   {
     final boolean isIOException = ex.getCause() instanceof IOException;
@@ -598,7 +600,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
             final List<Shard> shards = streamDescription.getShards();
 
             for (Shard shard : shards) {
-              retVal.add(shard.getShardId());
+              if (!bannedShardIdsHack.contains(shard.getShardId())) {
+                retVal.add(shard.getShardId());
+              }
             }
 
             if (streamDescription.isHasMoreShards()) {
@@ -635,6 +639,12 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     }
 
     this.closed = true;
+  }
+
+  @Override
+  public void addBannedId(String shardId)
+  {
+    bannedShardIdsHack.add(shardId);
   }
 
   private void seekInternal(StreamPartition<String> partition, String sequenceNumber, ShardIteratorType iteratorEnum)

@@ -393,6 +393,9 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
           new KinesisDataSourceMetadata(newSequences)
       );
       log.info("cleanupDeadShardsFromMetadata result: " + success);
+      if (success) {
+        //partitionIds.removeAll(expiredShards);
+      }
     }
     catch (IOException ioe) {
       throw new RuntimeException(ioe);

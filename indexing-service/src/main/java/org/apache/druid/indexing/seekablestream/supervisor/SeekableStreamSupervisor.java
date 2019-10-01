@@ -508,8 +508,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private volatile boolean stopped = false;
   private volatile boolean lifecycleStarted = false;
 
-  private final Set<PartitionIdType> simulateExpiredPartitionsHack = new HashSet();
-
   public SeekableStreamSupervisor(
       final String supervisorId,
       final TaskStorage taskStorage,
@@ -1899,11 +1897,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // Look for expired shards and remove them from metadata storage
     Set<PartitionIdType> expiredShards = new HashSet<>();
     for (PartitionIdType partitionTd : closedPartitions) {
-      if (!partitionIds.contains(partitionTd) || simulateExpiredPartitionsHack.contains(partitionTd)) {
+      if (!partitionIds.contains(partitionTd)) {
         expiredShards.add(partitionTd);
       } else {
         log.info("simulating expired partition for: " + partitionTd);
-        simulateExpiredPartitionsHack.add(partitionTd);
+        recordSupplier.addBannedId(partitionTd);
       }
     }
 

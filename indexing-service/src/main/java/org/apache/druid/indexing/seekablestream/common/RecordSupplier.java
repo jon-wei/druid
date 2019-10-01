@@ -128,4 +128,9 @@ public interface RecordSupplier<PartitionIdType, SequenceOffsetType> extends Clo
    */
   @Override
   void close();
+
+  default void addBannedId(PartitionIdType shardId)
+  {
+
+  }
 }
