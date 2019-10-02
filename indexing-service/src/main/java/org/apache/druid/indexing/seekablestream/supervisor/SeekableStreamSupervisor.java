@@ -467,7 +467,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   // start up successive tasks without waiting for the previous tasks to succeed and still be able to handle task
   // failures during publishing.
   // Map<{group RandomIdUtils}, Map<{partition RandomIdUtils}, {startingOffset}>>
-  private final ConcurrentHashMap<Integer, ConcurrentHashMap<PartitionIdType, SequenceOffsetType>> partitionGroups = new ConcurrentHashMap<>();
+  protected final ConcurrentHashMap<Integer, ConcurrentHashMap<PartitionIdType, SequenceOffsetType>> partitionGroups = new ConcurrentHashMap<>();
 
   protected final ObjectMapper sortingMapper;
   protected final List<PartitionIdType> partitionIds = new CopyOnWriteArrayList<>();
@@ -1857,6 +1857,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     log.info("Found [%d] partitions for stream [%s]", partitionIds.size(), ioConfig.getStream());
+    log.info("Found [%s] partitions for stream [%s]", partitionIds, ioConfig.getStream());
+
 
     Set<PartitionIdType> closedPartitions = getOffsetsFromMetadataStorage()
         .entrySet()
@@ -1864,6 +1866,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         .filter(x -> isEndOfShard(x.getValue()))
         .map(Entry::getKey)
         .collect(Collectors.toSet());
+
+    log.info("Closed partitions: [%s]", closedPartitions);
 
     boolean initialPartitionDiscovery = this.partitionIds.isEmpty();
     for (PartitionIdType partitionId : partitionIds) {

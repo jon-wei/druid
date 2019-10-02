@@ -65,6 +65,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -226,7 +227,10 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       partitionIds.add(partitionId);
     }
 
+    /*
     return partitionIds.indexOf(partitionId) % spec.getIoConfig().getTaskCount();
+    */
+    return Math.abs(partitionId.hashCode()) % spec.getIoConfig().getTaskCount();
   }
 
   @Override
@@ -394,11 +398,29 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       );
       log.info("cleanupDeadShardsFromMetadata result: " + success);
       if (success) {
-        //partitionIds.removeAll(expiredShards);
+        removeDeadShardsFromMemory(expiredShards);
       }
     }
     catch (IOException ioe) {
       throw new RuntimeException(ioe);
     }
+  }
+
+  public void removeDeadShardsFromMemory(Set<String> expiredShards)
+  {
+    partitionIds.removeAll(expiredShards);
+
+    for (ConcurrentHashMap<String, String> partitionGroup : partitionGroups.values()) {
+      for (String expiredShard : expiredShards) {
+        partitionGroup.remove(expiredShard);
+      }
+    }
+
+
+  }
+
+  public void removeDeadShardsFromTaskGroups(Set<String> expiredShards)
+  {
+
   }
 }

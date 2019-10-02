@@ -588,6 +588,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   @Override
   public Set<String> getPartitionIds(String stream)
   {
+    log.info("Getting partitions IDs, banned IDs: " + bannedShardIdsHack);
     return wrapExceptions(
         () -> {
           final Set<String> retVal = new HashSet<>();
@@ -644,7 +645,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   @Override
   public void addBannedId(String shardId)
   {
-    bannedShardIdsHack.add(shardId);
+    //bannedShardIdsHack.add(shardId);
   }
 
   private void seekInternal(StreamPartition<String> partition, String sequenceNumber, ShardIteratorType iteratorEnum)
