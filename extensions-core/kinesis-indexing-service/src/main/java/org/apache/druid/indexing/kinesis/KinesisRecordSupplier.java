@@ -168,8 +168,14 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
         OrderedPartitionableRecord<String, String> currRecord;
 
         try {
+          boolean useHack = false;
+          String peonHack = System.getProperty("peon.hack");
+          if ("yes".equals(peonHack)) {
+            log.info("using peon hack");
+            useHack = true;
+          }
 
-          if (shardIterator == null) {
+          if (shardIterator == null || useHack) {
             log.info("shardIterator[%s] has been closed and has no more records", streamPartition.getPartitionId());
 
             // add an end-of-shard marker so caller knows this shard is closed
