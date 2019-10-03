@@ -24,6 +24,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.hash.HashCode;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.Task;
@@ -55,9 +58,11 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.utils.RandomIdUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -80,6 +85,8 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 {
+  private static final HashFunction HASH_FUNCTION = Hashing.sha1();
+
   private static final EmittingLogger log = new EmittingLogger(KinesisSupervisor.class);
 
   public static final TypeReference<TreeMap<Integer, Map<String, String>>> CHECKPOINTS_TYPE_REF =
@@ -227,10 +234,34 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       partitionIds.add(partitionId);
     }
 
-    /*
-    return partitionIds.indexOf(partitionId) % spec.getIoConfig().getTaskCount();
-    */
-    return Math.abs(partitionId.hashCode()) % spec.getIoConfig().getTaskCount();
+    Integer intForModulo = extractShardNumberFromShardId(partitionId);
+    if (intForModulo == null) {
+      intForModulo = getHashIntFromShardId(partitionId);
+    }
+
+    return Math.abs(intForModulo % spec.getIoConfig().getTaskCount());
+  }
+
+  private Integer extractShardNumberFromShardId(String shardId)
+  {
+    String numOnly = StringUtils.replace(shardId, "shard-", "");
+    try {
+      Long shardNum = DimensionHandlerUtils.convertObjectToLong(numOnly);
+      if (shardNum != null) {
+        return shardNum.intValue();
+      } else {
+        return null;
+      }
+    }
+    catch (Exception e) {
+      return null;
+    }
+  }
+
+  private int getHashIntFromShardId(String shardId)
+  {
+    HashCode hashCode = HASH_FUNCTION.hashString(shardId, StandardCharsets.UTF_8);
+    return hashCode.asInt();
   }
 
   @Override
