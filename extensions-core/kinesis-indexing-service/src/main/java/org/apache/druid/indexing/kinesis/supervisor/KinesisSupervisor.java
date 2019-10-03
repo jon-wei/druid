@@ -244,7 +244,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 
   private Integer extractShardNumberFromShardId(String shardId)
   {
-    String numOnly = StringUtils.replace(shardId, "shard-", "");
+    String numOnly = StringUtils.replace(shardId, "shardId-", "");
     try {
       Long shardNum = DimensionHandlerUtils.convertObjectToLong(numOnly);
       if (shardNum != null) {
@@ -446,8 +446,6 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         partitionGroup.remove(expiredShard);
       }
     }
-
-
   }
 
   public void removeDeadShardsFromTaskGroups(Set<String> expiredShards)
