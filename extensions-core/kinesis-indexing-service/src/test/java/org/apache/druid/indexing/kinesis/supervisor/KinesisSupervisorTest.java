@@ -4241,8 +4241,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expectLastCall()
             .anyTimes();
 
-
-    Capture<Task> postSplitCaptured = Capture.newInstance(CaptureType.ALL);
+    Capture<Task> postMergeCaptured = Capture.newInstance(CaptureType.ALL);
 
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
@@ -4251,15 +4250,22 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.NOT_STARTED))
             .anyTimes();
-    Task successfulTask = phaseOneTasks.get(0);
-    EasyMock.expect(taskStorage.getStatus(successfulTask.getId()))
-            .andReturn(Optional.of(TaskStatus.success(phaseOneTasks.get(0).getId())));
-    EasyMock.expect(taskStorage.getTask(successfulTask.getId())).andReturn(Optional.of(successfulTask)).anyTimes();
+
+    Task successfulTask0 = phaseOneTasks.get(0);
+    Task successfulTask1 = phaseOneTasks.get(1);
+    EasyMock.expect(taskStorage.getStatus(successfulTask0.getId()))
+            .andReturn(Optional.of(TaskStatus.success(successfulTask0.getId())));
+    EasyMock.expect(taskStorage.getTask(successfulTask0.getId())).andReturn(Optional.of(successfulTask0)).anyTimes();
+
+    EasyMock.expect(taskStorage.getStatus(successfulTask1.getId()))
+            .andReturn(Optional.of(TaskStatus.success(successfulTask1.getId())));
+    EasyMock.expect(taskStorage.getTask(successfulTask1.getId())).andReturn(Optional.of(successfulTask1)).anyTimes();
+
     EasyMock.expect(taskClient.getStartTimeAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
             .anyTimes();
 
-    EasyMock.expect(taskQueue.add(EasyMock.capture(postSplitCaptured))).andReturn(true).times(2);
+    EasyMock.expect(taskQueue.add(EasyMock.capture(postMergeCaptured))).andReturn(true).times(2);
 
     replayAll();
 
@@ -4292,7 +4298,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             .andReturn(Futures.immediateFuture(checkpointsGroup1))
             .times(1);
 
-    List<Task> postSplitTasks = postSplitCaptured.getValues();
+    List<Task> postSplitTasks = postMergeCaptured.getValues();
     EasyMock.expect(taskStorage.getActiveTasks()).andReturn(postSplitTasks).anyTimes();
     for (Task task : postSplitTasks) {
       EasyMock.expect(taskStorage.getStatus(task.getId()))
