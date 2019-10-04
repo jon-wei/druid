@@ -3999,21 +3999,21 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskClient.getStartTimeAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
             .anyTimes();
-    TreeMap<Integer, Map<String, String>> checkpoints2 = new TreeMap<>();
-    checkpoints2.put(0, ImmutableMap.of(
+    TreeMap<Integer, Map<String, String>> checkpointsGroup0 = new TreeMap<>();
+    checkpointsGroup0.put(0, ImmutableMap.of(
         SHARD_ID2, "0",
         SHARD_ID0, KinesisSequenceNumber.END_OF_SHARD_MARKER
     ));
-    TreeMap<Integer, Map<String, String>> checkpoints3 = new TreeMap<>();
-    checkpoints3.put(1, ImmutableMap.of(
+    TreeMap<Integer, Map<String, String>> checkpointsGroup1 = new TreeMap<>();
+    checkpointsGroup1.put(1, ImmutableMap.of(
         SHARD_ID1, "0"
     ));
     // there would be 4 tasks, 2 for each task group
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), EasyMock.anyBoolean()))
-            .andReturn(Futures.immediateFuture(checkpoints2))
+            .andReturn(Futures.immediateFuture(checkpointsGroup0))
             .times(1);
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-1"), EasyMock.anyBoolean()))
-            .andReturn(Futures.immediateFuture(checkpoints3))
+            .andReturn(Futures.immediateFuture(checkpointsGroup1))
             .times(1);
 
     List<Task> postSplitTasks = postSplitCaptured.getValues();
