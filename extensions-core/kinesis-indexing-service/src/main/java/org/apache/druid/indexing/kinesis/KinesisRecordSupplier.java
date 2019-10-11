@@ -66,6 +66,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -89,6 +90,7 @@ import java.util.stream.Collectors;
  */
 public class KinesisRecordSupplier implements RecordSupplier<String, String>
 {
+  private Map<String, Integer> bannedIds = new HashMap<>();
   private static final EmittingLogger log = new EmittingLogger(KinesisRecordSupplier.class);
   private static final long PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS = 3000;
   private static final long EXCEPTION_RETRY_DELAY_MS = 10000;
@@ -598,6 +600,10 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
             final List<Shard> shards = streamDescription.getShards();
 
             for (Shard shard : shards) {
+              Integer count = bannedIds.get(shard.getShardId());
+              if (count != null && count > 6) {
+                continue;
+              }
               retVal.add(shard.getShardId());
             }
 
@@ -611,6 +617,20 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
           return retVal;
         }
     );
+  }
+
+  @Override
+  public void banIds(Set<String> bannedIdss)
+  {
+    for (String bannedId : bannedIdss) {
+      bannedIds.putIfAbsent(
+          bannedId,
+          0
+      );
+      Integer count = bannedIds.get(bannedId);
+      count += 1;
+      bannedIds.put(bannedId, count);
+    }
   }
 
   @Override

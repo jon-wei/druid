@@ -123,6 +123,11 @@ public interface RecordSupplier<PartitionIdType, SequenceOffsetType> extends Clo
    */
   Set<PartitionIdType> getPartitionIds(String stream);
 
+  default void banIds(Set<PartitionIdType> bannedIds)
+  {
+
+  }
+
   /**
    * close the RecordSupplier
    */
