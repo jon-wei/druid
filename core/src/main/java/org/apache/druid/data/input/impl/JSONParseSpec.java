@@ -74,6 +74,12 @@ public class JSONParseSpec extends NestedDataParseSpec<JSONPathSpec>
   }
 
   @Override
+  public InputFormat toInputFormat()
+  {
+    return new JsonInputFormat(getFlattenSpec(), getFeatureSpec());
+  }
+
+  @Override
   public ParseSpec withTimestampSpec(TimestampSpec spec)
   {
     return new JSONParseSpec(spec, getDimensionsSpec(), getFlattenSpec(), getFeatureSpec());

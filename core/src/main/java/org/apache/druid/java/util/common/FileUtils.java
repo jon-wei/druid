@@ -287,11 +287,31 @@ public class FileUtils
       String messageOnRetry
   ) throws IOException
   {
+    try (InputStream inputStream = objectOpenFunction.open(object)) {
+      return copyLarge(
+          inputStream,
+          outFile,
+          fetchBuffer,
+          retryCondition,
+          numRetries,
+          messageOnRetry
+      );
+    }
+  }
+
+  public static long copyLarge(
+      InputStream inputStream,
+      File outFile,
+      byte[] fetchBuffer,
+      Predicate<Throwable> retryCondition,
+      int numRetries,
+      String messageOnRetry
+  ) throws IOException
+  {
     try {
       return RetryUtils.retry(
           () -> {
-            try (InputStream inputStream = objectOpenFunction.open(object);
-                 OutputStream out = new FileOutputStream(outFile)) {
+            try (OutputStream out = new FileOutputStream(outFile)) {
               return IOUtils.copyLarge(inputStream, out, fetchBuffer);
             }
           },
