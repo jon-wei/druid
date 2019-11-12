@@ -1626,7 +1626,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       log.warn("Clearing task group [%d] information as no valid tasks left the group", groupId);
       activelyReadingTaskGroups.remove(groupId);
       //partitionGroups.get(groupId).replaceAll((partition, sequence) -> getNotSetMarker());
-      for(PartitionIdType partitionId : taskGroup.startingSequences.keySet()) {
+      for (PartitionIdType partitionId : taskGroup.startingSequences.keySet()) {
         partitionOffsets.put(partitionId, getNotSetMarker());
       }
     }
@@ -2288,7 +2288,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         }
         // clear partitionGroups, so that latest sequences from db is used as start sequences not the stale ones
         // if tasks did some successful incremental handoffs
-        for(PartitionIdType partitionId : group.startingSequences.keySet()) {
+        for (PartitionIdType partitionId : group.startingSequences.keySet()) {
           partitionOffsets.put(partitionId, getNotSetMarker());
         }
         //partitionGroups.get(groupId).replaceAll((partition, sequence) -> getNotSetMarker());
@@ -2567,7 +2567,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
           // reset partitions sequences for this task group so that they will be re-read from metadata storage
           //partitionGroups.get(groupId).replaceAll((partition, sequence) -> getNotSetMarker());
-          for(PartitionIdType partitionId : group.startingSequences.keySet()) {
+          for (PartitionIdType partitionId : group.startingSequences.keySet()) {
             partitionOffsets.put(partitionId, getNotSetMarker());
           }
 
