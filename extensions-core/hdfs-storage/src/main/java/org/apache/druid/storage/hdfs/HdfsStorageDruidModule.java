@@ -115,6 +115,5 @@ public class HdfsStorageDruidModule implements DruidModule
     JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", HdfsKerberosConfig.class);
     binder.bind(HdfsStorageAuthentication.class).in(ManageLifecycle.class);
     LifecycleModule.register(binder, HdfsStorageAuthentication.class);
-
   }
 }

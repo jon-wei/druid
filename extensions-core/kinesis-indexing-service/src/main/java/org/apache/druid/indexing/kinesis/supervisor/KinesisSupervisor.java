@@ -66,7 +66,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -229,39 +228,34 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   @Override
   protected int getTaskGroupIdForPartition(String partitionId)
   {
-    if (!partitionIds.contains(partitionId)) {
-      partitionIds.add(partitionId);
-    }
-
     return getTaskGroupIdForPartitionWithProvidedList(partitionId, partitionIds);
   }
 
   private int getTaskGroupIdForPartitionWithProvidedList(String partitionId, List<String> availablePartitions)
   {
+    int index = availablePartitions.indexOf(partitionId);
+    if (index < 0) {
+      return index;
+    }
     return availablePartitions.indexOf(partitionId) % spec.getIoConfig().getTaskCount();
   }
 
   @Override
-  protected Map<Integer, ConcurrentHashMap<String, String>> recomputePartitionGroupsForExpiration(
+  protected Map<Integer, Set<String>> recomputePartitionGroupsForExpiration(
       Set<String> availablePartitions
   )
   {
     List<String> availablePartitionsList = new ArrayList<>(availablePartitions);
 
-    Map<Integer, ConcurrentHashMap<String, String>> newPartitionGroups = new HashMap<>();
+    Map<Integer, Set<String>> newPartitionGroups = new HashMap<>();
 
-    for (ConcurrentHashMap<String, String> oldGroup : partitionGroups.values()) {
-      for (Map.Entry<String, String> partitionOffsetMapping : oldGroup.entrySet()) {
-        String partitionId = partitionOffsetMapping.getKey();
-        if (availablePartitions.contains(partitionId)) {
-          int newTaskGroupId = getTaskGroupIdForPartitionWithProvidedList(partitionId, availablePartitionsList);
-          ConcurrentHashMap<String, String> partitionMap = newPartitionGroups.computeIfAbsent(
-              newTaskGroupId,
-              k -> new ConcurrentHashMap<>()
-          );
-          partitionMap.put(partitionId, partitionOffsetMapping.getValue());
-        }
-      }
+    for (String availablePartition : availablePartitions) {
+      int newTaskGroupId = getTaskGroupIdForPartitionWithProvidedList(availablePartition, availablePartitionsList);
+      Set<String> newGroup = newPartitionGroups.computeIfAbsent(
+          newTaskGroupId,
+          k -> new HashSet<>()
+      );
+      newGroup.add(availablePartition);
     }
 
     return newPartitionGroups;
@@ -440,4 +434,58 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 
     return new KinesisDataSourceMetadata(newSequences);
   }
+
+  @Override
+  protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetadataWithClosedPartitions(
+      SeekableStreamDataSourceMetadata<String, String> currentMetadata, Set<String> closedPartitionIds
+  )
+  {
+    log.info("Marking closed shards in metadata: " + closedPartitionIds);
+
+    final KinesisDataSourceMetadata dataSourceMetadata = (KinesisDataSourceMetadata) currentMetadata;
+
+    SeekableStreamSequenceNumbers<String, String> old = dataSourceMetadata.getSeekableStreamSequenceNumbers();
+
+    Map<String, String> oldPartitionSequenceNumberMap = old.getPartitionSequenceNumberMap();
+    Map<String, String> newPartitionSequenceNumberMap = new HashMap<>();
+    for (Map.Entry<String, String> entry : oldPartitionSequenceNumberMap.entrySet()) {
+      if (!closedPartitionIds.contains(entry.getKey())) {
+        newPartitionSequenceNumberMap.put(entry.getKey(), entry.getValue());
+      } else {
+        newPartitionSequenceNumberMap.put(entry.getKey(), KinesisSequenceNumber.END_OF_SHARD_MARKER);
+      }
+    }
+
+    SeekableStreamSequenceNumbers<String, String> newSequences;
+    if (old instanceof SeekableStreamStartSequenceNumbers) {
+      Set<String> oldExclusiveStartPartitions;
+      Set<String> newExclusiveStartPartitions;
+
+      newExclusiveStartPartitions = new HashSet<>();
+      oldExclusiveStartPartitions = ((SeekableStreamStartSequenceNumbers<String, String>) old).getExclusivePartitions();
+      for (String partitionId : oldExclusiveStartPartitions) {
+        if (!closedPartitionIds.contains(partitionId)) {
+          newExclusiveStartPartitions.add(partitionId);
+        }
+      }
+
+      newSequences = new SeekableStreamStartSequenceNumbers<String, String>(
+          old.getStream(),
+          null,
+          newPartitionSequenceNumberMap,
+          null,
+          newExclusiveStartPartitions
+      );
+    } else {
+      newSequences = new SeekableStreamEndSequenceNumbers<String, String>(
+          old.getStream(),
+          null,
+          newPartitionSequenceNumberMap,
+          null
+      );
+    }
+
+    return new KinesisDataSourceMetadata(newSequences);
+  }
+
 }
