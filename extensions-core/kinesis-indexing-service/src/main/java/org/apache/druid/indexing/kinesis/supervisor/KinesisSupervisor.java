@@ -242,24 +242,22 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   }
 
   @Override
-  protected Map<Integer, ConcurrentHashMap<String, String>> recomputePartitionGroupsForExpiration(
+  protected Map<Integer, Set<String>> recomputePartitionGroupsForExpiration(
       Set<String> availablePartitions
   )
   {
     List<String> availablePartitionsList = new ArrayList<>(availablePartitions);
 
-    Map<Integer, ConcurrentHashMap<String, String>> newPartitionGroups = new HashMap<>();
+    Map<Integer, Set<String>> newPartitionGroups = new HashMap<>();
 
-    for (ConcurrentHashMap<String, String> oldGroup : partitionGroups.values()) {
-      for (Map.Entry<String, String> partitionOffsetMapping : oldGroup.entrySet()) {
-        String partitionId = partitionOffsetMapping.getKey();
+    for (Set<String> oldGroup : partitionGroups.values()) {
+      for (String partitionId : oldGroup) {
         if (availablePartitions.contains(partitionId)) {
           int newTaskGroupId = getTaskGroupIdForPartitionWithProvidedList(partitionId, availablePartitionsList);
-          ConcurrentHashMap<String, String> partitionMap = newPartitionGroups.computeIfAbsent(
+          newPartitionGroups.computeIfAbsent(
               newTaskGroupId,
-              k -> new ConcurrentHashMap<>()
+              k -> new HashSet<>()
           );
-          partitionMap.put(partitionId, partitionOffsetMapping.getValue());
         }
       }
     }
