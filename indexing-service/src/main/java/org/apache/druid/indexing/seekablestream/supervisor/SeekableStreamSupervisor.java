@@ -444,6 +444,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   // Map<{group RandomIdUtils}, Map<{partition RandomIdUtils}, {startingOffset}>>
   protected final ConcurrentHashMap<Integer, ConcurrentHashMap<PartitionIdType, SequenceOffsetType>> partitionGroups = new ConcurrentHashMap<>();
 
+  protected final ConcurrentHashMap<PartitionIdType, SequenceOffsetType> partitionOffsets = new ConcurrentHashMap<>();
+  protected final ConcurrentHashMap<Integer, Set<PartitionIdType>> groupPartitions = new ConcurrentHashMap<>();
+
   protected final ObjectMapper sortingMapper;
   protected final List<PartitionIdType> partitionIds = new CopyOnWriteArrayList<>();
   protected final SeekableStreamSupervisorStateManager stateManager;
