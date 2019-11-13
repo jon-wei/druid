@@ -1869,6 +1869,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         previouslyExpiredPartitions
     );
 
+    Set<PartitionIdType> activePartitionsIdsFromSupplier = Sets.difference(
+        partitionIdsFromSupplierWithoutPreviouslyExpiredPartitions,
+        closedPartitions
+    );
+
     if (partitionIdsFromSupplierWithoutPreviouslyExpiredPartitions.size() != partitionIdsFromSupplier.size()) {
       // this should never happen, but we check for it and exclude the expired partitions if they somehow reappear
       log.warn(
@@ -1877,9 +1882,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           partitionIdsFromSupplier
       );
     }
-    if (partitionIdsFromSupplierWithoutPreviouslyExpiredPartitions.size() == 0) {
+    if (activePartitionsIdsFromSupplier.size() == 0) {
       String errMsg = StringUtils.format(
-          "No partitions found for stream [%s] after removing previously expired partitions",
+          "No active partitions found for stream [%s] after removing closed and previously expired partitions",
           ioConfig.getStream()
       );
       stateManager.recordThrowableEvent(new StreamException(new ISE(errMsg)));
@@ -1899,12 +1904,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
 
-
-    // When partitions expire, we need to recompute the task group assignments, considering only non-expired partitions,
-    // to ensure that we have even distribution of readable partitions across tasks.
+    // When partitions expire, we need to recompute the task group assignments, considering only
+    // non-closed and non-expired partitions, to ensure that we have even distribution of active
+    // partitions across tasks.
     if (supportsPartitionExpiration()) {
-      cleanupExpiredPartitions(
+      cleanupClosedAndExpiredPartitions(
           storedPartitions,
+          activePartitionsIdsFromSupplier,
           previouslyExpiredPartitions,
           partitionIdsFromSupplier
       );
@@ -1972,8 +1978,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * @param storedPartitions Set of partitions previously tracked, from the metadata store
    * @param partitionIdsFromSupplier Set of partitions currently returned by the record supplier.
    */
-  private void cleanupExpiredPartitions(
+  private void cleanupClosedAndExpiredPartitions(
       Set<PartitionIdType> storedPartitions,
+      Set<PartitionIdType> activePartitionsIdsFromSupplier,
       Set<PartitionIdType> previouslyExpiredPartitions,
       Set<PartitionIdType> partitionIdsFromSupplier
   )
@@ -2000,9 +2007,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       validateMetadataPartitionExpiration(newlyExpiredPartitions, currentMetadata, cleanedMetadata);
 
       // Compute new partition groups, only including partitions that are
-      // still in partitionIdsFromSupplier
+      // still in partitionIdsFromSupplier and not closed
       Map<Integer, Set<PartitionIdType>> newPartitionGroups =
-          recomputePartitionGroupsForExpiration(partitionIdsFromSupplier);
+          recomputePartitionGroupsForExpiration(activePartitionsIdsFromSupplier);
 
       validatePartitionGroupReassignments(newPartitionGroups);
 
@@ -2012,7 +2019,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         boolean success = indexerMetadataStorageCoordinator.resetDataSourceMetadata(dataSource, cleanedMetadata);
         if (success) {
           partitionIds.clear();
-          partitionIds.addAll(partitionIdsFromSupplier);
+          partitionIds.addAll(activePartitionsIdsFromSupplier);
 
           for (Integer groupId : partitionGroups.keySet()) {
             if (newPartitionGroups.containsKey(groupId)) {
