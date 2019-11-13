@@ -449,4 +449,58 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 
     return new KinesisDataSourceMetadata(newSequences);
   }
+
+  @Override
+  protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetadataWithClosedPartitions(
+      SeekableStreamDataSourceMetadata<String, String> currentMetadata, Set<String> closedPartitionIds
+  )
+  {
+    log.info("Marking closed shards in metadata: " + closedPartitionIds);
+
+    final KinesisDataSourceMetadata dataSourceMetadata = (KinesisDataSourceMetadata) currentMetadata;
+
+    SeekableStreamSequenceNumbers<String, String> old = dataSourceMetadata.getSeekableStreamSequenceNumbers();
+
+    Map<String, String> oldPartitionSequenceNumberMap = old.getPartitionSequenceNumberMap();
+    Map<String, String> newPartitionSequenceNumberMap = new HashMap<>();
+    for (Map.Entry<String, String> entry : oldPartitionSequenceNumberMap.entrySet()) {
+      if (!closedPartitionIds.contains(entry.getKey())) {
+        newPartitionSequenceNumberMap.put(entry.getKey(), entry.getValue());
+      } else {
+        newPartitionSequenceNumberMap.put(entry.getKey(), KinesisSequenceNumber.END_OF_SHARD_MARKER);
+      }
+    }
+
+    SeekableStreamSequenceNumbers<String, String> newSequences;
+    if (old instanceof SeekableStreamStartSequenceNumbers) {
+      Set<String> oldExclusiveStartPartitions;
+      Set<String> newExclusiveStartPartitions;
+
+      newExclusiveStartPartitions = new HashSet<>();
+      oldExclusiveStartPartitions = ((SeekableStreamStartSequenceNumbers<String, String>) old).getExclusivePartitions();
+      for (String partitionId : oldExclusiveStartPartitions) {
+        if (!closedPartitionIds.contains(partitionId)) {
+          newExclusiveStartPartitions.add(partitionId);
+        }
+      }
+
+      newSequences = new SeekableStreamStartSequenceNumbers<String, String>(
+          old.getStream(),
+          null,
+          newPartitionSequenceNumberMap,
+          null,
+          newExclusiveStartPartitions
+      );
+    } else {
+      newSequences = new SeekableStreamEndSequenceNumbers<String, String>(
+          old.getStream(),
+          null,
+          newPartitionSequenceNumberMap,
+          null
+      );
+    }
+
+    return new KinesisDataSourceMetadata(newSequences);
+  }
+
 }

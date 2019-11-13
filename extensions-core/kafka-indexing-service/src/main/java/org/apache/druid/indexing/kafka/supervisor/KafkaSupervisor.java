@@ -374,6 +374,12 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   }
 
   @Override
+  protected boolean updateClosedShards(Set<String> closedShards)
+  {
+    return false;
+  }
+
+  @Override
   protected void updateLatestSequenceFromStream(
       RecordSupplier<Integer, Long> recordSupplier,
       Set<StreamPartition<Integer>> partitions

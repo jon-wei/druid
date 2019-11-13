@@ -2097,6 +2097,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     throw new UnsupportedOperationException("This supervisor type does not support partition expiration.");
   }
 
+  protected SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> createDataSourceMetadataWithClosedPartitions(
+      SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentMetadata,
+      Set<PartitionIdType> closedPartitionIds
+  )
+  {
+    throw new UnsupportedOperationException("This supervisor type does not support partition closing.");
+  }
+
   /**
    * Perform a sanity check on the datasource metadata returned by
    * {@link #createDataSourceMetadataWithExpiredPartitions}.
@@ -3346,4 +3354,28 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * sequences. In Kafka, start offsets are always inclusive.
    */
   protected abstract boolean useExclusiveStartSequenceNumberForNonFirstSequence();
+
+  public boolean updateClosedShards(Set<PartitionIdType> closedShards) {
+    // Mark partitions as expired in metadata
+    @SuppressWarnings("unchecked")
+    SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentMetadata =
+        (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) indexerMetadataStorageCoordinator.getDataSourceMetadata(
+            dataSource);
+
+    SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> cleanedMetadata =
+        createDataSourceMetadataWithClosedPartitions(currentMetadata, closedShards);
+
+    try {
+      boolean success = indexerMetadataStorageCoordinator.resetDataSourceMetadata(dataSource, cleanedMetadata);
+      if (success) {
+
+      } else {
+        log.error("Failed to update datasource metadata[%s] with expired partitions removed", cleanedMetadata);
+      }
+      return success;
+    }
+    catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    }
+  }
 }

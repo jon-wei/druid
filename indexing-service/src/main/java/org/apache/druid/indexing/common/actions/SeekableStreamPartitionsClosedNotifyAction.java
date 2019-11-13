@@ -26,30 +26,32 @@ import org.apache.druid.indexing.common.task.Task;
 
 import java.util.Set;
 
-public class SeekableStreamPartitionsClosedNotifyAction implements TaskAction<String>
+public class SeekableStreamPartitionsClosedNotifyAction implements TaskAction<Boolean>
 {
-  private final String datasource;
+  private final String dataSource;
   private final Set<String> closedShards;
 
   @JsonCreator
   private SeekableStreamPartitionsClosedNotifyAction(
+      @JsonProperty("dataSource") String datasource,
       @JsonProperty("closedPartitions") Set<String> closedPartitions
   )
   {
+    this.dataSource = datasource;
     this.closedShards = closedPartitions;
   }
   @Override
-  public TypeReference<String> getReturnTypeReference()
+  public TypeReference<Boolean> getReturnTypeReference()
   {
-    return new TypeReference<String>() {};
+    return new TypeReference<Boolean>() {};
   }
 
   @Override
-  public String perform(
+  public Boolean perform(
       Task task, TaskActionToolbox toolbox
   )
   {
-    toolbox.getIndexerMetadataStorageCoordinator().resetDataSourceMetadata();
+    return toolbox.getSupervisorManager().updateClosedShards(dataSource, closedShards);
   }
 
   @Override
