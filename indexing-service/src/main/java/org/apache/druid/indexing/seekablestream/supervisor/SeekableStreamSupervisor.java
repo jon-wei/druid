@@ -1874,6 +1874,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         closedPartitions
     );
 
+    Set<PartitionIdType> newlyClosedPartitions = Sets.intersection(
+        closedPartitions,
+        new HashSet<>(previousPartitionIds)
+    );
+
+    log.info("active partitions from supplier: " + activePartitionsIdsFromSupplier);
+
     if (partitionIdsFromSupplierWithoutPreviouslyExpiredPartitions.size() != partitionIdsFromSupplier.size()) {
       // this should never happen, but we check for it and exclude the expired partitions if they somehow reappear
       log.warn(
@@ -1910,22 +1917,25 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     if (supportsPartitionExpiration()) {
       cleanupClosedAndExpiredPartitions(
           storedPartitions,
+          newlyClosedPartitions,
+          new HashSet<>(previousPartitionIds),
           activePartitionsIdsFromSupplier,
           previouslyExpiredPartitions,
           partitionIdsFromSupplier
       );
     }
 
-    for (PartitionIdType partitionId : partitionIdsFromSupplierWithoutPreviouslyExpiredPartitions) {
+    for (PartitionIdType partitionId : activePartitionsIdsFromSupplier) {
       int taskGroupId = getTaskGroupIdForPartition(partitionId);
       //ConcurrentHashMap<PartitionIdType, SequenceOffsetType> partitionMap = partitionGroups.computeIfAbsent(
       //    taskGroupId,
       //    k -> new ConcurrentHashMap<>()
       //);
-      partitionGroups.computeIfAbsent(
+      Set<PartitionIdType> partitionGroup = partitionGroups.computeIfAbsent(
           taskGroupId,
           k -> new HashSet<>()
       );
+      partitionGroup.add(partitionId);
 
       if (partitionOffsets.putIfAbsent(partitionId, getNotSetMarker()) == null) {
         log.info(
@@ -1980,6 +1990,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    */
   private void cleanupClosedAndExpiredPartitions(
       Set<PartitionIdType> storedPartitions,
+      Set<PartitionIdType> newlyClosedPartitions,
+      Set<PartitionIdType> previousPartitionIds,
       Set<PartitionIdType> activePartitionsIdsFromSupplier,
       Set<PartitionIdType> previouslyExpiredPartitions,
       Set<PartitionIdType> partitionIdsFromSupplier
@@ -1990,7 +2002,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     Set<PartitionIdType> newlyExpiredPartitions = Sets.difference(storedPartitions, previouslyExpiredPartitions);
     newlyExpiredPartitions = Sets.difference(newlyExpiredPartitions, partitionIdsFromSupplier);
 
-    if (newlyExpiredPartitions.size() > 0) {
+    if (!newlyExpiredPartitions.isEmpty()) {
       log.info("Detected newly expired partitions: " + newlyExpiredPartitions);
 
       // Mark partitions as expired in metadata
@@ -2006,6 +2018,25 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
       validateMetadataPartitionExpiration(newlyExpiredPartitions, currentMetadata, cleanedMetadata);
 
+      try {
+        boolean success = indexerMetadataStorageCoordinator.resetDataSourceMetadata(dataSource, cleanedMetadata);
+        if (success) {
+
+        } else {
+          log.error("Failed to update datasource metadata[%s] with expired partitions removed", cleanedMetadata);
+        }
+      }
+      catch (IOException ioe) {
+        throw new RuntimeException(ioe);
+      }
+    }
+
+    if (!newlyClosedPartitions.isEmpty()) {
+      log.info("Detected newly closed partitions: " + newlyClosedPartitions);
+    }
+
+    // Partitions have been dropped
+    if (!newlyClosedPartitions.isEmpty() || !newlyExpiredPartitions.isEmpty()) {
       // Compute new partition groups, only including partitions that are
       // still in partitionIdsFromSupplier and not closed
       Map<Integer, Set<PartitionIdType>> newPartitionGroups =
@@ -2013,27 +2044,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
       validatePartitionGroupReassignments(newPartitionGroups);
 
-      log.info("New partition groups after partition expiration: " + newPartitionGroups);
+      log.info("New partition groups after removing closed and expired partitions: " + newPartitionGroups);
 
-      try {
-        boolean success = indexerMetadataStorageCoordinator.resetDataSourceMetadata(dataSource, cleanedMetadata);
-        if (success) {
-          partitionIds.clear();
-          partitionIds.addAll(activePartitionsIdsFromSupplier);
+      partitionIds.clear();
+      partitionIds.addAll(activePartitionsIdsFromSupplier);
 
-          for (Integer groupId : partitionGroups.keySet()) {
-            if (newPartitionGroups.containsKey(groupId)) {
-              partitionGroups.put(groupId, newPartitionGroups.get(groupId));
-            } else {
-              partitionGroups.put(groupId, new HashSet<>());
-            }
-          }
+      for (Integer groupId : partitionGroups.keySet()) {
+        if (newPartitionGroups.containsKey(groupId)) {
+          partitionGroups.put(groupId, newPartitionGroups.get(groupId));
         } else {
-          log.error("Failed to update datasource metadata[%s] with expired partitions removed", cleanedMetadata);
+          partitionGroups.put(groupId, new HashSet<>());
         }
-      }
-      catch (IOException ioe) {
-        throw new RuntimeException(ioe);
       }
     }
   }

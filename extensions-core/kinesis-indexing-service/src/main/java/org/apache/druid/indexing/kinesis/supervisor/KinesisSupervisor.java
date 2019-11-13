@@ -249,17 +249,29 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 
     Map<Integer, Set<String>> newPartitionGroups = new HashMap<>();
 
+    for (String availablePartition : availablePartitions) {
+      int newTaskGroupId = getTaskGroupIdForPartitionWithProvidedList(availablePartition, availablePartitionsList);
+      Set<String> newGroup = newPartitionGroups.computeIfAbsent(
+          newTaskGroupId,
+          k -> new HashSet<>()
+      );
+      newGroup.add(availablePartition);
+    }
+
+    /*
     for (Set<String> oldGroup : partitionGroups.values()) {
       for (String partitionId : oldGroup) {
         if (availablePartitions.contains(partitionId)) {
           int newTaskGroupId = getTaskGroupIdForPartitionWithProvidedList(partitionId, availablePartitionsList);
-          newPartitionGroups.computeIfAbsent(
+          Set<String> newGroup = newPartitionGroups.computeIfAbsent(
               newTaskGroupId,
               k -> new HashSet<>()
           );
+          newGroup.add(partitionId);
         }
       }
     }
+    */
 
     return newPartitionGroups;
   }

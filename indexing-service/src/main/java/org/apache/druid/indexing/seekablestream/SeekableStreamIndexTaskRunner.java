@@ -585,7 +585,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           for (OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType> record : records) {
             final boolean shouldProcess = verifyRecordInRange(record.getPartitionId(), record.getSequenceNumber());
 
-            log.trace(
+            log.info(
                 "Got stream[%s] partition[%s] sequenceNumber[%s], shouldProcess[%s].",
                 record.getStream(),
                 record.getPartitionId(),
@@ -658,6 +658,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                       rowIngestionMeters.incrementProcessed();
                     }
                   } else {
+                    log.info("THROWN AWAY ROW: " + row);
                     rowIngestionMeters.incrementThrownAway();
                   }
                 }
@@ -970,6 +971,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 Preconditions.checkNotNull(publishedSegmentsAndMetadata.getCommitMetadata(), "commitMetadata")
             );
 
+            if (publishedSegmentsAndMetadata.getSegments().isEmpty()) {
+              // we didn't publish anything, check if we have any closed partitions that we should tell the
+              // supervisor about so that it stop assigning them to later tasks.
+              log.info("We published nothing! Checking sequence metadata for closed shards: " + sequenceMetadata);
+            }
+
             sequences.remove(sequenceMetadata);
             publishingSequences.remove(sequenceMetadata.getSequenceName());
             try {
@@ -1183,6 +1190,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     final SequenceOffsetType lastReadOffset = lastReadOffsets.get(recordPartition);
 
+    log.info("LAST READ OFFSET: " + lastReadOffset);
     if (lastReadOffset == null) {
       return false;
     } else {
@@ -1853,10 +1861,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     // Check if the record has already been read.
     if (isRecordAlreadyRead(partition, recordOffset)) {
+      log.info("ALREADY READ");
       return false;
     }
 
     // Finally, check if this record comes before the endOffsets for this partition.
+    log.info("END OFFSETS: " + endOffsets.get(partition));
     return isMoreToReadBeforeReadingRecord(recordSequenceNumber.get(), endOffsets.get(partition));
   }
 

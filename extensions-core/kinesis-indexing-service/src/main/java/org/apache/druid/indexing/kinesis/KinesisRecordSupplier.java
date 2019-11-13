@@ -191,6 +191,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
           recordsResult = kinesis.getRecords(new GetRecordsRequest().withShardIterator(
               shardIterator).withLimit(recordsPerFetch));
 
+          log.info("RECORDS RESULT: " + recordsResult);
+          log.info("RECORDS RESULT NUM RECS: " + recordsResult.getRecords().size());
+
           // list will come back empty if there are no records
           for (Record kinesisRecord : recordsResult.getRecords()) {
 
@@ -222,7 +225,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
             );
 
 
-            log.trace(
+            log.info(
                 "Stream[%s] / partition[%s] / sequenceNum[%s] / bufferRemainingCapacity[%d]: %s",
                 currRecord.getStream(),
                 currRecord.getPartitionId(),
@@ -246,12 +249,16 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
                   currRecord.getSequenceNumber()
               ).getShardIterator();
 
+              log.info("SHARD ITERATOR AAA: " + shardIterator);
+
               rescheduleRunnable(recordBufferFullWait);
               return;
             }
           }
 
           shardIterator = recordsResult.getNextShardIterator(); // will be null if the shard has been closed
+
+          log.info("SHARD ITERATOR BBB: " + shardIterator);
 
           rescheduleRunnable(fetchDelayMillis);
         }
@@ -282,6 +289,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
           );
           if (recordsResult != null) {
             shardIterator = recordsResult.getNextShardIterator(); // will be null if the shard has been closed
+            log.info("SHARD ITERATOR CCC: " + shardIterator);
             rescheduleRunnable(fetchDelayMillis);
           } else {
             throw new ISE("can't reschedule fetch records runnable, recordsResult is null??");
@@ -644,7 +652,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       throw new ISE("Partition [%s] has not been assigned", partition);
     }
 
-    log.debug(
+    log.info(
         "Seeking partition [%s] to [%s]",
         partition.getPartitionId(),
         sequenceNumber != null ? sequenceNumber : iteratorEnum.toString()
@@ -658,6 +666,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     ).getShardIterator());
 
     checkPartitionsStarted = true;
+
+    log.info("RESOURCE: " + resource.streamPartition);
+    log.info("SHARD ITERATOR: " + resource.shardIterator);
   }
 
   private void filterBufferAndResetFetchRunnable(Set<StreamPartition<String>> partitions) throws InterruptedException

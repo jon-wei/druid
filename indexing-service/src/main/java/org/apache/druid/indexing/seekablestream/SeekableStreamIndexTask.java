@@ -272,7 +272,8 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
       throw new ParseException(errorMsg);
     }
 
-    if (log.isDebugEnabled()) {
+    if (true) {
+    //if (log.isDebugEnabled()) {
       if (beforeMinimumMessageTime) {
         log.debug(
             "CurrentTimeStamp[%s] is before MinimumMessageTime[%s]",
