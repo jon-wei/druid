@@ -33,22 +33,26 @@ public class SeekableStreamPartitionsClosedNotifyAction implements TaskAction<Bo
 
   @JsonCreator
   public SeekableStreamPartitionsClosedNotifyAction(
-      @JsonProperty("dataSource") String datasource,
-      @JsonProperty("closedPartitions") Set<String> closedPartitions
+      @JsonProperty("dataSource") String dataSource,
+      @JsonProperty("closedShards") Set<String> closedPartitions
   )
   {
-    this.dataSource = datasource;
+    this.dataSource = dataSource;
     this.closedShards = closedPartitions;
   }
+
   @Override
   public TypeReference<Boolean> getReturnTypeReference()
   {
-    return new TypeReference<Boolean>() {};
+    return new TypeReference<Boolean>()
+    {
+    };
   }
 
   @Override
   public Boolean perform(
-      Task task, TaskActionToolbox toolbox
+      Task task,
+      TaskActionToolbox toolbox
   )
   {
     return toolbox.getSupervisorManager().updateClosedShards(dataSource, closedShards);
@@ -64,5 +68,11 @@ public class SeekableStreamPartitionsClosedNotifyAction implements TaskAction<Bo
   public Set<String> getClosedShards()
   {
     return closedShards;
+  }
+
+  @JsonProperty
+  public String getDataSource()
+  {
+    return dataSource;
   }
 }

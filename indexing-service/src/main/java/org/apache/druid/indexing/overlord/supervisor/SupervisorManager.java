@@ -196,6 +196,7 @@ public class SupervisorManager
 
     Preconditions.checkState(started, "SupervisorManager not started");
     Preconditions.checkNotNull(id, "id");
+    Preconditions.checkNotNull(id, "closedShards");
 
     Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
 

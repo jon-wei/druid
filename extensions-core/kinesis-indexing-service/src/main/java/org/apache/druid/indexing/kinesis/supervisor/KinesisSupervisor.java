@@ -229,7 +229,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   protected int getTaskGroupIdForPartition(String partitionId)
   {
     if (!partitionIds.contains(partitionId)) {
-      partitionIds.add(partitionId);
+      //partitionIds.add(partitionId);
     }
 
     return getTaskGroupIdForPartitionWithProvidedList(partitionId, partitionIds);
