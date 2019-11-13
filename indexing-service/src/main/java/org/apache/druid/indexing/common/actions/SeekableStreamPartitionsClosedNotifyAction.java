@@ -32,7 +32,7 @@ public class SeekableStreamPartitionsClosedNotifyAction implements TaskAction<Bo
   private final Set<String> closedShards;
 
   @JsonCreator
-  private SeekableStreamPartitionsClosedNotifyAction(
+  public SeekableStreamPartitionsClosedNotifyAction(
       @JsonProperty("dataSource") String datasource,
       @JsonProperty("closedPartitions") Set<String> closedPartitions
   )
