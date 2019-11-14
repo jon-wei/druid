@@ -228,15 +228,19 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   @Override
   protected int getTaskGroupIdForPartition(String partitionId)
   {
-    if (!partitionIds.contains(partitionId)) {
+    //if (!partitionIds.contains(partitionId)) {
       //partitionIds.add(partitionId);
-    }
+    //}
 
     return getTaskGroupIdForPartitionWithProvidedList(partitionId, partitionIds);
   }
 
   private int getTaskGroupIdForPartitionWithProvidedList(String partitionId, List<String> availablePartitions)
   {
+    int index = availablePartitions.indexOf(partitionId);
+    if (index < 0) {
+      return index;
+    }
     return availablePartitions.indexOf(partitionId) % spec.getIoConfig().getTaskCount();
   }
 

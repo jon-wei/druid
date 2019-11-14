@@ -1290,6 +1290,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType> seekableStreamIndexTask = (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType>) task;
       final String taskId = task.getId();
 
+      boolean hasInactivePartition = false;
+      // Check if the task has any inactive partitions. If so, terminate the task.
+      for (PartitionIdType partitionId : seekableStreamIndexTask.getIOConfig()
+                                                                .getStartSequenceNumbers()
+                                                                .getPartitionSequenceNumberMap()
+                                                                .keySet()) {
+        if (!partitionIds.contains(partitionId)) {
+          log.info("Task [%s] has inactive partition [%s], killing task.", taskId, partitionId);
+          hasInactivePartition = true;
+          break;
+        }
+      }
+      if (hasInactivePartition) {
+        killTask(taskId, "Task [%s] has inactive partition", taskId);
+        continue;
+      }
+
       // Determine which task group this task belongs to based on one of the partitions handled by this task. If we
       // later determine that this task is actively reading, we will make sure that it matches our current partition
       // allocation (getTaskGroupIdForPartition(partition) should return the same value for every partition being read
