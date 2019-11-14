@@ -1240,6 +1240,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
+  private void killTaskWithSuccess(final String id, String reasonFormat, Object... args)
+  {
+    Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
+    if (taskQueue.isPresent()) {
+      taskQueue.get().shutdownWithSuccess(id, reasonFormat, args);
+    } else {
+      log.error("Failed to get task queue because I'm not the leader!");
+    }
+  }
+
   private void killTasksInGroup(TaskGroup taskGroup, String reasonFormat, Object... args)
   {
     if (taskGroup != null) {
@@ -1297,13 +1307,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                                                 .getPartitionSequenceNumberMap()
                                                                 .keySet()) {
         if (!partitionIds.contains(partitionId)) {
-          log.info("Task [%s] has inactive partition [%s], killing task.", taskId, partitionId);
+          log.info("Task [%s] partition is no longer active [%s], stopping task.", taskId, partitionId);
           hasInactivePartition = true;
           break;
         }
       }
       if (hasInactivePartition) {
-        killTask(taskId, "Task [%s] has inactive partition", taskId);
+        killTaskWithSuccess(taskId, "Task [%s] has inactive partition", taskId);
         continue;
       }
 
