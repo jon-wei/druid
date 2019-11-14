@@ -1906,8 +1906,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         continue;
       }
 
-      if (!initialPartitionDiscovery && !this.partitionIds.contains(partitionId)) {
-        subsequentlyDiscoveredPartitions.add(partitionId);
+      //if (!initialPartitionDiscovery && !this.partitionIds.contains(partitionId)) {
+      //  subsequentlyDiscoveredPartitions.add(partitionId);
+      //}
+
+      if (!this.partitionIds.contains(partitionId)) {
+        partitionIds.add(partitionId);
+
+        if (!initialPartitionDiscovery) {
+          subsequentlyDiscoveredPartitions.add(partitionId);
+        }
       }
     }
 
