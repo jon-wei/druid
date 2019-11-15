@@ -1610,6 +1610,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           final SortedMap<Integer, Map<PartitionIdType, SequenceOffsetType>> latestCheckpoints = new TreeMap<>(
               taskCheckpoints.tailMap(earliestConsistentSequenceId.get())
           );
+
+          for (Map<PartitionIdType, SequenceOffsetType> groupCheckpoint : latestCheckpoints.values()) {
+            for (SequenceOffsetType offset : groupCheckpoint.values()) {
+              if (offset.equals(getEndOfPartitionMarker())) {
+                log.warn("WHOA @!");
+              }
+            }
+          }
+
           log.info("Setting taskGroup sequences to [%s] for group [%d]", latestCheckpoints, groupId);
           taskGroup.checkpointSequences.clear();
           taskGroup.checkpointSequences.putAll(latestCheckpoints);
