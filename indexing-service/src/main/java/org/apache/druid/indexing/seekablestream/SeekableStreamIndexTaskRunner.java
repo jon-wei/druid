@@ -558,6 +558,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           // if stop is requested or task's end sequence is set by call to setEndOffsets method with finish set to true
           if (stopRequested.get() || sequences.size() == 0 || getLastSequenceMetadata().isCheckpointed()) {
             status = Status.PUBLISHING;
+            log.info("STOP REQUESTED A, CHANGING TO PUBLISHING STATE");
           }
 
           if (stopRequested.get()) {
@@ -762,10 +763,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       }
 
       synchronized (statusLock) {
+        log.info("STOP REQUESTED B");
+
         if (stopRequested.get() && !publishOnStop.get()) {
           throw new InterruptedException("Stopping without publishing");
         }
-
+        log.info("STOP REQUESTED B, CHANGING TO PUBLISHING STATE");
         status = Status.PUBLISHING;
       }
 
@@ -1515,6 +1518,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Produces(MediaType.APPLICATION_JSON)
   public Map<PartitionIdType, SequenceOffsetType> getEndOffsetsHTTP(@Context final HttpServletRequest req)
   {
+    log.info("GOT GET ENDOFFSETS CALL");
     authorizationCheck(req, Action.READ);
     return getEndOffsets();
   }

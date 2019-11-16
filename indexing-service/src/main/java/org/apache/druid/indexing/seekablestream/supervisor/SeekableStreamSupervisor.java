@@ -219,6 +219,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                                     ? exclusiveStartSequenceNumberPartitions
                                                     : Collections.emptySet();
       this.baseSequenceName = baseSequenceName;
+
+      for (SequenceOffsetType sot : startingSequences.values()) {
+        if (sot.equals(getEndOfPartitionMarker())) {
+          log.warn("WHOA3");
+        }
+      }
     }
 
     int addNewCheckpoint(Map<PartitionIdType, SequenceOffsetType> checkpoint)
@@ -393,6 +399,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           return;
         }
         final Map<PartitionIdType, SequenceOffsetType> newCheckpoint = checkpointTaskGroup(taskGroup, false).get();
+        for (SequenceOffsetType sot : newCheckpoint.values()) {
+          if (sot.equals(getEndOfPartitionMarker())) {
+            log.warn("WHOA2");
+          }
+        }
         taskGroup.addNewCheckpoint(newCheckpoint);
         log.info("Handled checkpoint notice, new checkpoint is [%s] for taskGroup [%s]", newCheckpoint, taskGroupId);
       }
@@ -1371,6 +1382,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                             PartitionIdType partition = entry.getKey();
                             SequenceOffsetType sequence = entry.getValue();
 
+                            if (sequence.equals(getEndOfPartitionMarker())) {
+                              log.warn(
+                                  "Got end of partition marker for partition [%s] from task [%s] in discoverTasks, not updating partition offset.",
+                                  taskId,
+                                  partition
+                              );
+                              continue;
+                            }
+
                             boolean succeeded;
                             do {
                               succeeded = true;
@@ -1612,9 +1632,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           );
 
           for (Map<PartitionIdType, SequenceOffsetType> groupCheckpoint : latestCheckpoints.values()) {
-            for (SequenceOffsetType offset : groupCheckpoint.values()) {
-              if (offset.equals(getEndOfPartitionMarker())) {
-                log.warn("WHOA @!");
+            for (Map.Entry<PartitionIdType, SequenceOffsetType> partitionOffset : groupCheckpoint.entrySet()) {
+              if (partitionOffset.getValue().equals(getEndOfPartitionMarker())) {
+                log.warn(
+                    "Got end of partition marker for partition [%s] from task [%s] in verifyAndMergeCheckpoints, not updating partition offset.",
+                    taskId,
+                    partitionOffset.getKey()
+                );
               }
             }
           }
@@ -2337,6 +2361,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
         // set endOffsets as the next startOffsets
         for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
+          if (entry.getValue().equals(getEndOfPartitionMarker())) {
+            log.warn(
+                "Got end of partition marker for partition [%s] in checkTaskDuration, not updating partition offset.",
+                entry.getKey()
+            );
+            continue;
+          }
           partitionOffsets.put(entry.getKey(), entry.getValue());
         }
       } else {
