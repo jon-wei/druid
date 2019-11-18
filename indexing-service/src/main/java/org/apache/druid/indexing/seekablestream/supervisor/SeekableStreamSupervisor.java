@@ -219,12 +219,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                                     ? exclusiveStartSequenceNumberPartitions
                                                     : Collections.emptySet();
       this.baseSequenceName = baseSequenceName;
-
-      for (SequenceOffsetType sot : startingSequences.values()) {
-        if (sot.equals(getEndOfPartitionMarker())) {
-          log.warn("WHOA3");
-        }
-      }
     }
 
     int addNewCheckpoint(Map<PartitionIdType, SequenceOffsetType> checkpoint)
@@ -399,11 +393,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           return;
         }
         final Map<PartitionIdType, SequenceOffsetType> newCheckpoint = checkpointTaskGroup(taskGroup, false).get();
-        for (SequenceOffsetType sot : newCheckpoint.values()) {
-          if (sot.equals(getEndOfPartitionMarker())) {
-            log.warn("WHOA2");
-          }
-        }
         taskGroup.addNewCheckpoint(newCheckpoint);
         log.info("Handled checkpoint notice, new checkpoint is [%s] for taskGroup [%s]", newCheckpoint, taskGroupId);
       }
@@ -1630,18 +1619,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           final SortedMap<Integer, Map<PartitionIdType, SequenceOffsetType>> latestCheckpoints = new TreeMap<>(
               taskCheckpoints.tailMap(earliestConsistentSequenceId.get())
           );
-
-          for (Map<PartitionIdType, SequenceOffsetType> groupCheckpoint : latestCheckpoints.values()) {
-            for (Map.Entry<PartitionIdType, SequenceOffsetType> partitionOffset : groupCheckpoint.entrySet()) {
-              if (partitionOffset.getValue().equals(getEndOfPartitionMarker())) {
-                log.warn(
-                    "Got end of partition marker for partition [%s] from task [%s] in verifyAndMergeCheckpoints, not updating partition offset.",
-                    taskId,
-                    partitionOffset.getKey()
-                );
-              }
-            }
-          }
 
           log.info("Setting taskGroup sequences to [%s] for group [%d]", latestCheckpoints, groupId);
           taskGroup.checkpointSequences.clear();
