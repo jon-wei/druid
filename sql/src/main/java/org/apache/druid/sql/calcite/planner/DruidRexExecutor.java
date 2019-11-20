@@ -24,6 +24,7 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexExecutor;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
@@ -116,7 +117,9 @@ public class DruidRexExecutor implements RexExecutor
         } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
           final BigDecimal bigDecimal;
 
-          if (exprResult.type() == ExprType.LONG) {
+          if (exprResult.isNumericNull()) {
+            bigDecimal = NullHandling.replaceWithDefault() ? BigDecimal.valueOf(NullHandling.defaultLongValue()) : null;
+          } else if (exprResult.type() == ExprType.LONG) {
             bigDecimal = BigDecimal.valueOf(exprResult.asLong());
           } else {
             bigDecimal = BigDecimal.valueOf(exprResult.asDouble());

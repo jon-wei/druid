@@ -9215,4 +9215,74 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         results
     );
   }
+
+  @Test
+  public void testNullIf00() throws Exception {
+    testQuery(
+        "SELECT NULLIF(0,0)",
+        ImmutableList.of(),
+        ImmutableList.of(
+            NullHandling.replaceWithDefault() ?
+            new Object[]{0} : new Object[]{null}
+        )
+    );
+
+    testQuery(
+        "SELECT NULLIF('abc','abc')",
+        ImmutableList.of(),
+        ImmutableList.of(
+            new Object[]{null}
+        )
+    );
+
+    if (NullHandling.replaceWithDefault()) {
+      testQuery(
+          "SELECT NULLIF(0,0) FROM druid.foo",
+          ImmutableList.of(
+              newScanQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(expressionVirtualColumn("v0", "0", ValueType.LONG))
+                  .columns("v0")
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+          ),
+
+          ImmutableList.of(
+              new Object[]{0},
+              new Object[]{0},
+              new Object[]{0},
+              new Object[]{0},
+              new Object[]{0},
+              new Object[]{0}
+          )
+      );
+    } else {
+      testQuery(
+          "SELECT NULLIF(0,0) FROM druid.foo",
+          ImmutableList.of(
+              newScanQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(expressionVirtualColumn("v0", "null", ValueType.LONG))
+                  .columns("v0")
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+          ),
+
+          ImmutableList.of(
+              new Object[]{null},
+              new Object[]{null},
+              new Object[]{null},
+              new Object[]{null},
+              new Object[]{null},
+              new Object[]{null}
+          )
+      );
+    }
+
+    log.info("NULL HANDLING REPLACE WITH DEFAULT: " + NullHandling.replaceWithDefault());
+  }
 }
