@@ -1858,6 +1858,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return false;
   }
 
+  private Map<PartitionIdType, Integer> expireCounterMap = new HashMap<>();
+  private Set<PartitionIdType> thingsToExpire = new HashSet<>();
+
   private boolean updatePartitionDataFromStream()
   {
     List<PartitionIdType> previousPartitionIds = new ArrayList<>(partitionIds);
@@ -1865,6 +1868,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     try {
       synchronized (recordSupplierLock) {
         partitionIdsFromSupplier = recordSupplier.getPartitionIds(ioConfig.getStream());
+        partitionIdsFromSupplier.removeAll(thingsToExpire);
       }
     }
     catch (Exception e) {
@@ -1936,6 +1940,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     boolean initialPartitionDiscovery = this.partitionIds.isEmpty();
     for (PartitionIdType partitionId : partitionIdsFromSupplierWithoutPreviouslyExpiredPartitions) {
       if (closedPartitions.contains(partitionId)) {
+        expireCounterMap.putIfAbsent(partitionId, 0);
+        expireCounterMap.put(partitionId, expireCounterMap.get(partitionId) + 1);
+        if (expireCounterMap.get(partitionId) > 40) {
+          log.info("EXPIRING PARTITION: " + partitionId);
+          thingsToExpire.add(partitionId);
+        }
         log.info("partition [%s] is closed and has no more data, skipping.", partitionId);
         continue;
       }
