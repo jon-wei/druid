@@ -4689,6 +4689,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         taskClientFactory,
         OBJECT_MAPPER,
         new KinesisSupervisorSpec(
+            null,
             dataSchema,
             tuningConfig,
             kinesisSupervisorIOConfig,
@@ -4792,6 +4793,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         taskClientFactory,
         OBJECT_MAPPER,
         new KinesisSupervisorSpec(
+            null,
             dataSchema,
             tuningConfig,
             kinesisSupervisorIOConfig,
@@ -4877,6 +4879,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         taskClientFactory,
         OBJECT_MAPPER,
         new KinesisSupervisorSpec(
+            null,
             dataSchema,
             tuningConfig,
             kinesisSupervisorIOConfig,
@@ -4964,6 +4967,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         taskClientFactory,
         OBJECT_MAPPER,
         new KinesisSupervisorSpec(
+            null,
             dataSchema,
             tuningConfig,
             kinesisSupervisorIOConfig,
