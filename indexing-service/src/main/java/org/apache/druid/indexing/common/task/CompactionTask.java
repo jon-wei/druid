@@ -529,11 +529,9 @@ public class CompactionTask extends AbstractBatchIndexTask
         null,
         new DruidInputSource(
             dataSchema.getDataSource(),
-            interval,
             null,
             null,
-            dataSchema.getDimensionsSpec().getDimensionNames(),
-            Arrays.stream(dataSchema.getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toList()),
+            true,
             toolbox.getIndexIO(),
             coordinatorClient,
             segmentLoaderFactory,

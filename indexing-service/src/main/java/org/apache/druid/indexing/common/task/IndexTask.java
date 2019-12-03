@@ -727,7 +727,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
             new InputRowSchema(
                 ingestionSchema.getDataSchema().getTimestampSpec(),
                 ingestionSchema.getDataSchema().getDimensionsSpec(),
-                metricsNames
+                metricsNames,
+                granularitySpec.inputIntervals()
             ),
             inputSource.needsFormat() ? getInputFormat(ingestionSchema) : null,
             tmpDir

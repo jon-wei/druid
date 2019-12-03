@@ -64,7 +64,8 @@ public class InputEntityIteratingReaderTest
             new DimensionsSpec(
                 DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "name", "score"))
             ),
-            Collections.emptyList()
+            Collections.emptyList(),
+            ImmutableList.of()
         ),
         new CsvInputFormat(
             ImmutableList.of("time", "name", "score"),

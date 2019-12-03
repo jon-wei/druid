@@ -49,6 +49,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("ts", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("field"))),
+        ImmutableList.of(),
         ImmutableList.of()
     );
     InputEntityReader reader = createReader(
@@ -114,7 +115,8 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
-        ImmutableList.of("metric1")
+        ImmutableList.of("metric1"),
+        ImmutableList.of()
     );
     List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
         new JSONPathFieldSpec(JSONPathFieldType.ROOT, "col", "col"),
@@ -200,7 +202,8 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
-        Collections.emptyList()
+        Collections.emptyList(),
+        ImmutableList.of()
     );
     List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
         new JSONPathFieldSpec(JSONPathFieldType.PATH, "extractByLogicalMap", "$.intToStringColumn.1"),
@@ -315,7 +318,8 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("repeatedInt"))),
-        Collections.emptyList()
+        Collections.emptyList(),
+        ImmutableList.of()
     );
     List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
         new JSONPathFieldSpec(JSONPathFieldType.ROOT, "repeatedInt", "repeatedInt")
@@ -353,7 +357,8 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("i32_dec", "extracted1", "extracted2"))),
-        Collections.emptyList()
+        Collections.emptyList(),
+        ImmutableList.of()
     );
     List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
         new JSONPathFieldSpec(JSONPathFieldType.PATH, "extracted1", "$.myComplex[0].id"),
@@ -395,7 +400,8 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
-        Collections.emptyList()
+        Collections.emptyList(),
+        ImmutableList.of()
     );
     List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
         new JSONPathFieldSpec(JSONPathFieldType.PATH, "extractedOptional", "$.optionalMessage.someId"),

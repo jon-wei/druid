@@ -64,7 +64,8 @@ public class JsonReaderTest
         new InputRowSchema(
             new TimestampSpec("timestamp", "iso", null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
-            Collections.emptyList()
+            Collections.emptyList(),
+            ImmutableList.of()
         ),
         source,
         null
@@ -113,7 +114,8 @@ public class JsonReaderTest
         new InputRowSchema(
             new TimestampSpec("timestamp", "iso", null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo"))),
-            Collections.emptyList()
+            Collections.emptyList(),
+            ImmutableList.of()
         ),
         source,
         null

@@ -47,7 +47,8 @@ public class TsvReaderTest
   private static final InputRowSchema INPUT_ROW_SCHEMA = new InputRowSchema(
       new TimestampSpec("ts", "auto", null),
       new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "name"))),
-      Collections.emptyList()
+      Collections.emptyList(),
+      ImmutableList.of()
   );
 
   @BeforeClass
@@ -229,7 +230,8 @@ public class TsvReaderTest
         new InputRowSchema(
             new TimestampSpec("Timestamp", "auto", null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("Timestamp"))),
-            Collections.emptyList()
+            Collections.emptyList(),
+            ImmutableList.of()
         ),
         source,
         null

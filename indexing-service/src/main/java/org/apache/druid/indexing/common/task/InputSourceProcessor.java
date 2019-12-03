@@ -113,7 +113,8 @@ public class InputSourceProcessor
             new InputRowSchema(
                 dataSchema.getTimestampSpec(),
                 dataSchema.getDimensionsSpec(),
-                metricsNames
+                metricsNames,
+                granularitySpec.inputIntervals()
             ),
             inputFormat,
             tmpDir

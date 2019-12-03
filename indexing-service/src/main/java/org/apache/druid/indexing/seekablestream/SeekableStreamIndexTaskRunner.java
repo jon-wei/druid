@@ -254,7 +254,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         task.getDataSchema().getDimensionsSpec(),
         Arrays.stream(task.getDataSchema().getAggregators())
               .map(AggregatorFactory::getName)
-              .collect(Collectors.toList())
+              .collect(Collectors.toList()),
+        task.getDataSchema().getGranularitySpec().inputIntervals()
     );
     this.inputFormat = ioConfig.getInputFormat(parser == null ? null : parser.getParseSpec());
     this.parser = parser;

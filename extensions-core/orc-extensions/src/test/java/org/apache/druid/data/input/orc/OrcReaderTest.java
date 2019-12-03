@@ -259,7 +259,7 @@ public class OrcReaderTest
       String dataFile
   ) throws IOException
   {
-    final InputRowSchema schema = new InputRowSchema(timestampSpec, dimensionsSpec, Collections.emptyList());
+    final InputRowSchema schema = new InputRowSchema(timestampSpec, dimensionsSpec, Collections.emptyList(), ImmutableList.of());
     final FileEntity entity = new FileEntity(new File(dataFile));
     return inputFormat.createReader(schema, entity, temporaryFolder.newFolder());
   }

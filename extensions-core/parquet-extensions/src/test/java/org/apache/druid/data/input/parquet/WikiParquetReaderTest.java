@@ -45,7 +45,8 @@ public class WikiParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "iso", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("page", "language", "user", "unpatrolled"))),
-        Collections.emptyList()
+        Collections.emptyList(),
+        ImmutableList.of()
     );
     InputEntityReader reader = createReader("example/wiki/wiki.parquet", schema, JSONPathSpec.DEFAULT);
 

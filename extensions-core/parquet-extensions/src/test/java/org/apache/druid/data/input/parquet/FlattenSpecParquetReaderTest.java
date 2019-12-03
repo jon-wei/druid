@@ -69,7 +69,8 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3", "listDim"))),
-        ImmutableList.of("metric1", "metric2")
+        ImmutableList.of("metric1", "metric2"),
+        ImmutableList.of()
     );
     JSONPathSpec flattenSpec = new JSONPathSpec(false, ImmutableList.of());
     InputEntityReader reader = createReader(
@@ -103,7 +104,8 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
-        ImmutableList.of("metric1", "metric2")
+        ImmutableList.of("metric1", "metric2"),
+        ImmutableList.of()
     );
     InputEntityReader reader = createReader(
         file,
@@ -136,7 +138,8 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3", "list"))),
-        ImmutableList.of("metric1", "metric2")
+        ImmutableList.of("metric1", "metric2"),
+        ImmutableList.of()
     );
     List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
         new JSONPathFieldSpec(JSONPathFieldType.ROOT, "timestamp", null),
@@ -177,7 +180,8 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "listExtracted"))),
-        ImmutableList.of("metric1", "metric2")
+        ImmutableList.of("metric1", "metric2"),
+        ImmutableList.of()
     );
     List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
         new JSONPathFieldSpec(JSONPathFieldType.ROOT, "timestamp", null),
@@ -217,7 +221,8 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1"))),
-        ImmutableList.of("metric1")
+        ImmutableList.of("metric1"),
+        ImmutableList.of()
     );
     JSONPathSpec flattenSpec = new JSONPathSpec(false, ImmutableList.of());
     InputEntityReader reader = createReader(
@@ -253,7 +258,8 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
-        ImmutableList.of("metric1", "metric2")
+        ImmutableList.of("metric1", "metric2"),
+        ImmutableList.of()
     );
     InputEntityReader reader = createReader(
         file,
@@ -286,7 +292,8 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
-        ImmutableList.of("metric1", "metric2")
+        ImmutableList.of("metric1", "metric2"),
+        ImmutableList.of()
     );
     List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
         new JSONPathFieldSpec(JSONPathFieldType.ROOT, "timestamp", null),
@@ -329,7 +336,8 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
-        Collections.emptyList()
+        Collections.emptyList(),
+        ImmutableList.of()
     );
     List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
         new JSONPathFieldSpec(JSONPathFieldType.ROOT, "timestamp", null),

@@ -46,12 +46,14 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schemaAsString = new InputRowSchema(
         new TimestampSpec("date_as_string", "Y-M-d", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
-        Collections.emptyList()
+        Collections.emptyList(),
+        ImmutableList.of()
     );
     InputRowSchema schemaAsDate = new InputRowSchema(
         new TimestampSpec("date_as_date", null, null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
-        Collections.emptyList()
+        Collections.emptyList(),
+        ImmutableList.of()
     );
     InputEntityReader readerAsString = createReader(
         file,
@@ -104,7 +106,8 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("ts", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
-        Collections.emptyList()
+        Collections.emptyList(),
+        ImmutableList.of()
     );
     InputEntityReader reader = createReader(file, schema, JSONPathSpec.DEFAULT);
 
@@ -130,7 +133,8 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("time", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
-        Collections.emptyList()
+        Collections.emptyList(),
+        ImmutableList.of()
     );
     InputEntityReader reader = createReader(
         file,

@@ -197,7 +197,8 @@ public class InputSourceSampler
     final InputRowSchema inputRowSchema = new InputRowSchema(
         dataSchema.getTimestampSpec(),
         dataSchema.getDimensionsSpec(),
-        metricsNames
+        metricsNames,
+        dataSchema.getGranularitySpec().inputIntervals()
     );
 
     InputSourceReader reader = inputSource.reader(inputRowSchema, inputFormat, tempDir);

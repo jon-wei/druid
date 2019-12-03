@@ -49,7 +49,8 @@ public class DecimalParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("fixed_len_dec"))),
-        ImmutableList.of("metric1")
+        ImmutableList.of("metric1"),
+        ImmutableList.of()
     );
     List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
         new JSONPathFieldSpec(JSONPathFieldType.ROOT, "fixed_len_dec", "fixed_len_dec"),
@@ -86,7 +87,8 @@ public class DecimalParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("i32_dec"))),
-        ImmutableList.of("metric1")
+        ImmutableList.of("metric1"),
+        ImmutableList.of()
     );
     List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
         new JSONPathFieldSpec(JSONPathFieldType.ROOT, "i32_dec", "i32_dec"),
@@ -123,7 +125,8 @@ public class DecimalParquetReaderTest extends BaseParquetReaderTest
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("i64_dec"))),
-        ImmutableList.of("metric1")
+        ImmutableList.of("metric1"),
+        ImmutableList.of()
     );
     List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
         new JSONPathFieldSpec(JSONPathFieldType.ROOT, "i32_dec", "i64_dec"),

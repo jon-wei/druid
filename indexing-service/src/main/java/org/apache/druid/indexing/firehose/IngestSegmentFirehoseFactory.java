@@ -27,6 +27,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -283,7 +284,12 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
     if (interval == null) {
       return DruidInputSource.getTimelineForSegmentIds(coordinatorClient, dataSource, segmentIds);
     } else {
-      return DruidInputSource.getTimelineForIntervals(coordinatorClient, retryPolicyFactory, dataSource, interval);
+      return DruidInputSource.getTimelineForIntervals(
+          coordinatorClient,
+          retryPolicyFactory,
+          dataSource,
+          ImmutableList.of(interval)
+      );
     }
   }
 
@@ -297,7 +303,7 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
         coordinatorClient,
         retryPolicyFactory,
         dataSource,
-        interval,
+        ImmutableList.of(interval),
         splitHintSpec == null ? new SegmentsSplitHintSpec(null) : splitHintSpec
     );
   }

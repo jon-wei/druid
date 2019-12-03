@@ -45,7 +45,7 @@ public class TimedShutoffInputSourceTest
     );
     final InputFormat inputFormat = new CsvInputFormat(ImmutableList.of("col1", "col2", "col3"), null, null, false, 0);
     final InputSourceReader reader = inputSource.reader(
-        new InputRowSchema(new TimestampSpec(null, null, null), new DimensionsSpec(null), Collections.emptyList()),
+        new InputRowSchema(new TimestampSpec(null, null, null), new DimensionsSpec(null), Collections.emptyList(), Collections.emptyList()),
         inputFormat,
         null
     );

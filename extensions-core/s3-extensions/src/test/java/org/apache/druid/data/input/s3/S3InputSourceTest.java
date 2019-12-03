@@ -277,7 +277,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     InputRowSchema someSchema = new InputRowSchema(
         new TimestampSpec("time", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2"))),
-        ImmutableList.of("count")
+        ImmutableList.of("count"),
+        ImmutableList.of()
     );
 
     InputSourceReader reader = inputSource.reader(
@@ -316,7 +317,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     InputRowSchema someSchema = new InputRowSchema(
         new TimestampSpec("time", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2"))),
-        ImmutableList.of("count")
+        ImmutableList.of("count"),
+        ImmutableList.of()
     );
 
     InputSourceReader reader = inputSource.reader(

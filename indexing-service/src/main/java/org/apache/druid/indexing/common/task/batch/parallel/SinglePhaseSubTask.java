@@ -429,7 +429,8 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
             new InputRowSchema(
                 ingestionSchema.getDataSchema().getTimestampSpec(),
                 ingestionSchema.getDataSchema().getDimensionsSpec(),
-                metricsNames
+                metricsNames,
+                ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals()
             ),
             inputSource.needsFormat() ? ParallelIndexSupervisorTask.getInputFormat(ingestionSchema) : null,
             tmpDir

@@ -156,7 +156,6 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
         metrics = new ArrayList<>();
       }
     } else {
-      // get RequiredFields
       metrics = new ArrayList<>(inputRowSchema.getMetricRequiredFields());
     }
 
@@ -489,9 +488,11 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     for (TimelineObjectHolder<String, DataSegment> timelineHolder : Lists.reverse(timelineSegments)) {
       for (PartitionChunk<DataSegment> chunk : timelineHolder.getObject()) {
         for (String metric : chunk.getObject().getMetrics()) {
-          uniqueMetrics.computeIfAbsent(metric, k -> {
-                                          return index[0]++;
-                                        }
+          uniqueMetrics.computeIfAbsent(
+              metric,
+              k -> {
+                return index[0]++;
+              }
           );
         }
       }

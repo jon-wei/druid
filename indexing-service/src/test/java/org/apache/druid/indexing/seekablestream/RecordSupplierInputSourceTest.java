@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
@@ -76,7 +77,8 @@ public class RecordSupplierInputSourceTest
         new InputRowSchema(
             new TimestampSpec("col_0", "auto", null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(colNames.subList(1, colNames.size()))),
-            Collections.emptyList()
+            Collections.emptyList(),
+            ImmutableList.of()
         ),
         inputFormat,
         temporaryFolder.newFolder()

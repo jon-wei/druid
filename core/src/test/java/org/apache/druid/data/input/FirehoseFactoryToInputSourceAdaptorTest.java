@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -70,7 +71,8 @@ public class FirehoseFactoryToInputSourceAdaptorTest
         new InputRowSchema(
             inputRowParser.getParseSpec().getTimestampSpec(),
             inputRowParser.getParseSpec().getDimensionsSpec(),
-            Collections.emptyList()
+            Collections.emptyList(),
+            ImmutableList.of()
         ),
         null,
         null
