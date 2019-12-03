@@ -69,8 +69,8 @@ public class DruidSegmentInputFormat implements InputFormat
     return new DruidSegmentReader(
         source,
         indexIO,
-        inputRowSchema.getDimensionsSpec().getDimensionNames(),
-        inputRowSchema.getMetricNames(),
+        dimensions,
+        metrics,
         dimFilter,
         temporaryDirectory
     );
