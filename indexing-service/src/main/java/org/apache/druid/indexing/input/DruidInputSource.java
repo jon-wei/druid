@@ -24,7 +24,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
+import com.google.common.collect.Lists;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputEntity;
@@ -63,9 +67,12 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class DruidInputSource extends AbstractInputSource implements SplittableInputSource<List<WindowedSegmentId>>
@@ -77,28 +84,20 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   // by the user creating this firehose and 'segmentIds' is used for sub-tasks if it is split for parallel
   // batch ingestion.
   @Nullable
-  private final Interval interval;
-  @Nullable
   private final List<WindowedSegmentId> segmentIds;
   private final DimFilter dimFilter;
-  private final List<String> dimensions;
-  private final List<String> metrics;
   private final IndexIO indexIO;
   private final CoordinatorClient coordinatorClient;
   private final SegmentLoaderFactory segmentLoaderFactory;
   private final RetryPolicyFactory retryPolicyFactory;
-  private final DruidSegmentInputFormat inputFormat;
+  private final boolean retainMetricsFromSegment;
 
   @JsonCreator
   public DruidInputSource(
       @JsonProperty("dataSource") final String dataSource,
-      @JsonProperty("interval") @Nullable Interval interval,
-      // Specifying "segments" is intended only for when this FirehoseFactory has split itself,
-      // not for direct end user use.
       @JsonProperty("segments") @Nullable List<WindowedSegmentId> segmentIds,
       @JsonProperty("filter") DimFilter dimFilter,
-      @JsonProperty("dimensions") List<String> dimensions,
-      @JsonProperty("metrics") List<String> metrics,
+      @JsonProperty("retainMetricsFromSegment") Boolean retainMetricsFromSegment,
       @JacksonInject IndexIO indexIO,
       @JacksonInject CoordinatorClient coordinatorClient,
       @JacksonInject SegmentLoaderFactory segmentLoaderFactory,
@@ -106,33 +105,20 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   )
   {
     Preconditions.checkNotNull(dataSource, "dataSource");
-    if ((interval == null && segmentIds == null) || (interval != null && segmentIds != null)) {
-      throw new IAE("Specify exactly one of 'interval' and 'segments'");
-    }
     this.dataSource = dataSource;
-    this.interval = interval;
     this.segmentIds = segmentIds;
     this.dimFilter = dimFilter;
-    this.dimensions = dimensions;
-    this.metrics = metrics;
+    this.retainMetricsFromSegment = retainMetricsFromSegment == null ? true : retainMetricsFromSegment;
     this.indexIO = Preconditions.checkNotNull(indexIO, "null IndexIO");
     this.coordinatorClient = Preconditions.checkNotNull(coordinatorClient, "null CoordinatorClient");
     this.segmentLoaderFactory = Preconditions.checkNotNull(segmentLoaderFactory, "null SegmentLoaderFactory");
     this.retryPolicyFactory = Preconditions.checkNotNull(retryPolicyFactory, "null RetryPolicyFactory");
-    this.inputFormat = new DruidSegmentInputFormat(indexIO, dimFilter);
   }
 
   @JsonProperty
   public String getDataSource()
   {
     return dataSource;
-  }
-
-  @Nullable
-  @JsonProperty
-  public Interval getInterval()
-  {
-    return interval;
   }
 
   @Nullable
@@ -149,24 +135,40 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     return dimFilter;
   }
 
-  @JsonProperty
-  public List<String> getDimensions()
-  {
-    return dimensions;
-  }
-
-  @JsonProperty
-  public List<String> getMetrics()
-  {
-    return metrics;
-  }
-
   @Override
   protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
   {
     final SegmentLoader segmentLoader = segmentLoaderFactory.manufacturate(temporaryDirectory);
+    final List<TimelineObjectHolder<String, DataSegment>> timeline = createTimeline(inputRowSchema.getIntervals());
 
-    final Stream<InputEntity> entityStream = createTimeline()
+    List<String> dimensions;
+    if (inputRowSchema.getDimensionsSpec().hasCustomDimensions()) {
+      dimensions = inputRowSchema.getDimensionsSpec().getDimensionNames();
+    } else {
+      dimensions = getUniqueDimensions(timeline, inputRowSchema.getDimensionsSpec().getDimensionExclusions());
+    }
+
+    List<String> metrics;
+    if (inputRowSchema.getMetricRequiredFields().isEmpty()) {
+      if (retainMetricsFromSegment) {
+        metrics = getUniqueMetrics(timeline);
+      } else {
+        metrics = new ArrayList<>();
+      }
+    } else {
+      // get RequiredFields
+      metrics = new ArrayList<>(inputRowSchema.getMetricRequiredFields());
+    }
+
+    DruidSegmentInputFormat inputFormat = new DruidSegmentInputFormat(
+        indexIO,
+        dimFilter,
+        dimensions,
+        metrics,
+        inputRowSchema.getIntervals()
+    );
+
+    final Stream<InputEntity> entityStream = timeline
         .stream()
         .flatMap(holder -> {
           final PartitionHolder<DataSegment> partitionHolder = holder.getObject();
@@ -183,12 +185,12 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     );
   }
 
-  private List<TimelineObjectHolder<String, DataSegment>> createTimeline()
+  private List<TimelineObjectHolder<String, DataSegment>> createTimeline(List<Interval> intervals)
   {
-    if (interval == null) {
+    if (segmentIds != null) {
       return getTimelineForSegmentIds(coordinatorClient, dataSource, segmentIds);
     } else {
-      return getTimelineForInterval(coordinatorClient, retryPolicyFactory, dataSource, interval);
+      return getTimelineForIntervals(coordinatorClient, retryPolicyFactory, dataSource, intervals);
     }
   }
 
@@ -198,6 +200,11 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
       @Nullable SplitHintSpec splitHintSpec
   )
   {
+    if (!(inputFormat instanceof DruidSegmentInputFormat)) {
+      throw new ISE("Got a non-segment input format!");
+    }
+    DruidSegmentInputFormat segmentInputFormat = (DruidSegmentInputFormat) inputFormat;
+
     // segmentIds is supposed to be specified by the supervisor task during the parallel indexing.
     // If it's not null, segments are already split by the supervisor task and further split won't happen.
     if (segmentIds == null) {
@@ -205,7 +212,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
           coordinatorClient,
           retryPolicyFactory,
           dataSource,
-          interval,
+          segmentInputFormat.getIntervals(),
           splitHintSpec == null ? new SegmentsSplitHintSpec(null) : splitHintSpec
       ).stream();
     } else {
@@ -216,6 +223,11 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   @Override
   public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
+    if (!(inputFormat instanceof DruidSegmentInputFormat)) {
+      throw new ISE("Got a non-segment input format!");
+    }
+    DruidSegmentInputFormat segmentInputFormat = (DruidSegmentInputFormat) inputFormat;
+
     // segmentIds is supposed to be specified by the supervisor task during the parallel indexing.
     // If it's not null, segments are already split by the supervisor task and further split won't happen.
     if (segmentIds == null) {
@@ -223,7 +235,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
           coordinatorClient,
           retryPolicyFactory,
           dataSource,
-          interval,
+          segmentInputFormat.getIntervals(),
           splitHintSpec == null ? new SegmentsSplitHintSpec(null) : splitHintSpec
       ).size();
     } else {
@@ -236,11 +248,9 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   {
     return new DruidInputSource(
         dataSource,
-        null,
         split.get(),
         dimFilter,
-        dimensions,
-        metrics,
+        retainMetricsFromSegment,
         indexIO,
         coordinatorClient,
         segmentLoaderFactory,
@@ -258,7 +268,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
       CoordinatorClient coordinatorClient,
       RetryPolicyFactory retryPolicyFactory,
       String dataSource,
-      Interval interval,
+      List<Interval> intervals,
       SplitHintSpec splitHintSpec
   )
   {
@@ -271,11 +281,11 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     }
 
     // isSplittable() ensures this is only called when we have an interval.
-    final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = getTimelineForInterval(
+    final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = getTimelineForIntervals(
         coordinatorClient,
         retryPolicyFactory,
         dataSource,
-        interval
+        intervals
     );
 
     // We do the simplest possible greedy algorithm here instead of anything cleverer. The general bin packing
@@ -296,10 +306,10 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
           existingWindowedSegmentId.getIntervals().add(timelineHolder.getInterval());
         } else {
           // It's the first time we've seen this segment, so create a new WindowedSegmentId.
-          List<Interval> intervals = new ArrayList<>();
+          List<Interval> intervals2 = new ArrayList<>();
           // Use the interval that contributes to the timeline, not the entire segment's true interval.
           intervals.add(timelineHolder.getInterval());
-          final WindowedSegmentId newWindowedSegmentId = new WindowedSegmentId(segment.getId().toString(), intervals);
+          final WindowedSegmentId newWindowedSegmentId = new WindowedSegmentId(segment.getId().toString(), intervals2);
           windowedSegmentIds.put(segment, newWindowedSegmentId);
 
           // Now figure out if it goes in the current split or not.
@@ -328,14 +338,14 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     return splits;
   }
 
-  public static List<TimelineObjectHolder<String, DataSegment>> getTimelineForInterval(
+  public static List<TimelineObjectHolder<String, DataSegment>> getTimelineForIntervals(
       CoordinatorClient coordinatorClient,
       RetryPolicyFactory retryPolicyFactory,
       String dataSource,
-      Interval interval
+      List<Interval> intervals
   )
   {
-    Preconditions.checkNotNull(interval);
+    Preconditions.checkNotNull(intervals);
 
     // This call used to use the TaskActionClient, so for compatibility we use the same retry configuration
     // as TaskActionClient.
@@ -344,7 +354,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     while (true) {
       try {
         usedSegments =
-            coordinatorClient.getDatabaseSegmentDataSourceSegments(dataSource, Collections.singletonList(interval));
+            coordinatorClient.getDatabaseSegmentDataSourceSegments(dataSource, intervals);
         break;
       }
       catch (Throwable e) {
@@ -365,7 +375,11 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
       }
     }
 
-    return VersionedIntervalTimeline.forSegments(usedSegments).lookup(interval);
+    List<TimelineObjectHolder<String, DataSegment>> timelineObjectHolders = new ArrayList<>();
+    for (Interval interval : intervals) {
+      timelineObjectHolders.addAll(VersionedIntervalTimeline.forSegments(usedSegments).lookup(interval));
+    }
+    return timelineObjectHolders;
   }
 
   public static List<TimelineObjectHolder<String, DataSegment>> getTimelineForSegmentIds(
@@ -428,5 +442,64 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     final double jitter = ThreadLocalRandom.current().nextGaussian() * input / 4.0;
     long retval = input + (long) jitter;
     return retval < 0 ? 0 : retval;
+  }
+
+  @VisibleForTesting
+  private static List<String> getUniqueDimensions(
+      List<TimelineObjectHolder<String, DataSegment>> timelineSegments,
+      @Nullable Set<String> excludeDimensions
+  )
+  {
+    final BiMap<String, Integer> uniqueDims = HashBiMap.create();
+
+    // Here, we try to retain the order of dimensions as they were specified since the order of dimensions may be
+    // optimized for performance.
+    // Dimensions are extracted from the recent segments to olders because recent segments are likely to be queried more
+    // frequently, and thus the performance should be optimized for recent ones rather than old ones.
+
+    // timelineSegments are sorted in order of interval
+    int index = 0;
+    for (TimelineObjectHolder<String, DataSegment> timelineHolder : Lists.reverse(timelineSegments)) {
+      for (PartitionChunk<DataSegment> chunk : timelineHolder.getObject()) {
+        for (String dimension : chunk.getObject().getDimensions()) {
+          if (!uniqueDims.containsKey(dimension) &&
+              (excludeDimensions == null || !excludeDimensions.contains(dimension))) {
+            uniqueDims.put(dimension, index++);
+          }
+        }
+      }
+    }
+
+    final BiMap<Integer, String> orderedDims = uniqueDims.inverse();
+    return IntStream.range(0, orderedDims.size())
+                    .mapToObj(orderedDims::get)
+                    .collect(Collectors.toList());
+  }
+
+  @VisibleForTesting
+  private static List<String> getUniqueMetrics(List<TimelineObjectHolder<String, DataSegment>> timelineSegments)
+  {
+    final BiMap<String, Integer> uniqueMetrics = HashBiMap.create();
+
+    // Here, we try to retain the order of metrics as they were specified. Metrics are extracted from the recent
+    // segments to olders.
+
+    // timelineSegments are sorted in order of interval
+    int[] index = {0};
+    for (TimelineObjectHolder<String, DataSegment> timelineHolder : Lists.reverse(timelineSegments)) {
+      for (PartitionChunk<DataSegment> chunk : timelineHolder.getObject()) {
+        for (String metric : chunk.getObject().getMetrics()) {
+          uniqueMetrics.computeIfAbsent(metric, k -> {
+                                          return index[0]++;
+                                        }
+          );
+        }
+      }
+    }
+
+    final BiMap<Integer, String> orderedMetrics = uniqueMetrics.inverse();
+    return IntStream.range(0, orderedMetrics.size())
+                    .mapToObj(orderedMetrics::get)
+                    .collect(Collectors.toList());
   }
 }

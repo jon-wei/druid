@@ -25,18 +25,32 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.IndexIO;
+import org.joda.time.Interval;
 
 import java.io.File;
+import java.util.List;
 
 public class DruidSegmentInputFormat implements InputFormat
 {
   private final IndexIO indexIO;
   private final DimFilter dimFilter;
+  private final List<String> dimensions;
+  private final List<String> metrics;
+  private final List<Interval> intervals;
 
-  DruidSegmentInputFormat(IndexIO indexIO, DimFilter dimFilter)
+  DruidSegmentInputFormat(
+      IndexIO indexIO,
+      DimFilter dimFilter,
+      List<String> dimensions,
+      List<String> metrics,
+      List<Interval> intervals
+  )
   {
     this.indexIO = indexIO;
     this.dimFilter = dimFilter;
+    this.dimensions = dimensions;
+    this.metrics = metrics;
+    this.intervals = intervals;
   }
 
   @Override
@@ -60,5 +74,20 @@ public class DruidSegmentInputFormat implements InputFormat
         dimFilter,
         temporaryDirectory
     );
+  }
+
+  public List<String> getDimensions()
+  {
+    return dimensions;
+  }
+
+  public List<String> getMetrics()
+  {
+    return metrics;
+  }
+
+  public List<Interval> getIntervals()
+  {
+    return intervals;
   }
 }

@@ -283,7 +283,7 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
     if (interval == null) {
       return DruidInputSource.getTimelineForSegmentIds(coordinatorClient, dataSource, segmentIds);
     } else {
-      return DruidInputSource.getTimelineForInterval(coordinatorClient, retryPolicyFactory, dataSource, interval);
+      return DruidInputSource.getTimelineForIntervals(coordinatorClient, retryPolicyFactory, dataSource, interval);
     }
   }
 

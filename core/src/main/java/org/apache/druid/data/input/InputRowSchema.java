@@ -21,8 +21,10 @@ package org.apache.druid.data.input;
 
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.joda.time.Interval;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Schema of {@link InputRow}.
@@ -32,12 +34,16 @@ public class InputRowSchema
   private final TimestampSpec timestampSpec;
   private final DimensionsSpec dimensionsSpec;
   private final List<String> metricNames;
+  private final List<String> metricRequiredFields;
+  private final List<Interval> intervals;
 
   public InputRowSchema(TimestampSpec timestampSpec, DimensionsSpec dimensionsSpec, List<String> metricNames)
   {
     this.timestampSpec = timestampSpec;
     this.dimensionsSpec = dimensionsSpec;
     this.metricNames = metricNames;
+    this.metricRequiredFields = metricNames;
+    this.intervals = null;
   }
 
   public TimestampSpec getTimestampSpec()
@@ -53,5 +59,15 @@ public class InputRowSchema
   public List<String> getMetricNames()
   {
     return metricNames;
+  }
+
+  public List<String> getMetricRequiredFields()
+  {
+    return metricRequiredFields;
+  }
+
+  public List<Interval> getIntervals()
+  {
+    return intervals;
   }
 }
