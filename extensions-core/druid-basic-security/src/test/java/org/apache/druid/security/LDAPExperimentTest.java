@@ -43,7 +43,8 @@ import org.junit.Test;
 public class LDAPExperimentTest extends AbstractLdapTestUnit {
 
   @Test
-  public void test() {
+  public void test() throws Exception
+  {
     //do whatever you need with `ldapServer`
 
     LdapServer myLdapserver = ldapServer;
@@ -51,9 +52,10 @@ public class LDAPExperimentTest extends AbstractLdapTestUnit {
 
     LDAPCredentialsValidator ldapCredentialsValidator = new LDAPCredentialsValidator(
         "ldap://localhost:23456",
-        "ldaptest1",
-        new DefaultPasswordProvider("12345"),
-        "cn=Test1 Ldap,ou=Users,dc=myorg,dc=com",
+        //"uid=ldaptest1,sn=Ldap,cn=Test1Ldap,ou=Users,dc=myorg,dc=com",
+        "uid=admin2,ou=system",
+        new DefaultPasswordProvider("secret2"),
+        "cn=Test1Ldap,ou=Users,dc=myorg,dc=com",
         "sn=Ldap",
         "uid",
         null,
@@ -69,6 +71,8 @@ public class LDAPExperimentTest extends AbstractLdapTestUnit {
         "12345".toCharArray()
     );
 
-    System.out.println(ldapCredentialsValidator);
+    System.out.println(authResult);
+
+    //Thread.sleep(200000);
   }
 }
