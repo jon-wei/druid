@@ -29,9 +29,16 @@ import org.apache.directory.server.core.annotations.ApplyLdifFiles;
 import org.apache.directory.server.ldap.LdapServer;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.security.basic.authentication.validator.LDAPCredentialsValidator;
+import org.apache.druid.security.basic.authorization.LDAPRoleProvider;
+import org.apache.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheManager;
+import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
+import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRole;
+import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.junit.runner.RunWith;
 import org.junit.Test;
+
+import java.util.Map;
 
 @RunWith(FrameworkRunner.class)
 @CreateDS(name = "myDS",
@@ -46,7 +53,6 @@ public class LDAPExperimentTest extends AbstractLdapTestUnit {
   public void test() throws Exception
   {
     //do whatever you need with `ldapServer`
-
     LdapServer myLdapserver = ldapServer;
     System.out.println(ldapServer);
 
@@ -73,6 +79,60 @@ public class LDAPExperimentTest extends AbstractLdapTestUnit {
 
     System.out.println(authResult);
 
+    AuthenticationResult authResultFail = ldapCredentialsValidator.validateCredentials(
+        "a",
+        "b",
+        "ldaptest1",
+        "wrongpassword".toCharArray()
+    );
+    System.out.println(authResultFail);
+
     //Thread.sleep(200000);
+
+    LDAPRoleProvider lrp = new LDAPRoleProvider(
+
+    );
+  }
+
+
+  public static class LDAPTestBasiAuthorizerCacheManager implements BasicAuthorizerCacheManager
+  {
+    @Override
+    public void handleAuthorizerUserUpdate(String authorizerPrefix, byte[] serializedUserAndRoleMap)
+    {
+
+    }
+
+    @Override
+    public void handleAuthorizerGroupMappingUpdate(String authorizerPrefix, byte[] serializedGroupMappingAndRoleMap)
+    {
+
+    }
+
+    @Override
+    public Map<String, BasicAuthorizerUser> getUserMap(String authorizerPrefix)
+    {
+      return null;
+    }
+
+    @Override
+    public Map<String, BasicAuthorizerRole> getRoleMap(String authorizerPrefix)
+    {
+      return null;
+    }
+
+    @Override
+    public Map<String, BasicAuthorizerGroupMapping> getGroupMappingMap(
+        String authorizerPrefix
+    )
+    {
+      return null;
+    }
+
+    @Override
+    public Map<String, BasicAuthorizerRole> getGroupMappingRoleMap(String authorizerPrefix)
+    {
+      return null;
+    }
   }
 }

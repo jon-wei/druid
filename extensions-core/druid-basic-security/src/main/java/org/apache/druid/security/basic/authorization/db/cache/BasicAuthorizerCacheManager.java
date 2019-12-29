@@ -45,7 +45,6 @@ public interface BasicAuthorizerCacheManager
    * */
   void handleAuthorizerGroupMappingUpdate(String authorizerPrefix, byte[] serializedGroupMappingAndRoleMap);
 
-
   /**
    * Return the cache manager's local view of the user map for the authorizer named `authorizerPrefix`.
    *
