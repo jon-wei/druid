@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kafka;
 
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 
+import java.util.ArrayList;
 import javax.validation.constraints.NotNull;
 
 // OrderedSequenceNumber.equals() should be used instead.
