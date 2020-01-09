@@ -5775,7 +5775,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_topN_orderByLongNumericColumnWithNulls_returnsDescendingResults()
+  public void test_topN_orderByLongSumNumericColumnWithNulls_returnsDescendingResults()
   {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -5843,7 +5843,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_topN_orderByFloatNumericColumnWithNulls_returnsDescendingResults()
+  public void test_topN_orderByFloatSumNumericColumnWithNulls_returnsDescendingResults()
   {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -5911,7 +5911,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_topN_orderByDoubleNumericColumnWithNulls_returnsDescendingResults()
+  public void test_topN_orderByDoubleSumNumericColumnWithNulls_returnsDescendingResults()
   {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -5989,5 +5989,73 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     nullRow.put(dimName, dimValue);
     nullRow.put(nameOfColumnWithNull, defaultNullValue);
     return nullRow;
+  }
+
+  @Test
+  public void test_topN_orderByLongLastNumericColumnWithNulls_returnsDescendingResults()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(new DefaultDimensionSpec("index", "index_alias", ValueType.LONG))
+        .metric(new NumericTopNMetricSpec("longNumericNull"))
+        .threshold(10000)
+        .aggregators(new LongLastAggregatorFactory("longNumericNull", "longNumericNull"))
+        .intervals(QueryRunnerTestHelper.SECOND_ONLY)
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-04-02T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 97L)
+                        .put("longNumericNull", 80L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 135L)
+                        .put("longNumericNull", 70L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1049L)
+                        .put("longNumericNull", 70L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1321L)
+                        .put("longNumericNull", 70L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 110L)
+                        .put("longNumericNull", 50L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1144L)
+                        .put("longNumericNull", 50L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1193L)
+                        .put("longNumericNull", 50L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 113L)
+                        .put("longNumericNull", 40L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 112L)
+                        .put("longNumericNull", 20L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 147L)
+                        .put("longNumericNull", 10L)
+                        .build(),
+                    makeNumericNullRowHelper("index_alias", 114L, "longNumericNull", NullHandling.defaultLongValue()),
+                    makeNumericNullRowHelper("index_alias", 126L, "longNumericNull", NullHandling.defaultLongValue()),
+                    makeNumericNullRowHelper("index_alias", 166L, "longNumericNull", NullHandling.defaultLongValue())
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
   }
 }
