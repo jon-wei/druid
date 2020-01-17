@@ -23,10 +23,14 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 
-public class TopNColumnSelectorStrategyFactory implements ColumnSelectorStrategyFactory<TopNColumnSelectorStrategy>
+import java.util.function.Function;
+
+public class TopNColumnSelectorStrategyFactory
+    implements ColumnSelectorStrategyFactory<TopNColumnAggregatesProcessor<?>>
 {
   private final ValueType dimensionType;
 
@@ -36,36 +40,43 @@ public class TopNColumnSelectorStrategyFactory implements ColumnSelectorStrategy
   }
 
   @Override
-  public TopNColumnSelectorStrategy makeColumnSelectorStrategy(
+  public TopNColumnAggregatesProcessor<?> makeColumnSelectorStrategy(
       ColumnCapabilities capabilities,
       ColumnValueSelector selector
   )
   {
     final ValueType selectorType = capabilities.getType();
 
-    switch (selectorType) {
-      case STRING:
-        // Return strategy that reads strings and outputs dimensionTypes.
-        return new StringTopNColumnSelectorStrategy(dimensionType);
-      case LONG:
-      case FLOAT:
-      case DOUBLE:
-        // When the selector is numeric, we want to use NumericTopNColumnSelectorStrategy. It aggregates using
-        // a numeric type and then converts to the desired output type after aggregating. We must be careful not to
-        // convert to an output type that cannot represent all possible values of the input type.
-
-        if (ValueType.isNumeric(dimensionType)) {
-          // Return strategy that aggregates using the _output_ type, because this allows us to collapse values
-          // properly (numeric types cannot always represent all values of other numeric types).
-          return NumericTopNColumnSelectorStrategy.ofType(dimensionType, dimensionType);
-        } else {
-          // Return strategy that aggregates using the _input_ type. Here we are assuming that the output type can
-          // represent all possible values of the input type. This will be true for STRING, which is the only
-          // non-numeric type currently supported.
-          return NumericTopNColumnSelectorStrategy.ofType(selectorType, dimensionType);
-        }
-      default:
-        throw new IAE("Cannot create query type helper from invalid type [%s]", selectorType);
+    if (selectorType.equals(ValueType.STRING)) {
+      return new StringTopNColumnAggregatesProcessor(dimensionType);
+    } else if (selectorType.isNumeric()) {
+      final Function<Object, Comparable<?>> converter;
+      final ValueType strategyType;
+      // When the selector is numeric, we want to use NumericTopNColumnSelectorStrategy. It aggregates using
+      // a numeric type and then converts to the desired output type after aggregating. We must be careful not to
+      // convert to an output type that cannot represent all possible values of the input type.
+      if (ValueType.isNumeric(dimensionType)) {
+        // Return strategy that aggregates using the _output_ type, because this allows us to collapse values
+        // properly (numeric types cannot always represent all values of other numeric types).
+        converter = DimensionHandlerUtils.converterFromTypeToType(dimensionType, dimensionType);
+        strategyType = dimensionType;
+      } else {
+        // Return strategy that aggregates using the _input_ type. Here we are assuming that the output type can
+        // represent all possible values of the input type. This will be true for STRING, which is the only
+        // non-numeric type currently supported.
+        converter = DimensionHandlerUtils.converterFromTypeToType(selectorType, dimensionType);
+        strategyType = selectorType;
+      }
+      switch (strategyType) {
+        case LONG:
+          return new LongTopNColumnAggregatesProcessor(converter);
+        case FLOAT:
+          return new FloatTopNColumnAggregatesProcessor(converter);
+        case DOUBLE:
+          return new DoubleTopNColumnAggregatesProcessor(converter);
+      }
     }
+
+    throw new IAE("Cannot create query type helper from invalid type [%s]", selectorType);
   }
 }
