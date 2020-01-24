@@ -276,4 +276,18 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
                 .filter(clause -> clause.includesColumn(column))
                 .findFirst();
   }
+
+  public static class JoinFilterSplit
+  {
+    Filter baseTableFilter;
+    Filter joinTableFilter;
+    
+    public JoinFilterSplit()
+    {
+
+    }
+
+
+
+  }
 }
