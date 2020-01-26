@@ -35,6 +35,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
+import org.apache.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -282,12 +283,23 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     Filter baseTableFilter;
     Filter joinTableFilter;
     
-    public JoinFilterSplit()
+    public JoinFilterSplit(
+        Filter baseTableFilter,
+        Filter joinTableFilter
+    )
     {
-
+      this.baseTableFilter = baseTableFilter;
+      this.joinTableFilter = joinTableFilter;
     }
 
-
-
+    public static JoinFilterSplit splitFilter(
+        Filter originalFilter,
+        StorageAdapter baseAdapter,
+        List<JoinableClause> clauses
+    )
+    {
+      Filter normalizedFilter = Filters.convertToCNF(originalFilter);
+      return null;
+    }
   }
 }
