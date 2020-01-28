@@ -24,7 +24,6 @@ import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Capabilities;
@@ -230,13 +229,19 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       }
     }
 
+    JoinFilterSplit joinFilterSplit = JoinFilterSplit.splitFilter(
+        filter,
+        baseAdapter,
+        clauses
+    );
+
     // Soon, we will need a way to push filters past a join when possible. This could potentially be done right here
     // (by splitting out pushable pieces of 'filter') or it could be done at a higher level (i.e. in the SQL planner).
     //
     // If it's done in the SQL planner, that will likely mean adding a 'baseFilter' parameter to this class that would
     // be passed in to the below baseAdapter.makeCursors call (instead of the null filter).
     final Sequence<Cursor> baseCursorSequence = baseAdapter.makeCursors(
-        null,
+        joinFilterSplit.getBaseTableFilter(),
         interval,
         VirtualColumns.create(preJoinVirtualColumns),
         gran,
@@ -253,7 +258,11 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
             retVal = HashJoinEngine.makeJoinCursor(retVal, clause);
           }
 
-          return PostJoinCursor.wrap(retVal, VirtualColumns.create(postJoinVirtualColumns), filter);
+          return PostJoinCursor.wrap(
+              retVal,
+              VirtualColumns.create(postJoinVirtualColumns),
+              joinFilterSplit.getJoinTableFilter()
+          );
         }
     );
   }
@@ -346,6 +355,16 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       this.joinTableFilter = joinTableFilter;
     }
 
+    public Filter getBaseTableFilter()
+    {
+      return baseTableFilter;
+    }
+
+    public Filter getJoinTableFilter()
+    {
+      return joinTableFilter;
+    }
+
     public static JoinFilterSplit splitFilter(
         Filter originalFilter,
         StorageAdapter baseAdapter,
@@ -355,14 +374,17 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       Filter normalizedFilter = Filters.convertToCNF(originalFilter);
 
       // build the equicondition map
-      Map<String, Expr> equiconditions = new HashMap<>();
+      Map<String, JoinableClause> equiconditions = new HashMap<>();
       for (JoinableClause clause : clauses) {
         for (Equality equality : clause.getCondition().getEquiConditions()) {
-          equiconditions.put(equality.getRightColumn(), equality.getLeftExpr());
+          equiconditions.put(equality.getRightColumn(), clause);
         }
       }
 
       // List of candidates for pushdown
+      // CNF normalization will generate either
+      // - an AND filter with multiple subfilters
+      // - or a single non-AND subfilter which cannot be split further
       List<Filter> normalizedOrClauses;
       if (normalizedFilter instanceof AndFilter) {
         normalizedOrClauses = ((AndFilter) normalizedFilter).getFilters();
@@ -375,7 +397,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       List<Filter> leftFilters = new ArrayList<>();
       List<Filter> rightFilters = new ArrayList<>();
       for (Filter orClause : normalizedOrClauses) {
-        JoinFilterAnalysis joinFilterAnalysis = analyzeJoinFilterClause(orClause);
+        JoinFilterAnalysis joinFilterAnalysis = analyzeJoinFilterClause(orClause, equiconditions);
         if (joinFilterAnalysis.isCanPushDown()) {
           leftFilters.add(joinFilterAnalysis.getPushdownLhs());
         }
@@ -385,20 +407,28 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       }
 
       return new JoinFilterSplit(
-          new AndFilter(leftFilters),
-          new AndFilter(rightFilters)
+          leftFilters.isEmpty() ? null : new AndFilter(leftFilters),
+          rightFilters.isEmpty() ? null : new AndFilter(rightFilters)
       );
     }
   }
 
-  public static JoinFilterAnalysis analyzeJoinFilterClause(Filter filterClause)
+  public static JoinFilterAnalysis analyzeJoinFilterClause(
+      Filter filterClause,
+      Map<String, JoinableClause> equiconditions
+  )
   {
     // we only support selector filter push down right now
     // IS NULL conditions are not currently supported
     if (filterClause instanceof OrFilter) {
       for (Filter subor : ((OrFilter) filterClause).getFilters()) {
         if (!(subor instanceof SelectorFilter)) {
-          return JoinFilterAnalysis.CANNOT_PUSH_DOWN;
+          return new JoinFilterAnalysis(
+              false,
+              true,
+              filterClause,
+              null
+          );
         }
       }
       return new JoinFilterAnalysis(
@@ -417,7 +447,12 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
           filterClause
       );
     } else {
-      return JoinFilterAnalysis.CANNOT_PUSH_DOWN;
+      return new JoinFilterAnalysis(
+          false,
+          true,
+          filterClause,
+          null
+      );
     }
   }
 }
