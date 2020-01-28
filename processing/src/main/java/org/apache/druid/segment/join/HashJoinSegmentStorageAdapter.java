@@ -35,21 +35,15 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
-import org.apache.druid.segment.filter.AndFilter;
-import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.segment.filter.OrFilter;
-import org.apache.druid.segment.filter.SelectorFilter;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -229,7 +223,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       }
     }
 
-    JoinFilterSplit joinFilterSplit = JoinFilterSplit.splitFilter(
+    JoinFilterAnalyzer.JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(
         filter,
         baseAdapter,
         clauses
@@ -291,168 +285,5 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
                 .stream()
                 .filter(clause -> clause.includesColumn(column))
                 .findFirst();
-  }
-
-  public static class JoinFilterAnalysis
-  {
-    private boolean canPushDown;
-    private boolean retainRhs;
-    private Filter originalRhs;
-    private Filter pushdownLhs;
-
-    public static JoinFilterAnalysis CANNOT_PUSH_DOWN = new JoinFilterAnalysis(
-        false,
-        true,
-        null,
-        null
-    );
-
-    public JoinFilterAnalysis(
-        boolean canPushDown,
-        boolean retainRhs,
-        Filter originalRhs,
-        Filter pushdownLhs
-    )
-    {
-      this.canPushDown = canPushDown;
-      this.retainRhs = retainRhs;
-      this.originalRhs = originalRhs;
-      this.pushdownLhs = pushdownLhs;
-    }
-
-    public boolean isCanPushDown()
-    {
-      return canPushDown;
-    }
-
-    public boolean isRetainRhs()
-    {
-      return retainRhs;
-    }
-
-    public Filter getOriginalRhs()
-    {
-      return originalRhs;
-    }
-
-    public Filter getPushdownLhs()
-    {
-      return pushdownLhs;
-    }
-  }
-
-  public static class JoinFilterSplit
-  {
-    Filter baseTableFilter;
-    Filter joinTableFilter;
-    
-    public JoinFilterSplit(
-        Filter baseTableFilter,
-        Filter joinTableFilter
-    )
-    {
-      this.baseTableFilter = baseTableFilter;
-      this.joinTableFilter = joinTableFilter;
-    }
-
-    public Filter getBaseTableFilter()
-    {
-      return baseTableFilter;
-    }
-
-    public Filter getJoinTableFilter()
-    {
-      return joinTableFilter;
-    }
-
-    public static JoinFilterSplit splitFilter(
-        Filter originalFilter,
-        StorageAdapter baseAdapter,
-        List<JoinableClause> clauses
-    )
-    {
-      Filter normalizedFilter = Filters.convertToCNF(originalFilter);
-
-      // build the equicondition map
-      Map<String, JoinableClause> equiconditions = new HashMap<>();
-      for (JoinableClause clause : clauses) {
-        for (Equality equality : clause.getCondition().getEquiConditions()) {
-          equiconditions.put(equality.getRightColumn(), clause);
-        }
-      }
-
-      // List of candidates for pushdown
-      // CNF normalization will generate either
-      // - an AND filter with multiple subfilters
-      // - or a single non-AND subfilter which cannot be split further
-      List<Filter> normalizedOrClauses;
-      if (normalizedFilter instanceof AndFilter) {
-        normalizedOrClauses = ((AndFilter) normalizedFilter).getFilters();
-      } else {
-        normalizedOrClauses = new ArrayList<>();
-        normalizedOrClauses.add(normalizedFilter);
-      }
-
-      // Pushdown filters, rewriting if necessary
-      List<Filter> leftFilters = new ArrayList<>();
-      List<Filter> rightFilters = new ArrayList<>();
-      for (Filter orClause : normalizedOrClauses) {
-        JoinFilterAnalysis joinFilterAnalysis = analyzeJoinFilterClause(orClause, equiconditions);
-        if (joinFilterAnalysis.isCanPushDown()) {
-          leftFilters.add(joinFilterAnalysis.getPushdownLhs());
-        }
-        if (joinFilterAnalysis.isRetainRhs()) {
-          rightFilters.add(joinFilterAnalysis.getOriginalRhs());
-        }
-      }
-
-      return new JoinFilterSplit(
-          leftFilters.isEmpty() ? null : new AndFilter(leftFilters),
-          rightFilters.isEmpty() ? null : new AndFilter(rightFilters)
-      );
-    }
-  }
-
-  public static JoinFilterAnalysis analyzeJoinFilterClause(
-      Filter filterClause,
-      Map<String, JoinableClause> equiconditions
-  )
-  {
-    // we only support selector filter push down right now
-    // IS NULL conditions are not currently supported
-    if (filterClause instanceof OrFilter) {
-      for (Filter subor : ((OrFilter) filterClause).getFilters()) {
-        if (!(subor instanceof SelectorFilter)) {
-          return new JoinFilterAnalysis(
-              false,
-              true,
-              filterClause,
-              null
-          );
-        }
-      }
-      return new JoinFilterAnalysis(
-          true,
-          false,
-          null,
-          filterClause
-      );
-    }
-
-    if (filterClause instanceof SelectorFilter) {
-      return new JoinFilterAnalysis(
-          true,
-          false,
-          null,
-          filterClause
-      );
-    } else {
-      return new JoinFilterAnalysis(
-          false,
-          true,
-          filterClause,
-          null
-      );
-    }
   }
 }

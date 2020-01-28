@@ -35,6 +35,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTable;
@@ -1301,6 +1302,50 @@ public class HashJoinSegmentStorageAdapterTest
             )
         ).makeCursors(
             new SelectorFilter("channel", "#en.wikipedia"),
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            FACT_TO_REGION_PREFIX + "regionName",
+            REGION_TO_COUNTRY_PREFIX + "countryName"
+        ),
+        ImmutableList.of(
+            new Object[]{"Talk:Oswald Tilghman", null, null},
+            new Object[]{"Peremptory norm", "New South Wales", "Australia"},
+            new Object[]{"President of India", "California", "United States"},
+            new Object[]{"Glasgow", "Kingston upon Hull", "United Kingdom"},
+            new Object[]{"Otjiwarongo Airport", "California", "United States"},
+            new Object[]{"Sarah Michelle Gellar", "Ontario", "Canada"},
+            new Object[]{"DirecTV", "North Carolina", "United States"},
+            new Object[]{"Carlo Curti", "California", "United States"},
+            new Object[]{"Giusy Ferreri discography", "Provincia di Varese", "Italy"},
+            new Object[]{"Roma-Bangkok", "Provincia di Varese", "Italy"},
+            new Object[]{"Old Anatolian Turkish", "Virginia", "United States"}
+        )
+    );
+  }
+
+  @Test
+  public void test_makeCursors_factToRegionToCountryLeftFilterOnChannelAndCountryName()
+  {
+    JoinTestHelper.verifyCursors(
+        new HashJoinSegmentStorageAdapter(
+            factSegment.asStorageAdapter(),
+            ImmutableList.of(
+                factToRegion(JoinType.LEFT),
+                regionToCountry(JoinType.LEFT)
+            )
+        ).makeCursors(
+            new AndFilter(
+                ImmutableList.of(
+                    new SelectorFilter("channel", "#en.wikipedia"),
+                    new SelectorFilter("rtc.countryName", "United States")
+                )
+            ),
             Intervals.ETERNITY,
             VirtualColumns.EMPTY,
             Granularities.ALL,

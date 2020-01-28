@@ -127,4 +127,14 @@ public class SelectorFilter implements Filter
   {
     return StringUtils.format("%s = %s", dimension, value);
   }
+
+  public String getDimension()
+  {
+    return dimension;
+  }
+
+  public String getValue()
+  {
+    return value;
+  }
 }
