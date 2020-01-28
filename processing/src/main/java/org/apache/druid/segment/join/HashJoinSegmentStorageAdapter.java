@@ -24,6 +24,7 @@ import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Capabilities;
@@ -35,16 +36,21 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
+import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.filter.OrFilter;
+import org.apache.druid.segment.filter.SelectorFilter;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -278,6 +284,54 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
                 .findFirst();
   }
 
+  public static class JoinFilterAnalysis
+  {
+    private boolean canPushDown;
+    private boolean retainRhs;
+    private Filter originalRhs;
+    private Filter pushdownLhs;
+
+    public static JoinFilterAnalysis CANNOT_PUSH_DOWN = new JoinFilterAnalysis(
+        false,
+        true,
+        null,
+        null
+    );
+
+    public JoinFilterAnalysis(
+        boolean canPushDown,
+        boolean retainRhs,
+        Filter originalRhs,
+        Filter pushdownLhs
+    )
+    {
+      this.canPushDown = canPushDown;
+      this.retainRhs = retainRhs;
+      this.originalRhs = originalRhs;
+      this.pushdownLhs = pushdownLhs;
+    }
+
+    public boolean isCanPushDown()
+    {
+      return canPushDown;
+    }
+
+    public boolean isRetainRhs()
+    {
+      return retainRhs;
+    }
+
+    public Filter getOriginalRhs()
+    {
+      return originalRhs;
+    }
+
+    public Filter getPushdownLhs()
+    {
+      return pushdownLhs;
+    }
+  }
+
   public static class JoinFilterSplit
   {
     Filter baseTableFilter;
@@ -299,7 +353,71 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     )
     {
       Filter normalizedFilter = Filters.convertToCNF(originalFilter);
-      return null;
+
+      // build the equicondition map
+      Map<String, Expr> equiconditions = new HashMap<>();
+      for (JoinableClause clause : clauses) {
+        for (Equality equality : clause.getCondition().getEquiConditions()) {
+          equiconditions.put(equality.getRightColumn(), equality.getLeftExpr());
+        }
+      }
+
+      // List of candidates for pushdown
+      List<Filter> normalizedOrClauses;
+      if (normalizedFilter instanceof AndFilter) {
+        normalizedOrClauses = ((AndFilter) normalizedFilter).getFilters();
+      } else {
+        normalizedOrClauses = new ArrayList<>();
+        normalizedOrClauses.add(normalizedFilter);
+      }
+
+      // Pushdown filters, rewriting if necessary
+      List<Filter> leftFilters = new ArrayList<>();
+      List<Filter> rightFilters = new ArrayList<>();
+      for (Filter orClause : normalizedOrClauses) {
+        JoinFilterAnalysis joinFilterAnalysis = analyzeJoinFilterClause(orClause);
+        if (joinFilterAnalysis.isCanPushDown()) {
+          leftFilters.add(joinFilterAnalysis.getPushdownLhs());
+        }
+        if (joinFilterAnalysis.isRetainRhs()) {
+          rightFilters.add(joinFilterAnalysis.getOriginalRhs());
+        }
+      }
+
+      return new JoinFilterSplit(
+          new AndFilter(leftFilters),
+          new AndFilter(rightFilters)
+      );
+    }
+  }
+
+  public static JoinFilterAnalysis analyzeJoinFilterClause(Filter filterClause)
+  {
+    // we only support selector filter push down right now
+    // IS NULL conditions are not currently supported
+    if (filterClause instanceof OrFilter) {
+      for (Filter subor : ((OrFilter) filterClause).getFilters()) {
+        if (!(subor instanceof SelectorFilter)) {
+          return JoinFilterAnalysis.CANNOT_PUSH_DOWN;
+        }
+      }
+      return new JoinFilterAnalysis(
+          true,
+          false,
+          null,
+          filterClause
+      );
+    }
+
+    if (filterClause instanceof SelectorFilter) {
+      return new JoinFilterAnalysis(
+          true,
+          false,
+          null,
+          filterClause
+      );
+    } else {
+      return JoinFilterAnalysis.CANNOT_PUSH_DOWN;
     }
   }
 }
