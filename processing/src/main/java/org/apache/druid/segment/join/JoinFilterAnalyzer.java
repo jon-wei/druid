@@ -309,7 +309,7 @@ public class JoinFilterAnalyzer
                   vcName,
                   correlatedBaseExpr.toString(),
                   ValueType.STRING,
-                  ExprMacroTable.nil()
+                  ExprMacroTable.nil() // TODO: Need an injected ExprMacroTable
               );
               pushdownVirtualColumns.add(correlatedBaseExprVirtualColumn);
 
