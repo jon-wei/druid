@@ -1358,16 +1358,10 @@ public class HashJoinSegmentStorageAdapterTest
             REGION_TO_COUNTRY_PREFIX + "countryName"
         ),
         ImmutableList.of(
-            new Object[]{"Talk:Oswald Tilghman", null, null},
-            new Object[]{"Peremptory norm", "New South Wales", "Australia"},
             new Object[]{"President of India", "California", "United States"},
-            new Object[]{"Glasgow", "Kingston upon Hull", "United Kingdom"},
             new Object[]{"Otjiwarongo Airport", "California", "United States"},
-            new Object[]{"Sarah Michelle Gellar", "Ontario", "Canada"},
             new Object[]{"DirecTV", "North Carolina", "United States"},
             new Object[]{"Carlo Curti", "California", "United States"},
-            new Object[]{"Giusy Ferreri discography", "Provincia di Varese", "Italy"},
-            new Object[]{"Roma-Bangkok", "Provincia di Varese", "Italy"},
             new Object[]{"Old Anatolian Turkish", "Virginia", "United States"}
         )
     );
