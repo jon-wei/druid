@@ -20,11 +20,13 @@
 package org.apache.druid.segment.join;
 
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.commons.lang.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.filter.InFilter;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
@@ -33,8 +35,10 @@ import org.apache.druid.segment.join.table.IndexedTableJoinable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class JoinFilterAnalyzer
 {
@@ -147,7 +151,7 @@ public class JoinFilterAnalyzer
 
     public boolean supportsPushDown()
     {
-      return !baseColumns.isEmpty() && !baseExpressions.isEmpty();
+      return !baseColumns.isEmpty() || !baseExpressions.isEmpty();
     }
   }
 
@@ -276,14 +280,15 @@ public class JoinFilterAnalyzer
         for (JoinFilterColumnCorrelationAnalysis correlationAnalysis : correlations) {
           if (correlationAnalysis.supportsPushDown()) {
             List<String> correlatedValues = getCorrelatedValuesForPushDown(
+                selectorFilter.getDimension(),
                 selectorFilter.getValue(),
                 prefixes.get(prefix),
                 correlationAnalysis
             );
+
+            System.out.println(correlatedValues);
           }
         }
-
-
 
         System.out.println(correlations);
       }
@@ -292,6 +297,7 @@ public class JoinFilterAnalyzer
   }
 
   public static List<String> getCorrelatedValuesForPushDown(
+      String dimName,
       String filterValue,
       JoinableClause clause,
       JoinFilterColumnCorrelationAnalysis correlationAnalysis
@@ -303,13 +309,19 @@ public class JoinFilterAnalyzer
       return correlatedValues;
     }
 
+    String dimNameNoPrefix = dimName.substring(clause.getPrefix().length());
+    String rhsColumnNoPrefix = correlationAnalysis.getRhsColumn().substring(clause.getPrefix().length());
+
     if (clause.getJoinable() instanceof IndexedTableJoinable) {
       IndexedTableJoinable indexedTableJoinable = (IndexedTableJoinable) clause.getJoinable();
       IndexedTable indexedTable = indexedTableJoinable.getTable();
-      if (indexedTable.keyColumns().contains(correlationAnalysis.getRhsColumn())) {
-        int columnPosition = indexedTable.allColumns().indexOf(correlationAnalysis.getRhsColumn());
-        IndexedTable.Index index = indexedTable.columnIndex(columnPosition);
-        IndexedTable.Reader reader = indexedTable.columnReader(columnPosition);
+
+      int dimNameColumnPosition = indexedTable.allColumns().indexOf(dimNameNoPrefix);
+      int correlatedColumnPosition = indexedTable.allColumns().indexOf(rhsColumnNoPrefix);
+
+      if (indexedTable.keyColumns().contains(dimNameNoPrefix)) {
+        IndexedTable.Index index = indexedTable.columnIndex(dimNameColumnPosition);
+        IndexedTable.Reader reader = indexedTable.columnReader(correlatedColumnPosition);
         IntList rowIndex = index.find(filterValue);
         List<String> correlatedValues = new ArrayList<>();
         for (int i = 0; i < rowIndex.size(); i++) {
@@ -317,6 +329,17 @@ public class JoinFilterAnalyzer
           correlatedValues.add(reader.read(rowNum).toString());
         }
         return correlatedValues;
+      } else {
+        IndexedTable.Reader dimNameReader = indexedTable.columnReader(dimNameColumnPosition);
+        IndexedTable.Reader correlatedColumnReader = indexedTable.columnReader(correlatedColumnPosition);
+        Set<String> correlatedValueSet = new HashSet<>();
+        for (int i = 0; i < indexedTable.numRows(); i++) {
+          if (filterValue.equals(dimNameReader.read(i).toString())) {
+            correlatedValueSet.add(correlatedColumnReader.read(i).toString());
+          }
+        }
+
+        return new ArrayList<>(correlatedValueSet);
       }
     }
 
