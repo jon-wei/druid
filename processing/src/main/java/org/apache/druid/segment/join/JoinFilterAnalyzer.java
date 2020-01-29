@@ -20,13 +20,11 @@
 package org.apache.druid.segment.join;
 
 import it.unimi.dsi.fastutil.ints.IntList;
-import org.apache.commons.lang.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.segment.filter.InFilter;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
