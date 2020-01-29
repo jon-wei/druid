@@ -21,9 +21,11 @@ package org.apache.druid.segment.join;
 
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.InFilter;
@@ -32,6 +34,7 @@ import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -277,8 +280,8 @@ public class JoinFilterAnalyzer
         );
 
         List<Filter> newFilters = new ArrayList<>();
-
         List<VirtualColumn> pushdownVirtualColumns = new ArrayList<>();
+
         for (JoinFilterColumnCorrelationAnalysis correlationAnalysis : correlations) {
           if (correlationAnalysis.supportsPushDown()) {
             List<String> correlatedValues = getCorrelatedValuesForPushDown(
@@ -297,12 +300,38 @@ public class JoinFilterAnalyzer
               ).toFilter();
               newFilters.add(rewrittenFilter);
             }
+
+            for (Expr correlatedBaseExpr : correlationAnalysis.getBaseExpressions()) {
+              // need to create a virtual column for the expressions when pushing down
+              String vcName = getCorrelatedBaseExprVirtualColumnName(pushdownVirtualColumns.size());
+
+              VirtualColumn correlatedBaseExprVirtualColumn = new ExpressionVirtualColumn(
+                  vcName,
+                  correlatedBaseExpr.toString(),
+                  ValueType.STRING,
+                  ExprMacroTable.nil()
+              );
+              pushdownVirtualColumns.add(correlatedBaseExprVirtualColumn);
+
+              InFilter rewrittenFilter = (InFilter) new InDimFilter(
+                  vcName,
+                  correlatedValues,
+                  null,
+                  null
+              ).toFilter();
+              newFilters.add(rewrittenFilter);
+            }
           }
         }
         return newFilters.size() == 1 ? newFilters.get(0) : new AndFilter(newFilters);
       }
     }
     return filter;
+  }
+
+  public static String getCorrelatedBaseExprVirtualColumnName(int counter)
+  {
+    return "TEST-TEST-VIRTUAL-COLUMN-" + counter;
   }
 
   public static List<String> getCorrelatedValuesForPushDown(
@@ -312,6 +341,7 @@ public class JoinFilterAnalyzer
       JoinFilterColumnCorrelationAnalysis correlationAnalysis
   )
   {
+    // would be nice to have non-key column indices on the Joinables for better perf
     if (clause.getJoinable() instanceof LookupJoinable) {
       LookupJoinable lookupJoinable = (LookupJoinable) clause.getJoinable();
       List<String> correlatedValues = lookupJoinable.getExtractor().unapply(filterValue);
