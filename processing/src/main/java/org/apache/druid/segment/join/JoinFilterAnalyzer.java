@@ -19,12 +19,17 @@
 
 package org.apache.druid.segment.join;
 
+import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
+import org.apache.druid.segment.join.lookup.LookupJoinable;
+import org.apache.druid.segment.join.table.IndexedTable;
+import org.apache.druid.segment.join.table.IndexedTableJoinable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -65,17 +70,21 @@ public class JoinFilterAnalyzer
     private final Filter originalRhs;
     private final Filter pushdownLhs;
 
+    private final List<VirtualColumn> pushdownLhsVirtualColumns;
+
     public JoinFilterAnalysis(
         boolean canPushDown,
         boolean retainRhs,
         Filter originalRhs,
-        Filter pushdownLhs
+        Filter pushdownLhs,
+        List<VirtualColumn> pushdownLhsVirtualColumns
     )
     {
       this.canPushDown = canPushDown;
       this.retainRhs = retainRhs;
       this.originalRhs = originalRhs;
       this.pushdownLhs = pushdownLhs;
+      this.pushdownLhsVirtualColumns = pushdownLhsVirtualColumns;
     }
 
     public boolean isCanPushDown()
@@ -96,6 +105,11 @@ public class JoinFilterAnalyzer
     public Filter getPushdownLhs()
     {
       return pushdownLhs;
+    }
+
+    public List<VirtualColumn> getPushdownLhsVirtualColumns()
+    {
+      return pushdownLhsVirtualColumns;
     }
   }
 
@@ -202,6 +216,7 @@ public class JoinFilterAnalyzer
               false,
               true,
               filterClause,
+              null,
               null
           );
         }
@@ -210,7 +225,8 @@ public class JoinFilterAnalyzer
           true,
           false,
           null,
-          filterClause
+          filterClause,
+          null
       );
     }
 
@@ -219,13 +235,15 @@ public class JoinFilterAnalyzer
           true,
           false,
           null,
-          rewriteFilterIfRHS(baseAdapter, filterClause, prefixes, equiconditions)
+          rewriteFilterIfRHS(baseAdapter, filterClause, prefixes, equiconditions),
+          null
       );
     } else {
       return new JoinFilterAnalysis(
           false,
           true,
           filterClause,
+          null,
           null
       );
     }
@@ -250,10 +268,22 @@ public class JoinFilterAnalyzer
         List<JoinFilterColumnCorrelationAnalysis> correlations = findCorrelatedBaseTableColumns(
            baseAdapter,
            prefix,
-           dimName,
            prefixes,
            equiconditions
-       );
+        );
+
+        List<VirtualColumn> pushdownVirtualColumns = new ArrayList<>();
+        for (JoinFilterColumnCorrelationAnalysis correlationAnalysis : correlations) {
+          if (correlationAnalysis.supportsPushDown()) {
+            List<String> correlatedValues = getCorrelatedValuesForPushDown(
+                selectorFilter.getValue(),
+                prefixes.get(prefix),
+                correlationAnalysis
+            );
+          }
+        }
+
+
 
         System.out.println(correlations);
       }
@@ -261,10 +291,41 @@ public class JoinFilterAnalyzer
     return filter;
   }
 
+  public static List<String> getCorrelatedValuesForPushDown(
+      String filterValue,
+      JoinableClause clause,
+      JoinFilterColumnCorrelationAnalysis correlationAnalysis
+  )
+  {
+    if (clause.getJoinable() instanceof LookupJoinable) {
+      LookupJoinable lookupJoinable = (LookupJoinable) clause.getJoinable();
+      List<String> correlatedValues = lookupJoinable.getExtractor().unapply(filterValue);
+      return correlatedValues;
+    }
+
+    if (clause.getJoinable() instanceof IndexedTableJoinable) {
+      IndexedTableJoinable indexedTableJoinable = (IndexedTableJoinable) clause.getJoinable();
+      IndexedTable indexedTable = indexedTableJoinable.getTable();
+      if (indexedTable.keyColumns().contains(correlationAnalysis.getRhsColumn())) {
+        int columnPosition = indexedTable.allColumns().indexOf(correlationAnalysis.getRhsColumn());
+        IndexedTable.Index index = indexedTable.columnIndex(columnPosition);
+        IndexedTable.Reader reader = indexedTable.columnReader(columnPosition);
+        IntList rowIndex = index.find(filterValue);
+        List<String> correlatedValues = new ArrayList<>();
+        for (int i = 0; i < rowIndex.size(); i++) {
+          int rowNum = rowIndex.getInt(i);
+          correlatedValues.add(reader.read(rowNum).toString());
+        }
+        return correlatedValues;
+      }
+    }
+
+    return null;
+  }
+
   public static List<JoinFilterColumnCorrelationAnalysis> findCorrelatedBaseTableColumns(
       HashJoinSegmentStorageAdapter baseAdapter,
       String prefix,
-      String rhsColumnName,
       Map<String, JoinableClause> prefixes,
       Map<String, Expr> equiconditions
   )
@@ -293,7 +354,7 @@ public class JoinFilterAnalyzer
         String identifier = lhs.getBindingIfIdentifier();
         if (identifier == null) {
           // if it's a function on a column of the base table, we can still push down.
-          // if it's a function on a non-base table, skip push down for now.
+          // if it's a function on a non-base table column, skip push down for now.
           Expr.BindingDetails bindingDetails = lhs.analyzeInputs();
           assert (bindingDetails.getFreeVariables().size() == 1);
           Expr baseExpr = bindingDetails.getFreeVariables().iterator().next();
@@ -305,9 +366,8 @@ public class JoinFilterAnalyzer
           }
         } else {
           // simple identifier, see if we can correlate it with a column on the base table
-          String baseColumn = identifier;
-          findMappingFor = baseColumn;
-          if (baseAdapter.isBaseColumn(baseColumn)) {
+          findMappingFor = identifier;
+          if (baseAdapter.isBaseColumn(identifier)) {
             terminate = true;
             correlatedBaseColumns.add(findMappingFor);
           }
