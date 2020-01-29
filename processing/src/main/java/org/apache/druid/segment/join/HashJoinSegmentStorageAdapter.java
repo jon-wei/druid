@@ -225,7 +225,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
 
     JoinFilterAnalyzer.JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(
         filter,
-        baseAdapter,
+        this,
         clauses
     );
 
@@ -265,7 +265,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
    * Returns whether "column" will be selected from "baseAdapter". This is true if it is not shadowed by any joinables
    * (i.e. if it does not start with any of their prefixes).
    */
-  private boolean isBaseColumn(final String column)
+  protected boolean isBaseColumn(final String column)
   {
     return !getClauseForColumn(column).isPresent();
   }

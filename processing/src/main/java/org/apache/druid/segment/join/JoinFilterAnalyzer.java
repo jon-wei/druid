@@ -21,7 +21,6 @@ package org.apache.druid.segment.join;
 
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.filter.Filter;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.OrFilter;
@@ -100,21 +99,59 @@ public class JoinFilterAnalyzer
     }
   }
 
+  public static class JoinFilterColumnCorrelationAnalysis
+  {
+    private String rhsColumn;
+    private List<String> baseColumns;
+    private List<Expr> baseExpressions;
+
+    public JoinFilterColumnCorrelationAnalysis(
+        String rhsColumn,
+        List<String> baseColumns,
+        List<Expr> baseExpressions
+    )
+    {
+      this.rhsColumn = rhsColumn;
+      this.baseColumns = baseColumns;
+      this.baseExpressions = baseExpressions;
+    }
+
+    public String getRhsColumn()
+    {
+      return rhsColumn;
+    }
+
+    public List<String> getBaseColumns()
+    {
+      return baseColumns;
+    }
+
+    public List<Expr> getBaseExpressions()
+    {
+      return baseExpressions;
+    }
+
+    public boolean supportsPushDown()
+    {
+      return !baseColumns.isEmpty() && !baseExpressions.isEmpty();
+    }
+  }
+
   public static JoinFilterSplit splitFilter(
       Filter originalFilter,
-      StorageAdapter baseAdapter,
+      HashJoinSegmentStorageAdapter baseAdapter,
       List<JoinableClause> clauses
   )
   {
     Filter normalizedFilter = Filters.convertToCNF(originalFilter);
 
     // build the prefix and equicondition maps
-    Map<String, JoinableClause> equiconditions = new HashMap<>();
+    Map<String, Expr> equiconditions = new HashMap<>();
     Map<String, JoinableClause> prefixes = new HashMap<>();
     for (JoinableClause clause : clauses) {
       prefixes.put(clause.getPrefix(), clause);
       for (Equality equality : clause.getCondition().getEquiConditions()) {
-        equiconditions.put(clause.getPrefix() + equality.getRightColumn(), clause);
+        equiconditions.put(clause.getPrefix() + equality.getRightColumn(), equality.getLeftExpr());
       }
     }
 
@@ -134,7 +171,7 @@ public class JoinFilterAnalyzer
     List<Filter> leftFilters = new ArrayList<>();
     List<Filter> rightFilters = new ArrayList<>();
     for (Filter orClause : normalizedOrClauses) {
-      JoinFilterAnalysis joinFilterAnalysis = analyzeJoinFilterClause(orClause, prefixes, equiconditions);
+      JoinFilterAnalysis joinFilterAnalysis = analyzeJoinFilterClause(baseAdapter, orClause, prefixes, equiconditions);
       if (joinFilterAnalysis.isCanPushDown()) {
         leftFilters.add(joinFilterAnalysis.getPushdownLhs());
       }
@@ -150,9 +187,10 @@ public class JoinFilterAnalyzer
   }
 
   public static JoinFilterAnalysis analyzeJoinFilterClause(
+      HashJoinSegmentStorageAdapter baseAdapter,
       Filter filterClause,
       Map<String, JoinableClause> prefixes,
-      Map<String, JoinableClause> equiconditions
+      Map<String, Expr> equiconditions
   )
   {
     // we only support selector filter push down right now
@@ -181,7 +219,7 @@ public class JoinFilterAnalyzer
           true,
           false,
           null,
-          rewriteFilterIfRHS(filterClause, prefixes, equiconditions)
+          rewriteFilterIfRHS(baseAdapter, filterClause, prefixes, equiconditions)
       );
     } else {
       return new JoinFilterAnalysis(
@@ -194,9 +232,10 @@ public class JoinFilterAnalyzer
   }
 
   public static Filter rewriteFilterIfRHS(
+      HashJoinSegmentStorageAdapter baseAdapter,
       Filter filter,
       Map<String, JoinableClause> prefixes,
-      Map<String, JoinableClause> equiconditions
+      Map<String, Expr> equiconditions
   )
   {
     assert(filter instanceof SelectorFilter);
@@ -206,49 +245,81 @@ public class JoinFilterAnalyzer
     for (String prefix : prefixes.keySet()) {
       if (dimName.startsWith(prefix)) {
         // this filter clause applies to RHS
-        // find the rhs table column that's joined to the base table, rewrite into a filter on the base table
-       String correlatedBaseTableColumn = findCorrelatedBaseTableColumn(
+        // analyze the clause for the RHS table that this filter is applied to, find correlated RHS columns
+        // and base table columns
+        List<JoinFilterColumnCorrelationAnalysis> correlations = findCorrelatedBaseTableColumns(
+           baseAdapter,
            prefix,
            dimName,
            prefixes,
            equiconditions
        );
+
+        System.out.println(correlations);
       }
     }
     return filter;
   }
 
-  public static String findCorrelatedBaseTableColumn(
+  public static List<JoinFilterColumnCorrelationAnalysis> findCorrelatedBaseTableColumns(
+      HashJoinSegmentStorageAdapter baseAdapter,
       String prefix,
       String rhsColumnName,
       Map<String, JoinableClause> prefixes,
-      Map<String, JoinableClause> equiconditions
+      Map<String, Expr> equiconditions
   )
   {
     JoinableClause clause = prefixes.get(prefix);
-    while (clause != null) {
-      for (Equality equality : clause.getCondition().getEquiConditions()) {
-        // Is the left hand from another join clause? Try to reach the base segment
-        String rhsColumn = equality.getRightColumn();
-        String lhsColumn = equality.getLeftExpr().getBindingIfIdentifier();
+    JoinConditionAnalysis jca =  clause.getCondition();
 
-        // is the lhsColumn a simple identifier? If so, see if we can go further
-        // if not, the expr must be on the base table only or we do not push the filter down
-        //Expr.BindingDetails bindingDetails = equality.getLeftExpr().analyzeInputs();
-        if (lhsColumn == null) {
-          // not a simple identifier
-          return null;
+    List<String> rhsColumns = new ArrayList<>();
+    for (Equality eq : jca.getEquiConditions()) {
+      rhsColumns.add(prefix + eq.getRightColumn());
+    }
+
+    List<JoinFilterColumnCorrelationAnalysis> correlations = new ArrayList<>();
+
+    for (String rhsColumn : rhsColumns) {
+      List<String> correlatedBaseColumns = new ArrayList<>();
+      List<Expr> correlatedBaseExpressions = new ArrayList<>();
+      boolean terminate = false;
+
+      String findMappingFor = rhsColumn;
+      while (!terminate) {
+        Expr lhs = equiconditions.get(findMappingFor);
+        String identifier = lhs.getBindingIfIdentifier();
+        if (identifier == null) {
+          // if it's a function on a column of the base table, we can still push down.
+          // if it's a function on a non-base table, skip push down for now.
+          Expr.BindingDetails bindingDetails = lhs.analyzeInputs();
+          assert (bindingDetails.getFreeVariables().size() == 1);
+          Expr baseExpr = bindingDetails.getFreeVariables().iterator().next();
+          String baseColumn = baseExpr.getBindingIfIdentifier();
+
+          terminate = true;
+          if (baseAdapter.isBaseColumn(baseColumn)) {
+            correlatedBaseExpressions.add(lhs);
+          }
         } else {
-          // is a simple identifier
-
-          clause = equiconditions.get(lhsColumn);
-          if (clause == null) {
-            // see if it's base table
-
+          // simple identifier, see if we can correlate it with a column on the base table
+          String baseColumn = identifier;
+          findMappingFor = baseColumn;
+          if (baseAdapter.isBaseColumn(baseColumn)) {
+            terminate = true;
+            correlatedBaseColumns.add(findMappingFor);
           }
         }
       }
+
+      correlations.add(
+          new JoinFilterColumnCorrelationAnalysis(
+              rhsColumn,
+              correlatedBaseColumns,
+              correlatedBaseExpressions
+          )
+      );
     }
-    return null;
+
+    return correlations;
   }
 }
