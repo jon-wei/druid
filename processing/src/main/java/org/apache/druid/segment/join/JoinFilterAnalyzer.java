@@ -22,9 +22,11 @@ package org.apache.druid.segment.join;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.filter.InFilter;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
@@ -274,6 +276,8 @@ public class JoinFilterAnalyzer
            equiconditions
         );
 
+        List<Filter> newFilters = new ArrayList<>();
+
         List<VirtualColumn> pushdownVirtualColumns = new ArrayList<>();
         for (JoinFilterColumnCorrelationAnalysis correlationAnalysis : correlations) {
           if (correlationAnalysis.supportsPushDown()) {
@@ -284,11 +288,18 @@ public class JoinFilterAnalyzer
                 correlationAnalysis
             );
 
-            System.out.println(correlatedValues);
+            for (String correlatedBaseColumn : correlationAnalysis.getBaseColumns()) {
+              InFilter rewrittenFilter = (InFilter) new InDimFilter(
+                  correlatedBaseColumn,
+                  correlatedValues,
+                  null,
+                  null
+              ).toFilter();
+              newFilters.add(rewrittenFilter);
+            }
           }
         }
-
-        System.out.println(correlations);
+        return newFilters.size() == 1 ? newFilters.get(0) : new AndFilter(newFilters);
       }
     }
     return filter;
