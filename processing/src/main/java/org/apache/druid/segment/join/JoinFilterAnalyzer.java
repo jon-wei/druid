@@ -287,6 +287,9 @@ public class JoinFilterAnalyzer
       String findMappingFor = rhsColumn;
       while (!terminate) {
         Expr lhs = equiconditions.get(findMappingFor);
+        if (lhs == null) {
+          break;
+        }
         String identifier = lhs.getBindingIfIdentifier();
         if (identifier == null) {
           // if it's a function on a column of the base table, we can still push down.
