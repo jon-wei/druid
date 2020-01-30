@@ -36,6 +36,7 @@ import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -47,8 +48,9 @@ public class JoinFilterAnalyzer
 {
   public static class JoinFilterSplit
   {
-    Filter baseTableFilter;
-    Filter joinTableFilter;
+    final Filter baseTableFilter;
+    final Filter joinTableFilter;
+    final List<VirtualColumn> pushdownLhsVirtualColumns;
 
     public JoinFilterSplit(
         Filter baseTableFilter,
@@ -67,6 +69,11 @@ public class JoinFilterAnalyzer
     public Filter getJoinTableFilter()
     {
       return joinTableFilter;
+    }
+
+    public List<VirtualColumn> getPushdownLhsVirtualColumns()
+    {
+      return pushdownLhsVirtualColumns;
     }
   }
 
@@ -217,17 +224,7 @@ public class JoinFilterAnalyzer
     // we only support selector filter push down right now
     // IS NULL conditions are not currently supported
     if (filterClause instanceof OrFilter) {
-      for (Filter subor : ((OrFilter) filterClause).getFilters()) {
-        if (!(subor instanceof SelectorFilter)) {
-          return new JoinFilterAnalysis(
-              false,
-              true,
-              filterClause,
-              null,
-              null
-          );
-        }
-      }
+      //TODO
       return new JoinFilterAnalysis(
           true,
           false,
@@ -238,12 +235,11 @@ public class JoinFilterAnalyzer
     }
 
     if (filterClause instanceof SelectorFilter) {
-      return new JoinFilterAnalysis(
-          true,
-          false,
-          null,
-          rewriteFilterIfRHS(baseAdapter, filterClause, prefixes, equiconditions),
-          null
+      return rewriteSelectorFilter(
+          baseAdapter,
+          filterClause,
+          prefixes,
+          equiconditions
       );
     } else {
       return new JoinFilterAnalysis(
@@ -256,7 +252,63 @@ public class JoinFilterAnalyzer
     }
   }
 
-  public static Filter rewriteFilterIfRHS(
+  @Nullable
+  public static JoinFilterAnalysis rewriteOrFilter(
+      HashJoinSegmentStorageAdapter baseAdapter,
+      OrFilter orFilter,
+      Map<String, JoinableClause> prefixes,
+      Map<String, Expr> equiconditions
+  )
+  {
+    boolean retainRhs = false;
+
+    List<Filter> newFilters = new ArrayList<>();
+    for (Filter filter : orFilter.getFilters()) {
+      for (String requiredColumn : filter.getRequiredColumns()) {
+        if (!baseAdapter.isBaseColumn(requiredColumn)) {
+          if (filter instanceof SelectorFilter) {
+            JoinFilterAnalysis rewritten = rewriteSelectorFilter(
+                baseAdapter,
+                filter,
+                prefixes,
+                equiconditions
+            );
+            if (!rewritten.isCanPushDown()) {
+              return new JoinFilterAnalysis(
+                  false,
+                  true,
+                  orFilter,
+                  null,
+                  null
+              );
+            } else {
+              newFilters.add(rewritten.getPushdownLhs());
+            }
+          } else {
+            return new JoinFilterAnalysis(
+                false,
+                true,
+                orFilter,
+                null,
+                null
+            );
+          }
+        } else {
+          newFilters.add(filter);
+        }
+      }
+    }
+
+    return new JoinFilterAnalysis(
+        true,
+        retainRhs,
+        orFilter,
+        new OrFilter(newFilters),
+        null
+    );
+  }
+
+  public static JoinFilterAnalysis rewriteSelectorFilter(
       HashJoinSegmentStorageAdapter baseAdapter,
       Filter filter,
       Map<String, JoinableClause> prefixes,
@@ -323,10 +375,23 @@ public class JoinFilterAnalyzer
             }
           }
         }
-        return newFilters.size() == 1 ? newFilters.get(0) : new AndFilter(newFilters);
+
+        return new JoinFilterAnalysis(
+            true,
+            true,
+            filter,
+            newFilters.size() == 1 ? newFilters.get(0) : new AndFilter(newFilters),
+            null
+        );
       }
     }
-    return filter;
+    return new JoinFilterAnalysis(
+        true,
+        false,
+        filter,
+        filter,
+        null
+    );
   }
 
   public static String getCorrelatedBaseExprVirtualColumnName(int counter)
