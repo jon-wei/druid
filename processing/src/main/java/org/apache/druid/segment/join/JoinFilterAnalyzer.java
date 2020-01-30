@@ -59,7 +59,6 @@ public class JoinFilterAnalyzer
   {
     final Filter baseTableFilter;
     final Filter joinTableFilter;
-    final List<VirtualColumn> pushdownLhsVirtualColumns;
 
     public JoinFilterSplit(
         Filter baseTableFilter,
@@ -78,11 +77,6 @@ public class JoinFilterAnalyzer
     public Filter getJoinTableFilter()
     {
       return joinTableFilter;
-    }
-
-    public List<VirtualColumn> getPushdownLhsVirtualColumns()
-    {
-      return pushdownLhsVirtualColumns;
     }
   }
 
