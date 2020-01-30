@@ -519,8 +519,7 @@ public class JoinFilterAnalyzer
         if (identifier == null) {
           terminate = true;
 
-          // if it's a function on a column of the base table, we can still push down.
-          // if it's a function on a non-base table column, skip push down for now.
+          // We push down if the function only requires base table columns
           Expr.BindingDetails bindingDetails = lhs.analyzeInputs();
           boolean allBaseColumns = true;
           Set<String> requiredBindings = bindingDetails.getRequiredBindings();

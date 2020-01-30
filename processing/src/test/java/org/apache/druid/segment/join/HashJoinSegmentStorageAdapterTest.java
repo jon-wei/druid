@@ -1510,11 +1510,12 @@ public class HashJoinSegmentStorageAdapterTest
             FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName"
         ),
         ImmutableList.of(
-            new Object[]{"Old Anatolian Turkish", "Ainigriv", "States United"}
+            new Object[]{"President of India", "Usca"},
+            new Object[]{"Otjiwarongo Airport", "Usca"},
+            new Object[]{"Carlo Curti", "Usca"}
         )
     );
   }
-
 
   private JoinableClause factToCountryNameUsingIsoCodeLookup(final JoinType joinType)
   {
