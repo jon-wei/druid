@@ -46,6 +46,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -91,7 +92,6 @@ public class JoinFilterAnalyzer
     private final boolean retainRhs;
     private final Filter originalRhs;
     private final Filter pushdownLhs;
-
     private final List<VirtualColumn> pushdownLhsVirtualColumns;
 
     public JoinFilterAnalysis(
@@ -246,7 +246,6 @@ public class JoinFilterAnalyzer
       );
     }
 
-    // we only support selector filter push down right now
     if (filterClause instanceof OrFilter) {
       return rewriteOrFilter(
           baseAdapter,
@@ -518,15 +517,20 @@ public class JoinFilterAnalyzer
         }
         String identifier = lhs.getBindingIfIdentifier();
         if (identifier == null) {
+          terminate = true;
+
           // if it's a function on a column of the base table, we can still push down.
           // if it's a function on a non-base table column, skip push down for now.
           Expr.BindingDetails bindingDetails = lhs.analyzeInputs();
-          assert (bindingDetails.getFreeVariables().size() == 1);
-          Expr baseExpr = bindingDetails.getFreeVariables().iterator().next();
-          String baseColumn = baseExpr.getBindingIfIdentifier();
-
-          terminate = true;
-          if (baseAdapter.isBaseColumn(baseColumn)) {
+          boolean allBaseColumns = true;
+          Set<String> requiredBindings = bindingDetails.getRequiredBindings();
+          for (String requiredBinding : requiredBindings) {
+            if (!baseAdapter.isBaseColumn(requiredBinding)) {
+              allBaseColumns = false;
+              break;
+            }
+          }
+          if (allBaseColumns) {
             correlatedBaseExpressions.add(lhs);
           }
         } else {

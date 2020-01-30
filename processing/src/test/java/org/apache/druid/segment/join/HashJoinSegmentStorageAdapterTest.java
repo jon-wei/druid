@@ -1469,6 +1469,52 @@ public class HashJoinSegmentStorageAdapterTest
     );
   }
 
+  @Test
+  public void test_makeCursors_factExpressionToCountryLeftFilterOnChannelAndCountryName()
+  {
+    JoinableClause factExprToCountry = new JoinableClause(
+        FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+        new IndexedTableJoinable(countriesTable),
+        JoinType.LEFT,
+        JoinConditionAnalysis.forExpression(
+            StringUtils.format(
+                "\"%scountryIsoCode\" == concat(countryIsoCode, regionIsoCode)",
+                FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX
+            ),
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+            ExprMacroTable.nil()
+        )
+    );
+
+    JoinTestHelper.verifyCursors(
+        new HashJoinSegmentStorageAdapter(
+            factSegment.asStorageAdapter(),
+            ImmutableList.of(
+                factExprToCountry
+            )
+        ).makeCursors(
+            new AndFilter(
+                ImmutableList.of(
+                    new SelectorFilter("channel", "#en.wikipedia"),
+                    new SelectorFilter("c1.countryName", "Usca")
+                )
+            ),
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName"
+        ),
+        ImmutableList.of(
+            new Object[]{"Old Anatolian Turkish", "Ainigriv", "States United"}
+        )
+    );
+  }
+
 
   private JoinableClause factToCountryNameUsingIsoCodeLookup(final JoinType joinType)
   {
