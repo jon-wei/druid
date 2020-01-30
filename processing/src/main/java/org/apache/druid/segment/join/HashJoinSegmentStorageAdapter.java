@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.join;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -223,13 +224,22 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       }
     }
 
-    JoinFilterAnalyzer.JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(
-        filter,
-        this,
-        clauses
-    );
+    JoinFilterAnalyzer.JoinFilterSplit joinFilterSplit;
+    if (filter == null) {
+      joinFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+          null,
+          null,
+          ImmutableList.of()
+      );
+    } else {
+      joinFilterSplit = JoinFilterAnalyzer.splitFilter(
+          filter,
+          this,
+          clauses
+      );
 
-    preJoinVirtualColumns.addAll(joinFilterSplit.getPushDownVirtualColumns());
+      preJoinVirtualColumns.addAll(joinFilterSplit.getPushDownVirtualColumns());
+    }
 
     // Soon, we will need a way to push filters past a join when possible. This could potentially be done right here
     // (by splitting out pushable pieces of 'filter') or it could be done at a higher level (i.e. in the SQL planner).
