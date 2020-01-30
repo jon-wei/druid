@@ -224,13 +224,11 @@ public class JoinFilterAnalyzer
     // we only support selector filter push down right now
     // IS NULL conditions are not currently supported
     if (filterClause instanceof OrFilter) {
-      //TODO
-      return new JoinFilterAnalysis(
-          true,
-          false,
-          null,
-          filterClause,
-          null
+      return rewriteOrFilter(
+          baseAdapter,
+          (OrFilter) filterClause,
+          prefixes,
+          equiconditions
       );
     }
 
@@ -242,11 +240,22 @@ public class JoinFilterAnalyzer
           equiconditions
       );
     } else {
+      for (String requiredColumn : filterClause.getRequiredColumns()) {
+        if (!baseAdapter.isBaseColumn(requiredColumn)) {
+          return new JoinFilterAnalysis(
+              false,
+              true,
+              filterClause,
+              null,
+              null
+          );
+        }
+      }
       return new JoinFilterAnalysis(
-          false,
           true,
+          false,
           filterClause,
-          null,
+          filterClause,
           null
       );
     }
@@ -264,27 +273,23 @@ public class JoinFilterAnalyzer
 
     List<Filter> newFilters = new ArrayList<>();
     for (Filter filter : orFilter.getFilters()) {
+      boolean allBaseColumns = true;
       for (String requiredColumn : filter.getRequiredColumns()) {
         if (!baseAdapter.isBaseColumn(requiredColumn)) {
-          if (filter instanceof SelectorFilter) {
-            JoinFilterAnalysis rewritten = rewriteSelectorFilter(
-                baseAdapter,
-                filter,
-                prefixes,
-                equiconditions
-            );
-            if (!rewritten.isCanPushDown()) {
-              return new JoinFilterAnalysis(
-                  false,
-                  true,
-                  orFilter,
-                  null,
-                  null
-              );
-            } else {
-              newFilters.add(rewritten.getPushdownLhs());
-            }
-          } else {
+          allBaseColumns = false;
+        }
+      }
+
+      if (!allBaseColumns) {
+        retainRhs = true;
+        if (filter instanceof SelectorFilter) {
+          JoinFilterAnalysis rewritten = rewriteSelectorFilter(
+              baseAdapter,
+              filter,
+              prefixes,
+              equiconditions
+          );
+          if (!rewritten.isCanPushDown()) {
             return new JoinFilterAnalysis(
                 false,
                 true,
@@ -292,10 +297,20 @@ public class JoinFilterAnalyzer
                 null,
                 null
             );
+          } else {
+            newFilters.add(rewritten.getPushdownLhs());
           }
         } else {
-          newFilters.add(filter);
+          return new JoinFilterAnalysis(
+              false,
+              true,
+              orFilter,
+              null,
+              null
+          );
         }
+      } else {
+        newFilters.add(filter);
       }
     }
 
