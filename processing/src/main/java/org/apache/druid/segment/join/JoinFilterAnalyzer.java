@@ -20,14 +20,11 @@
 package org.apache.druid.segment.join;
 
 import it.unimi.dsi.fastutil.ints.IntList;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
@@ -59,14 +56,17 @@ public class JoinFilterAnalyzer
   {
     final Filter baseTableFilter;
     final Filter joinTableFilter;
+    final List<VirtualColumn> pushDownVirtualColumns;
 
     public JoinFilterSplit(
         Filter baseTableFilter,
-        Filter joinTableFilter
+        Filter joinTableFilter,
+        List<VirtualColumn> pushDownVirtualColumns
     )
     {
       this.baseTableFilter = baseTableFilter;
       this.joinTableFilter = joinTableFilter;
+      this.pushDownVirtualColumns = pushDownVirtualColumns;
     }
 
     public Filter getBaseTableFilter()
@@ -77,6 +77,11 @@ public class JoinFilterAnalyzer
     public Filter getJoinTableFilter()
     {
       return joinTableFilter;
+    }
+
+    public List<VirtualColumn> getPushDownVirtualColumns()
+    {
+      return pushDownVirtualColumns;
     }
   }
 
@@ -201,10 +206,15 @@ public class JoinFilterAnalyzer
     // Pushdown filters, rewriting if necessary
     List<Filter> leftFilters = new ArrayList<>();
     List<Filter> rightFilters = new ArrayList<>();
+    List<VirtualColumn> pushDownVirtualColumns = new ArrayList<>();
+
     for (Filter orClause : normalizedOrClauses) {
       JoinFilterAnalysis joinFilterAnalysis = analyzeJoinFilterClause(baseAdapter, orClause, prefixes, equiconditions);
       if (joinFilterAnalysis.isCanPushDown()) {
         leftFilters.add(joinFilterAnalysis.getPushdownLhs());
+        if (joinFilterAnalysis.getPushdownLhsVirtualColumns() != null) {
+          pushDownVirtualColumns.addAll(joinFilterAnalysis.getPushdownLhsVirtualColumns());
+        }
       }
       if (joinFilterAnalysis.isRetainRhs()) {
         rightFilters.add(joinFilterAnalysis.getOriginalRhs());
@@ -213,7 +223,8 @@ public class JoinFilterAnalyzer
 
     return new JoinFilterSplit(
         leftFilters.isEmpty() ? null : new AndFilter(leftFilters),
-        rightFilters.isEmpty() ? null : new AndFilter(rightFilters)
+        rightFilters.isEmpty() ? null : new AndFilter(rightFilters),
+        pushDownVirtualColumns
     );
   }
 
@@ -227,8 +238,8 @@ public class JoinFilterAnalyzer
     // NULL matching conditions are not currently supported
     if (filterMatchesNull(filterClause)) {
       return new JoinFilterAnalysis(
-          true,
           false,
+          true,
           filterClause,
           filterClause,
           null
@@ -252,26 +263,26 @@ public class JoinFilterAnalyzer
           prefixes,
           equiconditions
       );
-    } else {
-      for (String requiredColumn : filterClause.getRequiredColumns()) {
-        if (!baseAdapter.isBaseColumn(requiredColumn)) {
-          return new JoinFilterAnalysis(
-              false,
-              true,
-              filterClause,
-              null,
-              null
-          );
-        }
-      }
-      return new JoinFilterAnalysis(
-          true,
-          false,
-          filterClause,
-          filterClause,
-          null
-      );
     }
+
+    for (String requiredColumn : filterClause.getRequiredColumns()) {
+      if (!baseAdapter.isBaseColumn(requiredColumn)) {
+        return new JoinFilterAnalysis(
+            false,
+            true,
+            filterClause,
+            null,
+            null
+        );
+      }
+    }
+    return new JoinFilterAnalysis(
+        true,
+        false,
+        filterClause,
+        filterClause,
+        null
+    );
   }
 
   @Nullable
@@ -387,9 +398,8 @@ public class JoinFilterAnalyzer
 
               VirtualColumn correlatedBaseExprVirtualColumn = new ExpressionVirtualColumn(
                   vcName,
-                  correlatedBaseExpr.toString(),
-                  ValueType.STRING,
-                  ExprMacroTable.nil() // TODO: Need an injected ExprMacroTable
+                  correlatedBaseExpr,
+                  ValueType.STRING
               );
               pushdownVirtualColumns.add(correlatedBaseExprVirtualColumn);
 
@@ -409,7 +419,7 @@ public class JoinFilterAnalyzer
             true,
             filter,
             newFilters.size() == 1 ? newFilters.get(0) : new AndFilter(newFilters),
-            null
+            pushdownVirtualColumns
         );
       }
     }
@@ -424,7 +434,7 @@ public class JoinFilterAnalyzer
 
   public static String getCorrelatedBaseExprVirtualColumnName(int counter)
   {
-    return "TEST-TEST-VIRTUAL-COLUMN-" + counter;
+    return "JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-" + counter;
   }
 
   public static List<String> getCorrelatedValuesForPushDown(

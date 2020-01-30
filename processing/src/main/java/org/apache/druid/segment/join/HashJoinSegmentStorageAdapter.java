@@ -229,6 +229,8 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         clauses
     );
 
+    preJoinVirtualColumns.addAll(joinFilterSplit.getPushDownVirtualColumns());
+
     // Soon, we will need a way to push filters past a join when possible. This could potentially be done right here
     // (by splitting out pushable pieces of 'filter') or it could be done at a higher level (i.e. in the SQL planner).
     //

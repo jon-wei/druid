@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -1330,6 +1331,58 @@ public class HashJoinSegmentStorageAdapterTest
   }
 
   @Test
+  public void test_makeCursors_factToRegionToCountryLeftFilterOnChannelVirtualColumn()
+  {
+    JoinTestHelper.verifyCursors(
+        new HashJoinSegmentStorageAdapter(
+            factSegment.asStorageAdapter(),
+            ImmutableList.of(
+                factToRegion(JoinType.LEFT),
+                regionToCountry(JoinType.LEFT)
+            )
+        ).makeCursors(
+            new AndFilter(
+                ImmutableList.of(
+                    new SelectorFilter("v1", "virtual-column-#en.wikipedia")
+                )
+            ),
+            Intervals.ETERNITY,
+            VirtualColumns.create(
+                ImmutableList.of(
+                    new ExpressionVirtualColumn(
+                        "v1",
+                        "concat('virtual-column-', \"channel\")",
+                        ValueType.STRING,
+                        TestExprMacroTable.INSTANCE
+                    )
+                )
+            ),
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            FACT_TO_REGION_PREFIX + "regionName",
+            REGION_TO_COUNTRY_PREFIX + "countryName"
+        ),
+        ImmutableList.of(
+            new Object[]{"Talk:Oswald Tilghman", null, null},
+            new Object[]{"Peremptory norm", "New South Wales", "Australia"},
+            new Object[]{"President of India", "California", "United States"},
+            new Object[]{"Glasgow", "Kingston upon Hull", "United Kingdom"},
+            new Object[]{"Otjiwarongo Airport", "California", "United States"},
+            new Object[]{"Sarah Michelle Gellar", "Ontario", "Canada"},
+            new Object[]{"DirecTV", "North Carolina", "United States"},
+            new Object[]{"Carlo Curti", "California", "United States"},
+            new Object[]{"Giusy Ferreri discography", "Provincia di Varese", "Italy"},
+            new Object[]{"Roma-Bangkok", "Provincia di Varese", "Italy"},
+            new Object[]{"Old Anatolian Turkish", "Virginia", "United States"}
+        )
+    );
+  }
+
+  @Test
   public void test_makeCursors_factToRegionToCountryLeftFilterOnChannelAndCountryName()
   {
     JoinTestHelper.verifyCursors(
@@ -1366,6 +1419,56 @@ public class HashJoinSegmentStorageAdapterTest
         )
     );
   }
+
+  @Test
+  public void test_makeCursors_factExpressionToRegionToCountryLeftFilterOnChannelAndCountryName()
+  {
+    JoinableClause factExprToRegon = new JoinableClause(
+        FACT_TO_REGION_PREFIX,
+        new IndexedTableJoinable(regionsTable),
+        JoinType.LEFT,
+        JoinConditionAnalysis.forExpression(
+            StringUtils.format(
+                "\"%sregionIsoCode\" == reverse(regionIsoCode) && \"%scountryIsoCode\" == reverse(countryIsoCode)",
+                FACT_TO_REGION_PREFIX,
+                FACT_TO_REGION_PREFIX
+            ),
+            FACT_TO_REGION_PREFIX,
+            ExprMacroTable.nil()
+        )
+    );
+
+    JoinTestHelper.verifyCursors(
+        new HashJoinSegmentStorageAdapter(
+            factSegment.asStorageAdapter(),
+            ImmutableList.of(
+                factExprToRegon,
+                regionToCountry(JoinType.LEFT)
+            )
+        ).makeCursors(
+            new AndFilter(
+                ImmutableList.of(
+                    new SelectorFilter("channel", "#en.wikipedia"),
+                    new SelectorFilter("rtc.countryName", "States United")
+                )
+            ),
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            FACT_TO_REGION_PREFIX + "regionName",
+            REGION_TO_COUNTRY_PREFIX + "countryName"
+        ),
+        ImmutableList.of(
+            new Object[]{"Old Anatolian Turkish", "Ainigriv", "States United"}
+        )
+    );
+  }
+
 
   private JoinableClause factToCountryNameUsingIsoCodeLookup(final JoinType joinType)
   {

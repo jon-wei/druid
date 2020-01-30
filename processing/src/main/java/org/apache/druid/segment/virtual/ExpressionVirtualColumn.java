@@ -62,6 +62,21 @@ public class ExpressionVirtualColumn implements VirtualColumn
     this.parsedExpression = Suppliers.memoize(() -> Parser.parse(expression, macroTable));
   }
 
+  /**
+   * Constructor for creating an ExpressionVirtualColumn from a pre-parsed expression.
+   */
+  public ExpressionVirtualColumn(
+      String name,
+      Expr parsedExpression,
+      ValueType outputType
+  )
+  {
+    this.name = Preconditions.checkNotNull(name, "name");
+    this.expression = parsedExpression.toString();
+    this.outputType = outputType != null ? outputType : ValueType.FLOAT;
+    this.parsedExpression = Suppliers.ofInstance(parsedExpression);
+  }
+
   @JsonProperty("name")
   @Override
   public String getOutputName()
