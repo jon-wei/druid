@@ -20,11 +20,20 @@
 package org.apache.druid.segment.join;
 
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.data.input.Row;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.Filters;
@@ -221,8 +230,18 @@ public class JoinFilterAnalyzer
       Map<String, Expr> equiconditions
   )
   {
+    // NULL matching conditions are not currently supported
+    if (filterMatchesNull(filterClause)) {
+      return new JoinFilterAnalysis(
+          true,
+          false,
+          filterClause,
+          filterClause,
+          null
+      );
+    }
+
     // we only support selector filter push down right now
-    // IS NULL conditions are not currently supported
     if (filterClause instanceof OrFilter) {
       return rewriteOrFilter(
           baseAdapter,
@@ -526,5 +545,32 @@ public class JoinFilterAnalyzer
     }
 
     return correlations;
+  }
+
+  public static boolean filterMatchesNull(Filter filter)
+  {
+    ValueMatcher valueMatcher = filter.makeMatcher(new AllNullColumnSelectorFactory());
+    return valueMatcher.matches();
+  }
+
+  private static class AllNullColumnSelectorFactory implements ColumnSelectorFactory
+  {
+    @Override
+    public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
+    {
+      return DimensionSelector.constant(null);
+    }
+
+    @Override
+    public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
+    {
+      return NilColumnValueSelector.instance();
+    }
+
+    @Override
+    public ColumnCapabilities getColumnCapabilities(String columnName)
+    {
+      return null;
+    }
   }
 }
