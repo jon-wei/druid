@@ -105,16 +105,19 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
    */
   public SpecificSegmentsQuerySegmentWalker(
       final QueryRunnerFactoryConglomerate conglomerate,
-      final LookupExtractorFactoryContainerProvider lookupProvider
+      final LookupExtractorFactoryContainerProvider lookupProvider,
+      final JoinableFactory joinableFactory
   )
   {
     this.conglomerate = conglomerate;
-    this.joinableFactory = MapJoinableFactoryTest.fromMap(
-        ImmutableMap.<Class<? extends DataSource>, JoinableFactory>builder()
-            .put(InlineDataSource.class, new InlineJoinableFactory())
-            .put(LookupDataSource.class, new LookupJoinableFactory(lookupProvider))
-            .build()
-    );
+    this.joinableFactory = joinableFactory == null ?
+                           MapJoinableFactoryTest.fromMap(
+                               ImmutableMap.<Class<? extends DataSource>, JoinableFactory>builder()
+                                   .put(InlineDataSource.class, new InlineJoinableFactory())
+                                   .put(LookupDataSource.class, new LookupJoinableFactory(lookupProvider))
+                                   .build()
+                           ) : joinableFactory;
+
     this.walker = new ClientQuerySegmentWalker(
         new NoopServiceEmitter(),
         new DataServerLikeWalker(),
@@ -179,7 +182,33 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
           {
             return Optional.empty();
           }
-        }
+        },
+        null
+    );
+  }
+
+  /**
+   * Create an instance without any lookups.
+   */
+  public SpecificSegmentsQuerySegmentWalker(final QueryRunnerFactoryConglomerate conglomerate, JoinableFactory joinableFactory)
+  {
+    this(
+        conglomerate,
+        new LookupExtractorFactoryContainerProvider()
+        {
+          @Override
+          public Set<String> getAllLookupNames()
+          {
+            return Collections.emptySet();
+          }
+
+          @Override
+          public Optional<LookupExtractorFactoryContainer> get(String lookupName)
+          {
+            return Optional.empty();
+          }
+        },
+        joinableFactory
     );
   }
 
