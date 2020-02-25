@@ -35,6 +35,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
@@ -172,7 +173,7 @@ public class JoinablesTest
         "BA"
     );
 
-    Joinables.checkPrefixesForDuplicatesAndShadowing(prefixes);
+    Joinables.checkPrefixesForDuplicatesAndShadowingTrie(prefixes);
   }
 
   @Test
@@ -187,14 +188,14 @@ public class JoinablesTest
         "ABCD"
     );
 
-    Joinables.checkPrefixesForDuplicatesAndShadowing(prefixes);
+    Joinables.checkPrefixesForDuplicatesAndShadowingTrie(prefixes);
   }
 
   @Test
   public void test_checkClausePrefixesForDuplicatesAndShadowing_shadowing()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("Detected conflicting prefixes in join clauses: [ABC.DEF, ABC.]");
+    expectedException.expectMessage("Detected conflicting prefixes in join clauses: [ABC., ABC.DEF]");
 
     List<String> prefixes = ImmutableList.of(
         "BASE.",
@@ -205,6 +206,6 @@ public class JoinablesTest
         "ABC.DEF"
     );
 
-    Joinables.checkPrefixesForDuplicatesAndShadowing(prefixes);
+    Joinables.checkPrefixesForDuplicatesAndShadowingTrie(prefixes);
   }
 }
