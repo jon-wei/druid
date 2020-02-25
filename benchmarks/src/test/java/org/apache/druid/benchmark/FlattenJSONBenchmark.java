@@ -19,7 +19,9 @@
 
 package org.apache.druid.benchmark;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.parsers.Parser;
+import org.apache.druid.segment.join.Joinables;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -37,6 +39,7 @@ import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -62,6 +65,8 @@ public class FlattenJSONBenchmark
   int nestedCounter = 0;
   int jqCounter = 0;
 
+  List<String> prefixes;
+
   @Setup
   public void prepare() throws Exception
   {
@@ -84,6 +89,15 @@ public class FlattenJSONBenchmark
     jqParser = gen.getJqParser();
     fieldDiscoveryParser = gen.getFieldDiscoveryParser();
     forcedPathParser = gen.getForcedPathParser();
+
+    prefixes = Arrays.asList(
+        "BASE.",
+        "BASEBALL",
+        "123.456",
+        "23.45",
+        "ABC.",
+        "ABCd.DEF"
+    );
   }
 
   @Benchmark
@@ -149,6 +163,39 @@ public class FlattenJSONBenchmark
     }
     nestedCounter = (nestedCounter + 1) % NUM_EVENTS;
     return parsed;
+  }
+
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void aaaaaaa(final Blackhole blackhole)
+  {
+    Joinables.checkPrefixesForDuplicatesAndShadowing(prefixes);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void aaaaaaab(final Blackhole blackhole)
+  {
+    Joinables.checkPrefixesForDuplicatesAndShadowing2(prefixes);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void aaaaaaa2(final Blackhole blackhole)
+  {
+    Joinables.checkPrefixesForDuplicatesAndShadowingTrie(prefixes);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void aaaaaaa3(final Blackhole blackhole)
+  {
+    Joinables.checkPrefixesForDuplicatesAndShadowingTrie2(prefixes);
   }
 
   public static void main(String[] args) throws RunnerException

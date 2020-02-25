@@ -26,6 +26,7 @@ import com.googlecode.concurrenttrees.radix.node.concrete.DefaultCharSequenceNod
 import org.apache.commons.collections4.trie.PatriciaTrie;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -33,6 +34,7 @@ import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -46,6 +48,16 @@ import java.util.stream.Collectors;
 public class Joinables
 {
   private static final NodeFactory DEFAULT_CHAR_SEQUENCE_NODE_FACTORY = new DefaultCharSequenceNodeFactory();
+  private static Comparator<String> C = (s1, s2) -> {
+    if (s1.length() > s2.length()) {
+      return -1;
+    } else if (s1.length() < s2.length()) {
+      return 1;
+    } else {
+      return 0;
+    }
+  };
+
   /**
    * Checks that "prefix" is a valid prefix for a join clause (see {@link JoinableClause#getPrefix()}) and, if so,
    * returns it. Otherwise, throws an exception.
@@ -159,28 +171,70 @@ public class Joinables
     }
   }
 
+
+  public static void checkPrefixesForDuplicatesAndShadowing2(
+      final List<String> prefixes
+  )
+  {
+    prefixes.sort(C);
+
+    for (int i = 0; i < prefixes.size(); i++) {
+      String prefix1 = prefixes.get(i);
+      for (int k = i; k < prefixes.size(); k++) {
+        if (i != k) {
+          String otherPrefix = prefixes.get(k);
+          if (prefix1.equals(otherPrefix)) {
+            throw new IAE("Detected duplicate prefix in join clauses: [%s]", prefix1);
+          }
+
+          if (isPrefixedBy(prefix1, otherPrefix)) {
+            throw new IAE("Detected conflicting prefixes in join clauses: [%s, %s]", prefix1, otherPrefix);
+          }
+        }
+      }
+    }
+  }
+
   public static void checkPrefixesForDuplicatesAndShadowingTrie(
       final List<String> prefixes
   )
   {
-    List<String> prefixesLongestFirst = new ArrayList<>(prefixes);
-    prefixesLongestFirst.sort(
-        (s1, s2) -> {
-          if (s1.length() > s2.length()) {
-            return -1;
-          } else if (s1.length() < s2.length()) {
-            return 1;
-          } else {
-            return 0;
-          }
-        }
-    );
+    //List<String> prefixesLongestFirst = new ArrayList<>(prefixes);
+    List<String> prefixesLongestFirst = prefixes;
+    prefixesLongestFirst.sort(C);
 
     ConcurrentRadixTree<String> radixTree = new ConcurrentRadixTree<>(DEFAULT_CHAR_SEQUENCE_NODE_FACTORY);
     for (String prefix : prefixesLongestFirst) {
       if (radixTree.putIfAbsent(prefix, "") != null) {
         throw new IAE("Detected duplicate prefix in join clauses: [%s]", prefix);
       }
+      // this returns a lazy iterable
+      Iterable<CharSequence> prefixedBy = radixTree.getKeysStartingWith(prefix);
+      prefixedBy.forEach(
+          (conflictingPrefix) -> {
+            // we already checked for duplicates when inserting prefixes into tree
+            // if length is identical here, then it's the same entry and not a conflict
+            if (prefix.length() != conflictingPrefix.length()) {
+              throw new IAE("Detected conflicting prefixes in join clauses: [%s, %s]", prefix, conflictingPrefix);
+            }
+          }
+      );
+    }
+  }
+
+
+  public static void checkPrefixesForDuplicatesAndShadowingTrie2(
+      final List<String> prefixes
+  )
+  {
+    ConcurrentRadixTree<String> radixTree = new ConcurrentRadixTree<>(DEFAULT_CHAR_SEQUENCE_NODE_FACTORY);
+    for (String prefix : prefixes) {
+      if (radixTree.putIfAbsent(prefix, "") != null) {
+        throw new IAE("Detected duplicate prefix in join clauses: [%s]", prefix);
+      }
+    }
+
+    for (String prefix : prefixes) {
       // this returns a lazy iterable
       Iterable<CharSequence> prefixedBy = radixTree.getKeysStartingWith(prefix);
       prefixedBy.forEach(
