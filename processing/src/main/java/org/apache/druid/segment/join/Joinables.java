@@ -176,13 +176,15 @@ public class Joinables
       final List<String> prefixes
   )
   {
-    prefixes.sort(C);
+    //List<String> prefixesLongestFirst = new ArrayList<>(prefixes);
+    List<String> prefixesLongestFirst = prefixes;
+    prefixesLongestFirst.sort(C);
 
-    for (int i = 0; i < prefixes.size(); i++) {
-      String prefix1 = prefixes.get(i);
-      for (int k = i; k < prefixes.size(); k++) {
+    for (int i = 0; i < prefixesLongestFirst.size(); i++) {
+      String prefix1 = prefixesLongestFirst.get(i);
+      for (int k = i; k < prefixesLongestFirst.size(); k++) {
         if (i != k) {
-          String otherPrefix = prefixes.get(k);
+          String otherPrefix = prefixesLongestFirst.get(k);
           if (prefix1.equals(otherPrefix)) {
             throw new IAE("Detected duplicate prefix in join clauses: [%s]", prefix1);
           }
