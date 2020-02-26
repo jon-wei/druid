@@ -88,6 +88,7 @@ public class JoinFilterAnalyzer
       HashJoinSegmentStorageAdapter hashJoinSegmentStorageAdapter,
       Set<String> baseColumnNames,
       @Nullable Filter originalFilter,
+      JoinFilterResourceCache resourceCache,
       boolean enableFilterPushDown
   )
   {
