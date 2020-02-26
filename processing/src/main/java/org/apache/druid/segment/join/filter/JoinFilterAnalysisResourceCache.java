@@ -19,10 +19,13 @@
 
 package org.apache.druid.segment.join.filter;
 
+import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.join.JoinableClause;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,14 +33,14 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * A cache for holding cross-segment shared resources used by join filter analysis
  */
-public class JoinFilterResourceCache
+public class JoinFilterAnalysisResourceCache
 {
   private volatile Filter normalizedFilter = null;
 
-  private final ConcurrentHashMap<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationCache =
+  private final ConcurrentHashMap<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationAnalysisCache =
       new ConcurrentHashMap<>();
 
-  private final ConcurrentHashMap<String, Set<String>> correlatedValuesCache =
+  private final ConcurrentHashMap<JoinFilterColumnCorrelationAnalysis, Set<String>> correlatedValuesCache =
       new ConcurrentHashMap<>();
 
   public Filter getOrComputeNormalizedFilter(Filter originalFilter)
@@ -55,6 +58,46 @@ public class JoinFilterResourceCache
     return filterRef;
   }
 
+  public Optional<List<JoinFilterColumnCorrelationAnalysis>> computeCorrelationAnalysisIfAbsent(
+      String prefix,
+      JoinableClause clause,
+      Set<String> baseColumnNames,
+      Map<String, Set<Expr>> equiconditions
+  )
+  {
+    Optional<List<JoinFilterColumnCorrelationAnalysis>> correlations = correlationAnalysisCache.computeIfAbsent(
+        prefix,
+        p -> JoinFilterAnalyzer.findCorrelatedBaseTableColumns(
+            baseColumnNames,
+            p,
+            clause,
+            equiconditions
+        )
+    );
+
+    return correlations;
+  }
+
+  public Set<String> computeCorrelatedValuesIfAbsent(
+      JoinFilterColumnCorrelationAnalysis correlationAnalysis,
+      String selectorFilterDimension,
+      String selectorFilterValue,
+      String joinColumn,
+      JoinableClause joinableClause
+  )
+  {
+    Set<String> correlatedValues = correlatedValuesCache.computeIfAbsent(
+        correlationAnalysis,
+        ca -> JoinFilterAnalyzer.getCorrelatedValuesForPushDown(
+            selectorFilterDimension,
+            selectorFilterValue,
+            joinColumn,
+            joinableClause
+        )
+    );
+
+    return correlatedValues;
+  }
 
 
 

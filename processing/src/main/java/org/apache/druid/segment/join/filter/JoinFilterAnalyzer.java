@@ -88,7 +88,7 @@ public class JoinFilterAnalyzer
       HashJoinSegmentStorageAdapter hashJoinSegmentStorageAdapter,
       Set<String> baseColumnNames,
       @Nullable Filter originalFilter,
-      JoinFilterResourceCache resourceCache,
+      JoinFilterAnalysisResourceCache resourceCache,
       boolean enableFilterPushDown
   )
   {
@@ -435,7 +435,7 @@ public class JoinFilterAnalyzer
    * @return A list of values of the correlatedJoinColumn that appear in rows where filterColumn = filterValue
    * Returns an empty set if we cannot determine the correlated values.
    */
-  private static Set<String> getCorrelatedValuesForPushDown(
+  protected static Set<String> getCorrelatedValuesForPushDown(
       String filterColumn,
       String filterValue,
       String correlatedJoinColumn,
@@ -485,7 +485,7 @@ public class JoinFilterAnalyzer
    * @return A list of correlatation analyses for the equicondition RHS columns that reside in the table associated with
    * the tablePrefix
    */
-  private static Optional<List<JoinFilterColumnCorrelationAnalysis>> findCorrelatedBaseTableColumns(
+  protected static Optional<List<JoinFilterColumnCorrelationAnalysis>> findCorrelatedBaseTableColumns(
       Set<String> baseColumnNames,
       String tablePrefix,
       JoinableClause clauseForTablePrefix,
