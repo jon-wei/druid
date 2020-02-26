@@ -22,6 +22,11 @@ package org.apache.druid.segment.join.filter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.filter.Filters;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * A cache for holding cross-segment shared resources used by join filter analysis
  */
@@ -29,11 +34,17 @@ public class JoinFilterResourceCache
 {
   private volatile Filter normalizedFilter = null;
 
+  private final ConcurrentHashMap<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationCache =
+      new ConcurrentHashMap<>();
+
+  private final ConcurrentHashMap<String, Set<String>> correlatedValuesCache =
+      new ConcurrentHashMap<>();
+
   public Filter getOrComputeNormalizedFilter(Filter originalFilter)
   {
     Filter filterRef = normalizedFilter;
     if (filterRef == null) {
-      synchronized (normalizedFilter) {
+      synchronized (this) {
         filterRef = normalizedFilter;
         if (filterRef == null) {
           filterRef = Filters.convertToCNF(originalFilter);
@@ -43,4 +54,8 @@ public class JoinFilterResourceCache
     }
     return filterRef;
   }
+
+
+
+
 }

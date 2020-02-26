@@ -108,7 +108,7 @@ public class JoinFilterAnalyzer
       );
     }
 
-    Filter normalizedFilter = Filters.convertToCNF(originalFilter);
+    Filter normalizedFilter = resourceCache.getOrComputeNormalizedFilter(originalFilter);
 
     // build the prefix and equicondition maps
     // We should check that the prefixes do not duplicate or shadow each other. This is not currently implemented,
