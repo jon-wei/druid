@@ -60,6 +60,7 @@ import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.Joinables;
+import org.apache.druid.segment.join.filter.JoinFilterAnalysisResourceCache;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.timeline.SegmentId;
@@ -175,6 +176,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
         analysis.getPreJoinableClauses(),
         joinableFactory,
         cpuTimeAccumulator,
+        new JoinFilterAnalysisResourceCache(),
         QueryContexts.getEnableJoinFilterPushDown(query)
     );
 

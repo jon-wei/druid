@@ -24,6 +24,7 @@ import org.apache.druid.segment.AbstractSegment;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.join.filter.JoinFilterAnalysisResourceCache;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
@@ -40,16 +41,19 @@ public class HashJoinSegment extends AbstractSegment
 {
   private final Segment baseSegment;
   private final List<JoinableClause> clauses;
+  private final JoinFilterAnalysisResourceCache resourceCache;
   private final boolean enableFilterPushDown;
 
   public HashJoinSegment(
       Segment baseSegment,
       List<JoinableClause> clauses,
+      JoinFilterAnalysisResourceCache resourceCache,
       boolean enableFilterPushDown
   )
   {
     this.baseSegment = baseSegment;
     this.clauses = clauses;
+    this.resourceCache = resourceCache;
     this.enableFilterPushDown = enableFilterPushDown;
 
     // Verify 'clauses' is nonempty (otherwise it's a waste to create this object, and the caller should know)
@@ -83,7 +87,7 @@ public class HashJoinSegment extends AbstractSegment
   @Override
   public StorageAdapter asStorageAdapter()
   {
-    return new HashJoinSegmentStorageAdapter(baseSegment.asStorageAdapter(), clauses, enableFilterPushDown);
+    return new HashJoinSegmentStorageAdapter(baseSegment.asStorageAdapter(), clauses, resourceCache, enableFilterPushDown);
   }
 
   @Override

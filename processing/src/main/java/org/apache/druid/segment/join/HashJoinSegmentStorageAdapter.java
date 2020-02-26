@@ -36,6 +36,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
+import org.apache.druid.segment.join.filter.JoinFilterAnalysisResourceCache;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterSplit;
 import org.joda.time.DateTime;
@@ -55,6 +56,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   private final StorageAdapter baseAdapter;
   private final List<JoinableClause> clauses;
   private final boolean enableFilterPushDown;
+  private final JoinFilterAnalysisResourceCache resourceCache;
 
   HashJoinSegmentStorageAdapter(
       StorageAdapter baseAdapter,
@@ -63,17 +65,20 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   {
     this.baseAdapter = baseAdapter;
     this.clauses = clauses;
+    this.resourceCache = new JoinFilterAnalysisResourceCache();
     this.enableFilterPushDown = QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN;
   }
 
   HashJoinSegmentStorageAdapter(
       StorageAdapter baseAdapter,
       List<JoinableClause> clauses,
+      JoinFilterAnalysisResourceCache resourceCache,
       final boolean enableFilterPushDown
   )
   {
     this.baseAdapter = baseAdapter;
     this.clauses = clauses;
+    this.resourceCache = resourceCache;
     this.enableFilterPushDown = enableFilterPushDown;
   }
 
@@ -236,6 +241,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         this,
         baseColumns,
         filter,
+        resourceCache,
         enableFilterPushDown
     );
     preJoinVirtualColumns.addAll(joinFilterSplit.getPushDownVirtualColumns());

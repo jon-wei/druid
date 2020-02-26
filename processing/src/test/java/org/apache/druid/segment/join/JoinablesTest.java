@@ -28,6 +28,7 @@ import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.join.filter.JoinFilterAnalysisResourceCache;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -95,6 +96,7 @@ public class JoinablesTest
         ImmutableList.of(),
         NoopJoinableFactory.INSTANCE,
         new AtomicLong(),
+        new JoinFilterAnalysisResourceCache(),
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
     );
 
@@ -119,6 +121,7 @@ public class JoinablesTest
         ImmutableList.of(clause),
         NoopJoinableFactory.INSTANCE,
         new AtomicLong(),
+        new JoinFilterAnalysisResourceCache(),
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
     );
   }
@@ -151,6 +154,7 @@ public class JoinablesTest
           }
         },
         new AtomicLong(),
+        new JoinFilterAnalysisResourceCache(),
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
     );
 

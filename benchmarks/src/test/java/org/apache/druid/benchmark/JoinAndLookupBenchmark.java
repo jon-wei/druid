@@ -49,6 +49,7 @@ import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinTestHelper;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.JoinableClause;
+import org.apache.druid.segment.join.filter.JoinFilterAnalysisResourceCache;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -139,6 +140,7 @@ public class JoinAndLookupBenchmark
                 )
             )
         ),
+        new JoinFilterAnalysisResourceCache(),
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
     );
 
@@ -156,6 +158,7 @@ public class JoinAndLookupBenchmark
                 )
             )
         ),
+        new JoinFilterAnalysisResourceCache(),
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
     );
 
@@ -173,6 +176,7 @@ public class JoinAndLookupBenchmark
                 )
             )
         ),
+        new JoinFilterAnalysisResourceCache(),
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
     );
 
@@ -190,6 +194,7 @@ public class JoinAndLookupBenchmark
                 )
             )
         ),
+        new JoinFilterAnalysisResourceCache(),
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
     );
 

@@ -24,6 +24,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.join.filter.JoinFilterAnalysisResourceCache;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.CoreMatchers;
@@ -78,6 +79,7 @@ public class HashJoinSegmentTest
                 JoinConditionAnalysis.forExpression("1", "j1.", ExprMacroTable.nil())
             )
         ),
+        new JoinFilterAnalysisResourceCache(),
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
     );
   }
@@ -91,6 +93,7 @@ public class HashJoinSegmentTest
     final HashJoinSegment ignored = new HashJoinSegment(
         baseSegment,
         ImmutableList.of(),
+        new JoinFilterAnalysisResourceCache(),
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
     );
   }

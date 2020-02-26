@@ -86,6 +86,7 @@ public class JoinFilterAnalysisResourceCache
       JoinableClause joinableClause
   )
   {
+    // there will only be one correlationAnalysis across all segments, so we can rely on its identity hash code
     Set<String> correlatedValues = correlatedValuesCache.computeIfAbsent(
         correlationAnalysis,
         ca -> JoinFilterAnalyzer.getCorrelatedValuesForPushDown(

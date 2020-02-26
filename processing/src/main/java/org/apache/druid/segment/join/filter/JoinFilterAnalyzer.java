@@ -143,7 +143,6 @@ public class JoinFilterAnalyzer
     List<Filter> leftFilters = new ArrayList<>();
     List<Filter> rightFilters = new ArrayList<>();
     List<VirtualColumn> pushDownVirtualColumns = new ArrayList<>();
-    Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationCache = new HashMap<>();
 
     for (Filter orClause : normalizedOrClauses) {
       JoinFilterAnalysis joinFilterAnalysis = analyzeJoinFilterClause(
@@ -151,7 +150,7 @@ public class JoinFilterAnalyzer
           orClause,
           prefixes,
           equiconditions,
-          correlationCache
+          resourceCache
       );
       if (joinFilterAnalysis.isCanPushDown()) {
         leftFilters.add(joinFilterAnalysis.getPushDownFilter().get());
@@ -181,7 +180,7 @@ public class JoinFilterAnalyzer
    * @param filterClause     Individual filter clause (an OR filter or a leaf filter) from a filter that is in CNF
    * @param prefixes         Map of table prefixes
    * @param equiconditions   Equicondition map
-   * @param correlationCache Cache of column correlation analyses.
+   * @param resourceCache    Cache of column correlation analyses.
    *
    * @return a JoinFilterAnalysis that contains a possible filter rewrite and information on how to handle the filter.
    */
@@ -190,7 +189,7 @@ public class JoinFilterAnalyzer
       Filter filterClause,
       Map<String, JoinableClause> prefixes,
       Map<String, Set<Expr>> equiconditions,
-      Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationCache
+      JoinFilterAnalysisResourceCache resourceCache
   )
   {
     // NULL matching conditions are not currently pushed down.
@@ -207,7 +206,7 @@ public class JoinFilterAnalyzer
           (SelectorFilter) filterClause,
           prefixes,
           equiconditions,
-          correlationCache
+          resourceCache
       );
     }
 
@@ -217,7 +216,7 @@ public class JoinFilterAnalyzer
           (OrFilter) filterClause,
           prefixes,
           equiconditions,
-          correlationCache
+          resourceCache
       );
     }
 
@@ -242,7 +241,7 @@ public class JoinFilterAnalyzer
    * @param orFilter         OrFilter to be rewritten
    * @param prefixes         Map of table prefixes to clauses
    * @param equiconditions   Map of equiconditions
-   * @param correlationCache Column correlation analysis cache. This will be potentially modified by adding
+   * @param resourceCache    Column correlation analysis cache. This will be potentially modified by adding
    *                         any new column correlation analyses to the cache.
    *
    * @return A JoinFilterAnalysis indicating how to handle the potentially rewritten filter
@@ -252,7 +251,7 @@ public class JoinFilterAnalyzer
       OrFilter orFilter,
       Map<String, JoinableClause> prefixes,
       Map<String, Set<Expr>> equiconditions,
-      Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationCache
+      JoinFilterAnalysisResourceCache resourceCache
   )
   {
     boolean retainRhs = false;
@@ -274,7 +273,7 @@ public class JoinFilterAnalyzer
               (SelectorFilter) filter,
               prefixes,
               equiconditions,
-              correlationCache
+              resourceCache
           );
           if (!rewritten.isCanPushDown()) {
             return JoinFilterAnalysis.createNoPushdownFilterAnalysis(orFilter);
@@ -305,7 +304,7 @@ public class JoinFilterAnalyzer
    * @param selectorFilter   SelectorFilter to be rewritten
    * @param prefixes         Map of join table prefixes to clauses
    * @param equiconditions   Map of equiconditions
-   * @param correlationCache Cache of column correlation analyses. This will be potentially modified by adding
+   * @param resourceCache    Cache of column correlation analyses. This will be potentially modified by adding
    *                         any new column correlation analyses to the cache.
    *
    * @return A JoinFilterAnalysis that indicates how to handle the potentially rewritten filter
@@ -315,20 +314,18 @@ public class JoinFilterAnalyzer
       SelectorFilter selectorFilter,
       Map<String, JoinableClause> prefixes,
       Map<String, Set<Expr>> equiconditions,
-      Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationCache
+      JoinFilterAnalysisResourceCache resourceCache
   )
   {
     String filteringColumn = selectorFilter.getDimension();
     for (Map.Entry<String, JoinableClause> prefixAndClause : prefixes.entrySet()) {
       if (prefixAndClause.getValue().includesColumn(filteringColumn)) {
-        Optional<List<JoinFilterColumnCorrelationAnalysis>> correlations = correlationCache.computeIfAbsent(
+
+        Optional<List<JoinFilterColumnCorrelationAnalysis>> correlations = resourceCache.computeCorrelationAnalysisIfAbsent(
             prefixAndClause.getKey(),
-            p -> findCorrelatedBaseTableColumns(
-                baseColumnNames,
-                p,
-                prefixes.get(p),
-                equiconditions
-            )
+            prefixAndClause.getValue(),
+            baseColumnNames,
+            equiconditions
         );
 
         if (!correlations.isPresent()) {
@@ -340,7 +337,8 @@ public class JoinFilterAnalyzer
 
         for (JoinFilterColumnCorrelationAnalysis correlationAnalysis : correlations.get()) {
           if (correlationAnalysis.supportsPushDown()) {
-            Set<String> correlatedValues = getCorrelatedValuesForPushDown(
+            Set<String> correlatedValues = resourceCache.computeCorrelatedValuesIfAbsent(
+                correlationAnalysis,
                 selectorFilter.getDimension(),
                 selectorFilter.getValue(),
                 correlationAnalysis.getJoinColumn(),

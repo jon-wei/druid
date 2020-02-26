@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.join.filter.JoinFilterAnalysisResourceCache;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
@@ -75,6 +76,7 @@ public class Joinables
       final List<PreJoinableClause> clauses,
       final JoinableFactory joinableFactory,
       final AtomicLong cpuTimeAccumulator,
+      final JoinFilterAnalysisResourceCache resourceCache,
       final boolean enableFilterPushDown
   )
   {
@@ -85,7 +87,7 @@ public class Joinables
             return Function.identity();
           } else {
             final List<JoinableClause> joinableClauses = createJoinableClauses(clauses, joinableFactory);
-            return baseSegment -> new HashJoinSegment(baseSegment, joinableClauses, enableFilterPushDown);
+            return baseSegment -> new HashJoinSegment(baseSegment, joinableClauses, resourceCache, enableFilterPushDown);
           }
         }
     );
