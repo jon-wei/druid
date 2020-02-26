@@ -62,6 +62,7 @@ import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.Joinables;
 import org.apache.druid.segment.join.LookupJoinableFactory;
 import org.apache.druid.segment.join.MapJoinableFactoryTest;
+import org.apache.druid.segment.join.filter.JoinFilterAnalysisResourceCache;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -374,6 +375,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
           analysis.getPreJoinableClauses(),
           joinableFactory,
           new AtomicLong(),
+          new JoinFilterAnalysisResourceCache(),
           QueryContexts.getEnableJoinFilterPushDown(query)
       );
 
