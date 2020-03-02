@@ -28,4 +28,8 @@ create_docker_network
 # Build Druid Cluster Image (Image running Java 8)
 docker build -t druid/cluster --build-arg DOCKER_IMAGE=imply/druiditbase:openjdk-1.8.0_191-1 $SHARED_DIR/docker
 
+build_hadoop_docker_image
+
 start_docker_containers
+
+start_hadoop_container
