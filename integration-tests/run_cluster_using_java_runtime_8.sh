@@ -33,3 +33,7 @@ build_hadoop_docker_image
 start_docker_containers
 
 start_hadoop_container
+
+wait_for_hadoop_namenode_up
+
+setup_hadoop_druid_dirs
