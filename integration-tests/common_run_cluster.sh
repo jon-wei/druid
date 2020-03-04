@@ -140,4 +140,10 @@ setup_hadoop_druid_dirs()
   docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -chmod -R 777 /tmp"
   docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -chmod -R 777 /user"
   echo "Finished setting up druid hadoop dirs"
+
+  echo "Copying Hadoop XML files to shared"
+  mkdir -p $SHARED_DIR/hadoop_xml
+  docker exec -t druid-it-hadoop sh -c "cp /usr/local/hadoop/etc/hadoop/*.xml /shared/hadoop_xml"
+  echo "Copied Hadoop XML files to shared"
+
 }
