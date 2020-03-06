@@ -1516,6 +1516,57 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   }
 
   @Test
+  public void test_filterPushDown_factToRegionToCountryLeftFilterOnRHSJoinConditionColumn()
+  {
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        ImmutableList.of(
+            factToRegion(JoinType.LEFT),
+            regionToCountry(JoinType.LEFT)
+        )
+    );
+    Filter originalFilter = new SelectorFilter("rtc.countryIsoCode", "US");
+
+    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
+        new InDimFilter("countryIsoCode", ImmutableSet.of("US"), null, null).toFilter(),
+        new SelectorFilter("rtc.countryIsoCode", "US"),
+        ImmutableList.of()
+    );
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
+        adapter,
+        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
+        originalFilter,
+        true,
+        true
+    );
+    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+
+    JoinTestHelper.verifyCursors(
+        adapter.makeCursors(
+            originalFilter,
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            FACT_TO_REGION_PREFIX + "regionName",
+            REGION_TO_COUNTRY_PREFIX + "countryName"
+        ),
+        ImmutableList.of(
+            new Object[]{"President of India", "California", "United States"},
+            new Object[]{"Otjiwarongo Airport", "California", "United States"},
+            new Object[]{"DirecTV", "North Carolina", "United States"},
+            new Object[]{"Carlo Curti", "California", "United States"},
+            new Object[]{"Old Anatolian Turkish", "Virginia", "United States"}
+        )
+    );
+  }
+
+
+  @Test
   public void test_JoinFilterSplit_equals()
   {
     EqualsVerifier.forClass(JoinFilterSplit.class)

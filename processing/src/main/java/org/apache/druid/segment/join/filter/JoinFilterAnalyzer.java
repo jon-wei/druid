@@ -354,50 +354,61 @@ public class JoinFilterAnalyzer
 
         for (JoinFilterColumnCorrelationAnalysis correlationAnalysis : correlations.get()) {
           if (correlationAnalysis.supportsPushDown()) {
-            Set<String> correlatedValues = getCorrelatedValuesForPushDown(
-                selectorFilter.getDimension(),
-                selectorFilter.getValue(),
-                correlationAnalysis.getJoinColumn(),
-                prefixAndClause.getValue()
-            );
-
-            if (correlatedValues.isEmpty()) {
-              return JoinFilterAnalysis.createNoPushdownFilterAnalysis(selectorFilter);
-            }
-
-            for (String correlatedBaseColumn : correlationAnalysis.getBaseColumns()) {
-              Filter rewrittenFilter = new InDimFilter(
-                  correlatedBaseColumn,
-                  correlatedValues,
-                  null,
-                  null
-              ).toFilter();
-              newFilters.add(rewrittenFilter);
-            }
-
-            for (Expr correlatedBaseExpr : correlationAnalysis.getBaseExpressions()) {
-              // We need to create a virtual column for the expressions when pushing down.
-              // Note that this block is never entered right now, since correlationAnalysis.supportsPushDown()
-              // will return false if there any correlated expressions on the base table.
-              // Pushdown of such filters is disabled until the expressions system supports converting an expression
-              // into a String representation that can be reparsed into the same expression.
-              // https://github.com/apache/druid/issues/9326 tracks this expressions issue.
-              String vcName = getCorrelatedBaseExprVirtualColumnName(pushdownVirtualColumns.size());
-
-              VirtualColumn correlatedBaseExprVirtualColumn = new ExpressionVirtualColumn(
-                  vcName,
-                  correlatedBaseExpr,
-                  ValueType.STRING
+            // check if we're filtering on the join column
+            if (selectorFilter.getDimension().equals(correlationAnalysis.getJoinColumn())) {
+              for (String correlatedBaseColumn : correlationAnalysis.getBaseColumns()) {
+                Filter rewrittenFilter = new SelectorFilter(
+                    correlatedBaseColumn,
+                    selectorFilter.getValue()
+                );
+                newFilters.add(rewrittenFilter);
+              }
+            } else {
+              Set<String> correlatedValues = getCorrelatedValuesForPushDown(
+                  selectorFilter.getDimension(),
+                  selectorFilter.getValue(),
+                  correlationAnalysis.getJoinColumn(),
+                  prefixAndClause.getValue()
               );
-              pushdownVirtualColumns.add(correlatedBaseExprVirtualColumn);
 
-              Filter rewrittenFilter = new InDimFilter(
-                  vcName,
-                  correlatedValues,
-                  null,
-                  null
-              ).toFilter();
-              newFilters.add(rewrittenFilter);
+              if (correlatedValues.isEmpty()) {
+                return JoinFilterAnalysis.createNoPushdownFilterAnalysis(selectorFilter);
+              }
+
+              for (String correlatedBaseColumn : correlationAnalysis.getBaseColumns()) {
+                Filter rewrittenFilter = new InDimFilter(
+                    correlatedBaseColumn,
+                    correlatedValues,
+                    null,
+                    null
+                ).toFilter();
+                newFilters.add(rewrittenFilter);
+              }
+
+              for (Expr correlatedBaseExpr : correlationAnalysis.getBaseExpressions()) {
+                // We need to create a virtual column for the expressions when pushing down.
+                // Note that this block is never entered right now, since correlationAnalysis.supportsPushDown()
+                // will return false if there any correlated expressions on the base table.
+                // Pushdown of such filters is disabled until the expressions system supports converting an expression
+                // into a String representation that can be reparsed into the same expression.
+                // https://github.com/apache/druid/issues/9326 tracks this expressions issue.
+                String vcName = getCorrelatedBaseExprVirtualColumnName(pushdownVirtualColumns.size());
+
+                VirtualColumn correlatedBaseExprVirtualColumn = new ExpressionVirtualColumn(
+                    vcName,
+                    correlatedBaseExpr,
+                    ValueType.STRING
+                );
+                pushdownVirtualColumns.add(correlatedBaseExprVirtualColumn);
+
+                Filter rewrittenFilter = new InDimFilter(
+                    vcName,
+                    correlatedValues,
+                    null,
+                    null
+                ).toFilter();
+                newFilters.add(rewrittenFilter);
+              }
             }
           }
         }
