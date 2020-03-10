@@ -86,6 +86,9 @@ public class Joinables
       final boolean enableFilterRewrite
   )
   {
+    // compute column correlations here and RHS correlated values
+
+
     return JvmUtils.safeAccumulateThreadCpuTime(
         cpuTimeAccumulator,
         () -> {

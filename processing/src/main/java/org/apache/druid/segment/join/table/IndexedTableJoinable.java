@@ -30,6 +30,7 @@ import org.apache.druid.segment.join.Joinable;
 import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 public class IndexedTableJoinable implements Joinable
@@ -84,7 +85,9 @@ public class IndexedTableJoinable implements Joinable
   public Set<String> getCorrelatedColumnValues(
       String searchColumnName,
       String searchColumnValue,
-      String retrievalColumnName
+      String retrievalColumnName,
+      long maxCorrelationSetSize,
+      boolean allowNonKeyColumnSearch
   )
   {
     int filterColumnPosition = table.allColumns().indexOf(searchColumnName);
@@ -102,14 +105,25 @@ public class IndexedTableJoinable implements Joinable
       for (int i = 0; i < rowIndex.size(); i++) {
         int rowNum = rowIndex.getInt(i);
         correlatedValues.add(reader.read(rowNum).toString());
+
+        if (correlatedValues.size() > maxCorrelationSetSize) {
+          return ImmutableSet.of();
+        }
       }
       return correlatedValues;
     } else {
+      if (!allowNonKeyColumnSearch) {
+        return ImmutableSet.of();
+      }
+
       IndexedTable.Reader dimNameReader = table.columnReader(filterColumnPosition);
       IndexedTable.Reader correlatedColumnReader = table.columnReader(correlatedColumnPosition);
       for (int i = 0; i < table.numRows(); i++) {
         if (searchColumnValue.equals(dimNameReader.read(i).toString())) {
           correlatedValues.add(correlatedColumnReader.read(i).toString());
+        }
+        if (correlatedValues.size() > maxCorrelationSetSize) {
+          return ImmutableSet.of();
         }
       }
 
