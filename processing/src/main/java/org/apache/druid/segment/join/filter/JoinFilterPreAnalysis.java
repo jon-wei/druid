@@ -32,7 +32,7 @@ public class JoinFilterPreAnalysis
   private final Filter originalFilter;
   private final List<Filter> normalizedBaseTableClauses;
   private final List<Filter> normalizedJoinTableClauses;
-  private final Map<String, Optional<JoinFilterColumnCorrelationAnalysis>>  correlationsByColumn;
+  private final Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>>  correlationsByColumn;
   private final boolean enableFilterPushDown;
   private final boolean enableFilterRewrite;
 
@@ -41,7 +41,7 @@ public class JoinFilterPreAnalysis
       final Filter originalFilter,
       final List<Filter> normalizedBaseTableClauses,
       final List<Filter> normalizedJoinTableClauses,
-      final Map<String, Optional<JoinFilterColumnCorrelationAnalysis>>  correlationsByColumn,
+      final Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>>  correlationsByColumn,
       final boolean enableFilterPushDown,
       final boolean enableFilterRewrite
   )
@@ -75,7 +75,7 @@ public class JoinFilterPreAnalysis
     return normalizedJoinTableClauses;
   }
 
-  public Map<String, Optional<JoinFilterColumnCorrelationAnalysis>>  getCorrelationsByColumn()
+  public Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>>  getCorrelationsByColumn()
   {
     return correlationsByColumn;
   }

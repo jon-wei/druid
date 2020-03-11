@@ -270,7 +270,7 @@ public class JoinFilterAnalyzer
       );
     }
 
-    Map<String, Optional<JoinFilterColumnCorrelationAnalysis>> correlationsByColumn = new HashMap<>(); //TODO: THIS NEEDS TO HAVE A LIST VALUE
+    Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationsByColumn = new HashMap<>(); //TODO: THIS NEEDS TO HAVE A LIST VALUE
     for (RHSRewriteCandidate rhsRewriteCandidate : rhsRewriteCandidates) {
       Optional<Map<String, JoinFilterColumnCorrelationAnalysis>> correlationsForPrefix = correlationsByPrefix.get(
           rhsRewriteCandidate.getJoinableClause().getPrefix()
@@ -278,7 +278,14 @@ public class JoinFilterAnalyzer
       if (correlationsForPrefix.isPresent()) {
         for (Map.Entry<String, JoinFilterColumnCorrelationAnalysis> correlationForColumn : correlationsForPrefix.get().entrySet()) {
           // TODO: this part needs to add to a list instead of replace
-          correlationsByColumn.put(rhsRewriteCandidate.getRhsColumn(), Optional.of(correlationForColumn.getValue()));
+          Optional<List<JoinFilterColumnCorrelationAnalysis>> perColumnCorrelations = correlationsByColumn.computeIfAbsent(
+              rhsRewriteCandidate.getRhsColumn(),
+              (rhsCol) -> {
+                return Optional.of(new ArrayList<>());
+              }
+          );
+          perColumnCorrelations.get().add(correlationForColumn.getValue());
+
           // update the value we just added to the map above with the per-value rewrite IN set
           correlationForColumn.getValue().getCorrelatedValuesMap().computeIfAbsent(
               rhsRewriteCandidate.getValueForRewrite(),
@@ -302,6 +309,15 @@ public class JoinFilterAnalyzer
         }
       } else {
         correlationsByColumn.put(rhsRewriteCandidate.getRhsColumn(), Optional.empty());
+      }
+    }
+
+    for (Map.Entry<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlation : correlationsByColumn.entrySet()) {
+      if (correlation.getValue().isPresent()) {
+        List<JoinFilterColumnCorrelationAnalysis> dedupList = eliminateCorrelationDuplicates(
+            correlation.getValue().get()
+        );
+        correlationsByColumn.put(correlation.getKey(), Optional.of(dedupList));
       }
     }
 
@@ -477,55 +493,57 @@ public class JoinFilterAnalyzer
     String filteringColumn = selectorFilter.getDimension();
     String filteringValue = selectorFilter.getValue();
 
-    Optional<JoinFilterColumnCorrelationAnalysis> correlationAnalysis = joinFilterPreAnalysis.getCorrelationsByColumn().get(filteringColumn);
+    Optional<List<JoinFilterColumnCorrelationAnalysis>> correlationAnalyses = joinFilterPreAnalysis.getCorrelationsByColumn().get(filteringColumn);
 
-    if (!correlationAnalysis.isPresent()) {
+    if (!correlationAnalyses.isPresent()) {
       return JoinFilterAnalysis.createNoPushdownFilterAnalysis(selectorFilter);
     }
 
     List<Filter> newFilters = new ArrayList<>();
     List<VirtualColumn> pushdownVirtualColumns = new ArrayList<>();
 
-    if (correlationAnalysis.get().supportsPushDown()) {
-      Optional<Set<String>> correlatedValues = correlationAnalysis.get().getCorrelatedValuesMap().get(filteringValue);
+    for (JoinFilterColumnCorrelationAnalysis correlationAnalysis : correlationAnalyses.get()) {
+      if (correlationAnalysis.supportsPushDown()) {
+        Optional<Set<String>> correlatedValues = correlationAnalysis.getCorrelatedValuesMap().get(filteringValue);
 
-      if (!correlatedValues.isPresent()) {
-        return JoinFilterAnalysis.createNoPushdownFilterAnalysis(selectorFilter);
-      }
+        if (!correlatedValues.isPresent()) {
+          return JoinFilterAnalysis.createNoPushdownFilterAnalysis(selectorFilter);
+        }
 
-      for (String correlatedBaseColumn : correlationAnalysis.get().getBaseColumns()) {
-        Filter rewrittenFilter = new InDimFilter(
-            correlatedBaseColumn,
-            correlatedValues.get(),
-            null,
-            null
-        ).toFilter();
-        newFilters.add(rewrittenFilter);
-      }
+        for (String correlatedBaseColumn : correlationAnalysis.getBaseColumns()) {
+          Filter rewrittenFilter = new InDimFilter(
+              correlatedBaseColumn,
+              correlatedValues.get(),
+              null,
+              null
+          ).toFilter();
+          newFilters.add(rewrittenFilter);
+        }
 
-      for (Expr correlatedBaseExpr : correlationAnalysis.get().getBaseExpressions()) {
-        // We need to create a virtual column for the expressions when pushing down.
-        // Note that this block is never entered right now, since correlationAnalysis.supportsPushDown()
-        // will return false if there any correlated expressions on the base table.
-        // Pushdown of such filters is disabled until the expressions system supports converting an expression
-        // into a String representation that can be reparsed into the same expression.
-        // https://github.com/apache/druid/issues/9326 tracks this expressions issue.
-        String vcName = getCorrelatedBaseExprVirtualColumnName(pushdownVirtualColumns.size());
+        for (Expr correlatedBaseExpr : correlationAnalysis.getBaseExpressions()) {
+          // We need to create a virtual column for the expressions when pushing down.
+          // Note that this block is never entered right now, since correlationAnalysis.supportsPushDown()
+          // will return false if there any correlated expressions on the base table.
+          // Pushdown of such filters is disabled until the expressions system supports converting an expression
+          // into a String representation that can be reparsed into the same expression.
+          // https://github.com/apache/druid/issues/9326 tracks this expressions issue.
+          String vcName = getCorrelatedBaseExprVirtualColumnName(pushdownVirtualColumns.size());
 
-        VirtualColumn correlatedBaseExprVirtualColumn = new ExpressionVirtualColumn(
-            vcName,
-            correlatedBaseExpr,
-            ValueType.STRING
-        );
-        pushdownVirtualColumns.add(correlatedBaseExprVirtualColumn);
+          VirtualColumn correlatedBaseExprVirtualColumn = new ExpressionVirtualColumn(
+              vcName,
+              correlatedBaseExpr,
+              ValueType.STRING
+          );
+          pushdownVirtualColumns.add(correlatedBaseExprVirtualColumn);
 
-        Filter rewrittenFilter = new InDimFilter(
-            vcName,
-            correlatedValues.get(),
-            null,
-            null
-        ).toFilter();
-        newFilters.add(rewrittenFilter);
+          Filter rewrittenFilter = new InDimFilter(
+              vcName,
+              correlatedValues.get(),
+              null,
+              null
+          ).toFilter();
+          newFilters.add(rewrittenFilter);
+        }
       }
     }
 

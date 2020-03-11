@@ -633,7 +633,6 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
                     null,
                     null
                 )),
-                new InDimFilter("countryIsoCode", ImmutableSet.of("CA"), null, null).toFilter(),
                 new OrFilter(
                     ImmutableList.of(
                         new SelectorFilter("namespace", "main"),
@@ -648,7 +647,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
                             null
                         ))
                     )
-                )
+                ),
+                new InDimFilter("countryIsoCode", ImmutableSet.of("CA"), null, null).toFilter()
             )
         ),
         new AndFilter(
