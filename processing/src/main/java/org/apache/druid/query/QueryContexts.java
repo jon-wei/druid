@@ -63,7 +63,7 @@ public class QueryContexts
   public static final long NO_TIMEOUT = 0;
   public static final boolean DEFAULT_ENABLE_PARALLEL_MERGE = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN = true;
-  public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE = false;
+  public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS = false;
   public static final long DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY = 10000;
 
