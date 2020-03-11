@@ -21,30 +21,65 @@ package org.apache.druid.segment.join.filter;
 
 import org.apache.druid.query.filter.Filter;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public class JoinFilterPreAnalysis
 {
   private final Filter originalFilter;
-  private final Optional<Filter> pushDownFilter;
+  private final List<Filter> normalizedBaseTableClauses;
+  private final List<Filter> normalizedJoinTableClauses;
+  private final Map<String, JoinFilterColumnCorrelationAnalysis> correlationsByColumn;
+  private final boolean enableFilterPushDown;
+  private final boolean enableFilterRewrite;
 
   public JoinFilterPreAnalysis(
       final Filter originalFilter,
-      final Optional<Filter> pushDownFilter
+      final List<Filter> normalizedBaseTableClauses,
+      final List<Filter> normalizedJoinTableClauses,
+      final Map<String, JoinFilterColumnCorrelationAnalysis> correlationsByColumn,
+      final boolean enableFilterPushDown,
+      final boolean enableFilterRewrite
   )
   {
     this.originalFilter = originalFilter;
-    this.pushDownFilter = pushDownFilter;
-  }
-
-  public Optional<Filter> getPushDownFilter()
-  {
-    return pushDownFilter;
+    this.normalizedBaseTableClauses = normalizedBaseTableClauses;
+    this.normalizedJoinTableClauses = normalizedJoinTableClauses;
+    this.correlationsByColumn = correlationsByColumn;
+    this.enableFilterPushDown = enableFilterPushDown;
+    this.enableFilterRewrite = enableFilterRewrite;
   }
 
   public Filter getOriginalFilter()
   {
     return originalFilter;
   }
+
+  public List<Filter> getNormalizedBaseTableClauses()
+  {
+    return normalizedBaseTableClauses;
+  }
+
+  public List<Filter> getNormalizedJoinTableClauses()
+  {
+    return normalizedJoinTableClauses;
+  }
+
+  public Map<String, JoinFilterColumnCorrelationAnalysis> getCorrelationsByColumn()
+  {
+    return correlationsByColumn;
+  }
+
+  public boolean isEnableFilterPushDown()
+  {
+    return enableFilterPushDown;
+  }
+
+  public boolean isEnableFilterRewrite()
+  {
+    return enableFilterRewrite;
+  }
+
 }
 

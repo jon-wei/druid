@@ -197,7 +197,9 @@ public class ServerManager implements QuerySegmentWalker
         joinableFactory,
         cpuTimeAccumulator,
         QueryContexts.getEnableJoinFilterPushDown(query),
-        QueryContexts.getEnableJoinFilterRewrite(query)
+        QueryContexts.getEnableJoinFilterRewrite(query),
+        query.getFilter().toFilter(),
+        query.getVirtualColumns()
     );
 
     FunctionalIterable<QueryRunner<T>> queryRunners = FunctionalIterable
