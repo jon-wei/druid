@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.filter.ExpressionDimFilter;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.VirtualColumns;
@@ -486,10 +487,11 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
     // In non-SQL-compatible mode, we get an extra row, since the 'null' countryNumber for "Talk:Oswald Tilghman"
     // is interpreted as 0 (a.k.a. Australia).
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnNumber(JoinType.INNER));
+    Filter filter = new SelectorDimFilter("channel", "#en.wikipedia", null).toFilter();
     JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
         joinableClauses,
         VirtualColumns.EMPTY,
-        null,
+        filter,
         true,
         true
     );
@@ -500,7 +502,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             joinableClauses,
             preAnalysis
         ).makeCursors(
-            new SelectorDimFilter("channel", "#en.wikipedia", null).toFilter(),
+            filter,
             Intervals.ETERNITY,
             VirtualColumns.EMPTY,
             Granularities.ALL,
@@ -553,10 +555,11 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
     // In non-SQL-compatible mode, we get an extra row, since the 'null' countryNumber for "Talk:Oswald Tilghman"
     // is interpreted as 0 (a.k.a. Australia).
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryNameUsingNumberLookup(JoinType.INNER));
+    Filter filter = new SelectorDimFilter("channel", "#en.wikipedia", null).toFilter();
     JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
         joinableClauses,
         VirtualColumns.EMPTY,
-        null,
+        filter,
         true,
         true
     );
@@ -567,7 +570,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             joinableClauses,
             preAnalysis
         ).makeCursors(
-            new SelectorDimFilter("channel", "#en.wikipedia", null).toFilter(),
+            filter,
             Intervals.ETERNITY,
             VirtualColumns.EMPTY,
             Granularities.ALL,
@@ -616,10 +619,11 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   public void test_makeCursors_factToCountryLeftWithFilterOnFacts()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
+    Filter filter = new SelectorDimFilter("channel", "#de.wikipedia", null).toFilter();
     JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
         joinableClauses,
         VirtualColumns.EMPTY,
-        null,
+        filter,
         true,
         true
     );
@@ -630,7 +634,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             joinableClauses,
             preAnalysis
         ).makeCursors(
-            new SelectorDimFilter("channel", "#de.wikipedia", null).toFilter(),
+            filter,
             Intervals.ETERNITY,
             VirtualColumns.EMPTY,
             Granularities.ALL,
@@ -654,10 +658,11 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   public void test_makeCursors_factToCountryRightWithFilterOnLeftIsNull()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.RIGHT));
+    Filter filter = new SelectorDimFilter("channel", null, null).toFilter();
     JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
         joinableClauses,
         VirtualColumns.EMPTY,
-        null,
+        filter,
         true,
         true
     );
@@ -668,7 +673,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             joinableClauses,
             preAnalysis
         ).makeCursors(
-            new SelectorDimFilter("channel", null, null).toFilter(),
+            filter,
             Intervals.ETERNITY,
             VirtualColumns.EMPTY,
             Granularities.ALL,
@@ -694,10 +699,11 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   public void test_makeCursors_factToCountryFullWithFilterOnLeftIsNull()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.FULL));
+    Filter filter = new SelectorDimFilter("channel", null, null).toFilter();
     JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
         joinableClauses,
         VirtualColumns.EMPTY,
-        null,
+        filter,
         true,
         true
     );
@@ -708,7 +714,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             joinableClauses,
             preAnalysis
         ).makeCursors(
-            new SelectorDimFilter("channel", null, null).toFilter(),
+            filter,
             Intervals.ETERNITY,
             VirtualColumns.EMPTY,
             Granularities.ALL,
@@ -734,10 +740,16 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   public void test_makeCursors_factToCountryRightWithFilterOnJoinable()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.RIGHT));
+    Filter filter = new SelectorDimFilter(
+        FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName",
+        "Germany",
+        null
+    ).toFilter();
+
     JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
         joinableClauses,
         VirtualColumns.EMPTY,
-        null,
+        filter,
         true,
         true
     );
@@ -748,11 +760,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             joinableClauses,
             preAnalysis
         ).makeCursors(
-            new SelectorDimFilter(
-                FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName",
-                "Germany",
-                null
-            ).toFilter(),
+            filter,
             Intervals.ETERNITY,
             VirtualColumns.EMPTY,
             Granularities.ALL,
@@ -777,10 +785,17 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   public void test_makeCursors_factToCountryLeftWithFilterOnJoinable()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
+
+    Filter filter = new OrDimFilter(
+        new SelectorDimFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryIsoCode", "DE", null),
+        new SelectorDimFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", "Norway", null),
+        new SelectorDimFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber", "10", null)
+    ).toFilter();
+
     JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
         joinableClauses,
         VirtualColumns.EMPTY,
-        null,
+        filter,
         true,
         true
     );
@@ -791,11 +806,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             joinableClauses,
             preAnalysis
         ).makeCursors(
-            new OrDimFilter(
-                new SelectorDimFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryIsoCode", "DE", null),
-                new SelectorDimFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", "Norway", null),
-                new SelectorDimFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber", "10", null)
-            ).toFilter(),
+            filter,
             Intervals.ETERNITY,
             VirtualColumns.EMPTY,
             Granularities.ALL,
@@ -821,10 +832,15 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   public void test_makeCursors_factToCountryLeftWithFilterOnJoinableUsingLookup()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryNameUsingIsoCodeLookup(JoinType.LEFT));
+    Filter filter = new OrDimFilter(
+        new SelectorDimFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "k", "DE", null),
+        new SelectorDimFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "v", "Norway", null)
+    ).toFilter();
+
     JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
         joinableClauses,
         VirtualColumns.EMPTY,
-        null,
+        filter,
         true,
         true
     );
@@ -835,10 +851,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             joinableClauses,
             preAnalysis
         ).makeCursors(
-            new OrDimFilter(
-                new SelectorDimFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "k", "DE", null),
-                new SelectorDimFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "v", "Norway", null)
-            ).toFilter(),
+            filter,
             Intervals.ETERNITY,
             VirtualColumns.EMPTY,
             Granularities.ALL,
@@ -876,10 +889,16 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             )
         )
     );
+
+    Filter filter = new ExpressionDimFilter(
+        StringUtils.format("\"%scountryIsoCode\" == countryIsoCode", FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX),
+        ExprMacroTable.nil()
+    ).toFilter();
+
     JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
         joinableClauses,
         VirtualColumns.EMPTY,
-        null,
+        filter,
         true,
         true
     );
@@ -890,10 +909,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             joinableClauses,
             preAnalysis
         ).makeCursors(
-            new ExpressionDimFilter(
-                StringUtils.format("\"%scountryIsoCode\" == countryIsoCode", FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX),
-                ExprMacroTable.nil()
-            ).toFilter(),
+            filter,
             Intervals.ETERNITY,
             VirtualColumns.EMPTY,
             Granularities.ALL,
@@ -1019,10 +1035,11 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         )
     );
 
+    Filter filter = new SelectorDimFilter("channel", "#de.wikipedia", null).toFilter();
     JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
         joinableClauses,
         VirtualColumns.EMPTY,
-        null,
+        filter,
         true,
         true
     );
@@ -1032,7 +1049,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             joinableClauses,
             preAnalysis
         ).makeCursors(
-            new SelectorDimFilter("channel", "#de.wikipedia", null).toFilter(),
+            filter,
             Intervals.ETERNITY,
             VirtualColumns.EMPTY,
             Granularities.ALL,
@@ -1082,10 +1099,12 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         )
     );
 
+    Filter filter = new SelectorDimFilter("channel", "#de.wikipedia", null).toFilter();
+
     JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
         joinableClauses,
         VirtualColumns.EMPTY,
-        null,
+        filter,
         true,
         true
     );
@@ -1096,7 +1115,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             joinableClauses,
             preAnalysis
         ).makeCursors(
-            new SelectorDimFilter("channel", "#de.wikipedia", null).toFilter(),
+            filter,
             Intervals.ETERNITY,
             VirtualColumns.EMPTY,
             Granularities.ALL,
@@ -1129,10 +1148,12 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         )
     );
 
+    Filter filter = new SelectorDimFilter("channel", "#de.wikipedia", null).toFilter();
+
     JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
         joinableClauses,
         VirtualColumns.EMPTY,
-        null,
+        filter,
         true,
         true
     );
@@ -1143,7 +1164,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             joinableClauses,
             preAnalysis
         ).makeCursors(
-            new SelectorDimFilter("channel", "#de.wikipedia", null).toFilter(),
+            filter,
             Intervals.ETERNITY,
             VirtualColumns.EMPTY,
             Granularities.ALL,
@@ -1193,10 +1214,12 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         )
     );
 
+    Filter filter = new SelectorDimFilter("channel", "#de.wikipedia", null).toFilter();
+
     JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
         joinableClauses,
         VirtualColumns.EMPTY,
-        null,
+        filter,
         true,
         true
     );
@@ -1207,7 +1230,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             joinableClauses,
             preAnalysis
         ).makeCursors(
-            new SelectorDimFilter("channel", "#de.wikipedia", null).toFilter(),
+            filter,
             Intervals.ETERNITY,
             VirtualColumns.EMPTY,
             Granularities.ALL,
@@ -1361,10 +1384,12 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         )
     );
 
+    Filter filter = new SelectorDimFilter("regionIsoCode", "VA", null).toFilter();
+
     JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
         joinableClauses,
         VirtualColumns.EMPTY,
-        null,
+        filter,
         true,
         true
     );
@@ -1375,7 +1400,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             joinableClauses,
             preAnalysis
         ).makeCursors(
-            new SelectorDimFilter("regionIsoCode", "VA", null).toFilter(),
+            filter,
             Intervals.ETERNITY,
             VirtualColumns.EMPTY,
             Granularities.ALL,

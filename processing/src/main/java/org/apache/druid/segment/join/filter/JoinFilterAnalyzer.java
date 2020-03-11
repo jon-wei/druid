@@ -299,8 +299,16 @@ public class JoinFilterAnalyzer
     List<Filter> rightFilters = new ArrayList<>();
     List<VirtualColumn> pushDownVirtualColumns = new ArrayList<>();
 
+    for (Filter baseTableFilter : joinFilterPreAnalysis.getNormalizedBaseTableClauses()) {
+      if (!filterMatchesNull(baseTableFilter)) {
+        leftFilters.add(baseTableFilter);
+      } else {
+        rightFilters.add(baseTableFilter);
+      }
+    }
+
     // Don't need to analyze LHS only filters, push them down always
-    leftFilters.addAll(joinFilterPreAnalysis.getNormalizedBaseTableClauses());
+    //leftFilters.addAll(joinFilterPreAnalysis.getNormalizedBaseTableClauses());
 
     for (Filter orClause : joinFilterPreAnalysis.getNormalizedJoinTableClauses()) {
       JoinFilterAnalysis joinFilterAnalysis = analyzeJoinFilterClause2(
