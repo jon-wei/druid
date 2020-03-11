@@ -233,7 +233,23 @@ public class JoinFilterAnalyzer
       );
       if (correlationsForPrefix.isPresent()) {
         for (Map.Entry<String, JoinFilterColumnCorrelationAnalysis> correlationForColumn : correlationsForPrefix.get().entrySet()) {
-          correlationsByColumn.put(correlationForColumn.getKey(), correlationForColumn.getValue());
+          correlationsByColumn.put(rhsRewriteCandidate.getRhsColumn(), correlationForColumn.getValue());
+          correlationForColumn.getValue().getCorrelatedValuesMap().computeIfAbsent(
+              rhsRewriteCandidate.getValueForRewrite(),
+              (rhsVal) -> {
+                Set<String> correlatedValues = getCorrelatedValuesForPushDown(
+                    rhsRewriteCandidate.getRhsColumn(),
+                    rhsRewriteCandidate.getValueForRewrite(),
+                    correlationForColumn.getValue().getJoinColumn(),
+                    rhsRewriteCandidate.getJoinableClause()
+                );
+                if (correlatedValues.isEmpty()) {
+                  return Optional.empty();
+                } else {
+                  return Optional.of(correlatedValues);
+                }
+              }
+          );
         }
       }
     }
@@ -580,7 +596,7 @@ public class JoinFilterAnalyzer
       } else {
         // simple identifier, see if we can correlate it with a column on the base table
         findMappingFor = identifier;
-        if (isColumnFromJoin(joinableClauses, identifier) != null) {
+        if (isColumnFromJoin(joinableClauses, identifier) == null) {
           correlatedBaseColumns.add(findMappingFor);
         } else {
           getCorrelationForRHSColumn2(
