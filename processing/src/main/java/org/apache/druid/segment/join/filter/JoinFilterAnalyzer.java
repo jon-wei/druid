@@ -147,6 +147,7 @@ public class JoinFilterAnalyzer
 
     if (originalFilter == null || !enableFilterPushDown) {
       return new JoinFilterPreAnalysis(
+          joinableClauses,
           originalFilter,
           null,
           null,
@@ -183,6 +184,7 @@ public class JoinFilterAnalyzer
 
     if (!enableFilterRewrite) {
       return new JoinFilterPreAnalysis(
+          joinableClauses,
           originalFilter,
           normalizedBaseTableClauses,
           normalizedJoinTableClauses,
@@ -302,6 +304,7 @@ public class JoinFilterAnalyzer
     }
 
     return new JoinFilterPreAnalysis(
+        joinableClauses,
         originalFilter,
         normalizedBaseTableClauses,
         normalizedJoinTableClauses,
@@ -435,6 +438,11 @@ public class JoinFilterAnalyzer
     boolean retainRhs = false;
     List<Filter> newFilters = new ArrayList<>();
     for (Filter filter : orFilter.getFilters()) {
+      if (!areSomeColumnsFromJoin(joinFilterPreAnalysis.getJoinableClauses(), filter.getRequiredColumns())) {
+        newFilters.add(filter);
+        continue;
+      }
+
       retainRhs = true;
       if (filter instanceof SelectorFilter) {
         JoinFilterAnalysis rewritten = rewriteSelectorFilter2(

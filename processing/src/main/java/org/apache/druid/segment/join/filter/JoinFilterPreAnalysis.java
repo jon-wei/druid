@@ -20,6 +20,7 @@
 package org.apache.druid.segment.join.filter;
 
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.segment.join.JoinableClause;
 
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,7 @@ import java.util.Optional;
 
 public class JoinFilterPreAnalysis
 {
+  private final  List<JoinableClause> joinableClauses;
   private final Filter originalFilter;
   private final List<Filter> normalizedBaseTableClauses;
   private final List<Filter> normalizedJoinTableClauses;
@@ -35,6 +37,7 @@ public class JoinFilterPreAnalysis
   private final boolean enableFilterRewrite;
 
   public JoinFilterPreAnalysis(
+      final List<JoinableClause> joinableClauses,
       final Filter originalFilter,
       final List<Filter> normalizedBaseTableClauses,
       final List<Filter> normalizedJoinTableClauses,
@@ -43,12 +46,18 @@ public class JoinFilterPreAnalysis
       final boolean enableFilterRewrite
   )
   {
+    this.joinableClauses = joinableClauses;
     this.originalFilter = originalFilter;
     this.normalizedBaseTableClauses = normalizedBaseTableClauses;
     this.normalizedJoinTableClauses = normalizedJoinTableClauses;
     this.correlationsByColumn = correlationsByColumn;
     this.enableFilterPushDown = enableFilterPushDown;
     this.enableFilterRewrite = enableFilterRewrite;
+  }
+
+  public List<JoinableClause> getJoinableClauses()
+  {
+    return joinableClauses;
   }
 
   public Filter getOriginalFilter()

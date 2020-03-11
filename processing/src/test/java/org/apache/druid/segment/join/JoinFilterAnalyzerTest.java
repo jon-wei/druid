@@ -1642,7 +1642,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         VirtualColumns.EMPTY,
         originalFilter,
         true,
-        true,
+        false,
         true,
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
