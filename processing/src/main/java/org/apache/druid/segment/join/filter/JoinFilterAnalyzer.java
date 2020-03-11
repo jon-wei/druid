@@ -40,6 +40,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -83,12 +84,26 @@ public class JoinFilterAnalyzer
         return joinableClause;
       }
     }
+
     return null;
+  }
+
+  public static boolean isColumnFromPostJoinVirtualColumns(
+      List<VirtualColumn> postJoinVirtualColumns,
+      String column
+  )
+  {
+    for (VirtualColumn postJoinVirtualColumn : postJoinVirtualColumns) {
+      if (column.equals(postJoinVirtualColumn.getOutputName())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public static boolean areSomeColumnsFromJoin(
       List<JoinableClause> joinableClauses,
-      Set<String> columns
+      Collection<String> columns
   )
   {
     for (String column : columns) {
@@ -99,6 +114,22 @@ public class JoinFilterAnalyzer
     return false;
   }
 
+  public static void splitVirtualColumns(
+      List<JoinableClause> joinableClauses,
+      final VirtualColumns virtualColumns,
+      final List<VirtualColumn> preJoinVirtualColumns,
+      final List<VirtualColumn> postJoinVirtualColumns
+  )
+  {
+    for (VirtualColumn virtualColumn : virtualColumns.getVirtualColumns()) {
+      if(areSomeColumnsFromJoin(joinableClauses, virtualColumn.requiredColumns())) {
+        postJoinVirtualColumns.add(virtualColumn);
+      } else {
+        preJoinVirtualColumns.add(virtualColumn);
+      }
+    }
+  }
+
   public static JoinFilterPreAnalysis preSplitComputeStuff(
       List<JoinableClause> joinableClauses,
       VirtualColumns virtualColumns,
@@ -107,6 +138,11 @@ public class JoinFilterAnalyzer
       boolean enableFilterRewrite
   )
   {
+    final List<VirtualColumn> preJoinVirtualColumns = new ArrayList<>();
+    final List<VirtualColumn> postJoinVirtualColumns = new ArrayList<>();
+
+    splitVirtualColumns(joinableClauses, virtualColumns, preJoinVirtualColumns, postJoinVirtualColumns);
+
     if (originalFilter == null || !enableFilterPushDown) {
       return new JoinFilterPreAnalysis(
           originalFilter,
@@ -1091,8 +1127,6 @@ public class JoinFilterAnalyzer
       return JoinFilterAnalysis.createNoPushdownFilterAnalysis(selectorFilter);
     }
   }
-
-
 
   /**
    * Helper method for {@link #findCorrelatedBaseTableColumns} that determines correlated base table columns

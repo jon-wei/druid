@@ -80,6 +80,5 @@ public class JoinFilterPreAnalysis
   {
     return enableFilterRewrite;
   }
-
 }
 

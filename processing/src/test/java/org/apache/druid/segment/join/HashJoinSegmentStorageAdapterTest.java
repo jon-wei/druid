@@ -31,6 +31,7 @@ import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
@@ -1263,9 +1264,20 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         )
     );
 
+    VirtualColumns virtualColumns = VirtualColumns.create(
+        Collections.singletonList(
+            new ExpressionVirtualColumn(
+                "virtual",
+                "concat(substring(countryIsoCode, 0, 1),'L')",
+                ValueType.STRING,
+                ExprMacroTable.nil()
+            )
+        )
+    );
+
     JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
         joinableClauses,
-        VirtualColumns.EMPTY,
+        virtualColumns,
         null,
         true,
         true
@@ -1279,16 +1291,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         ).makeCursors(
             null,
             Intervals.ETERNITY,
-            VirtualColumns.create(
-                Collections.singletonList(
-                    new ExpressionVirtualColumn(
-                        "virtual",
-                        "concat(substring(countryIsoCode, 0, 1),'L')",
-                        ValueType.STRING,
-                        ExprMacroTable.nil()
-                    )
-                )
-            ),
+            virtualColumns,
             Granularities.ALL,
             false,
             null
