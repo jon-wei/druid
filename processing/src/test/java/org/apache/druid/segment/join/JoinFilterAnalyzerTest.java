@@ -537,22 +537,6 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   @Test
   public void test_filterPushDown_factToRegionToCountryLeftFilterNormalizedAlreadyPushDownVariety()
   {
-    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
-        joinableClauses,
-        VirtualColumns.EMPTY,
-        originalFilter,
-        true,
-        true,
-        true,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
-    );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
-        ImmutableList.of(
-            factToRegion(JoinType.LEFT),
-            regionToCountry(JoinType.LEFT)
-        )
-    );
     Filter originalFilter = new AndFilter(
         ImmutableList.of(
             new SelectorFilter("channel", "#fr.wikipedia"),
@@ -608,6 +592,26 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
                 )
             )
         )
+    );
+
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        factToRegion(JoinType.LEFT),
+        regionToCountry(JoinType.LEFT)
+    );
+
+    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        originalFilter,
+        true,
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
+    );
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        joinableClauses,
+        joinFilterPreAnalysis
     );
 
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
@@ -674,13 +678,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ),
         ImmutableList.of()
     );
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
-        adapter,
-        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
-        originalFilter,
-        true,
-        true
-    );
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter2(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
 
     JoinTestHelper.verifyCursors(
@@ -708,15 +706,6 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   @Test
   public void test_filterPushDown_factExpressionsToRegionToCountryLeftFilterOnChannelAndCountryName()
   {
-    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
-        joinableClauses,
-        VirtualColumns.EMPTY,
-        originalFilter,
-        true,
-        true,
-        true,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
-    );
     JoinableClause factExprToRegon = new JoinableClause(
         FACT_TO_REGION_PREFIX,
         new IndexedTableJoinable(regionsTable),
@@ -731,18 +720,30 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             ExprMacroTable.nil()
         )
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
-        ImmutableList.of(
-            factExprToRegon,
-            regionToCountry(JoinType.LEFT)
-        )
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        factExprToRegon,
+        regionToCountry(JoinType.LEFT)
     );
     Filter originalFilter = new AndFilter(
         ImmutableList.of(
             new SelectorFilter("channel", "#en.wikipedia"),
             new SelectorFilter("rtc.countryName", "States United")
         )
+    );
+    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        originalFilter,
+        true,
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
+    );
+
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        joinableClauses,
+        joinFilterPreAnalysis
     );
 
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
@@ -755,13 +756,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         new SelectorFilter("rtc.countryName", "States United"),
         ImmutableList.of()
     );
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
-        adapter,
-        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
-        originalFilter,
-        true,
-        true
-    );
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter2(joinFilterPreAnalysis);
+
     ExpressionVirtualColumn expectedVirtualColumn = new ExpressionVirtualColumn(
         "JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-0",
         "reverse(countryIsoCode)",
@@ -803,18 +799,6 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   @Test
   public void test_filterPushDown_factToRegionToCountryNotEquiJoinLeftFilterOnChannelAndCountryName()
   {
-    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
-        joinableClauses,
-        VirtualColumns.EMPTY,
-        originalFilter,
-        true,
-        true,
-        true,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
-    );
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Cannot build hash-join matcher on non-equi-join condition: \"r1.regionIsoCode\" == regionIsoCode && reverse(\"r1.countryIsoCode\") == countryIsoCode");
-
     JoinableClause factExprToRegon = new JoinableClause(
         FACT_TO_REGION_PREFIX,
         new IndexedTableJoinable(regionsTable),
@@ -829,21 +813,38 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             ExprMacroTable.nil()
         )
     );
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        factExprToRegon,
+        regionToCountry(JoinType.LEFT)
+    );
+
+    Filter originalFilter = new AndFilter(
+        ImmutableList.of(
+            new SelectorFilter("channel", "#en.wikipedia"),
+            new SelectorFilter("rtc.countryName", "States United")
+        )
+    );
+
+    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        originalFilter,
+        true,
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
+    );
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Cannot build hash-join matcher on non-equi-join condition: \"r1.regionIsoCode\" == regionIsoCode && reverse(\"r1.countryIsoCode\") == countryIsoCode");
+
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
-        ImmutableList.of(
-            factExprToRegon,
-            regionToCountry(JoinType.LEFT)
-        )
+        joinableClauses,
+        joinFilterPreAnalysis
     );
     JoinTestHelper.verifyCursors(
         adapter.makeCursors(
-            new AndFilter(
-                ImmutableList.of(
-                    new SelectorFilter("channel", "#en.wikipedia"),
-                    new SelectorFilter("rtc.countryName", "States United")
-                )
-            ),
+            originalFilter,
             Intervals.ETERNITY,
             VirtualColumns.EMPTY,
             Granularities.ALL,
@@ -864,21 +865,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   @Test
   public void test_filterPushDown_factToRegionToCountryLeftUnnormalizedFilter()
   {
-    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
-        joinableClauses,
-        VirtualColumns.EMPTY,
-        originalFilter,
-        true,
-        true,
-        true,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
-    );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
-        ImmutableList.of(
-            factToRegion(JoinType.LEFT),
-            regionToCountry(JoinType.LEFT)
-        )
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        factToRegion(JoinType.LEFT),
+        regionToCountry(JoinType.LEFT)
     );
     Filter originalFilter = new OrFilter(
         ImmutableList.of(
@@ -890,6 +879,21 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
                 )
             )
         )
+    );
+
+    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        originalFilter,
+        true,
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
+    );
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        joinableClauses,
+        joinFilterPreAnalysis
     );
 
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
@@ -932,13 +936,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ),
         ImmutableList.of()
     );
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
-        adapter,
-        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
-        originalFilter,
-        true,
-        true
-    );
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter2(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
 
     JoinTestHelper.verifyCursors(
@@ -967,15 +965,6 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   @Test
   public void test_filterPushDown_factConcatExpressionToCountryLeftFilterOnChannelAndCountryName()
   {
-    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
-        joinableClauses,
-        VirtualColumns.EMPTY,
-        originalFilter,
-        true,
-        true,
-        true,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
-    );
     JoinableClause factExprToCountry = new JoinableClause(
         FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
         new IndexedTableJoinable(countriesTable),
@@ -989,17 +978,30 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             ExprMacroTable.nil()
         )
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
-        ImmutableList.of(
-            factExprToCountry
-        )
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        factExprToCountry
     );
     Filter filter = new AndFilter(
         ImmutableList.of(
             new SelectorFilter("channel", "#en.wikipedia"),
             new SelectorFilter("c1.countryName", "Usca")
         )
+    );
+
+    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        filter,
+        true,
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
+    );
+
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        joinableClauses,
+        joinFilterPreAnalysis
     );
 
     ExpressionVirtualColumn expectedVirtualColumn = new ExpressionVirtualColumn(
@@ -1020,13 +1022,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             expectedVirtualColumn
         )
     );
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
-        adapter,
-        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
-        filter,
-        true,
-        true
-    );
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter2(joinFilterPreAnalysis);
     Assert.assertEquals(
         expectedFilterSplit.getBaseTableFilter(),
         actualFilterSplit.getBaseTableFilter()
@@ -1063,6 +1059,13 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   @Test
   public void test_filterPushDown_factToCountryRightWithFilterOnChannelAndJoinable()
   {
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.RIGHT));
+    Filter originalFilter = new AndFilter(
+        ImmutableList.of(
+            new SelectorFilter("channel", "#de.wikipedia"),
+            new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", "Germany")
+        )
+    );
     JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
         joinableClauses,
         VirtualColumns.EMPTY,
@@ -1074,13 +1077,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
-        ImmutableList.of(factToCountryOnIsoCode(JoinType.RIGHT))
-    );
-    Filter originalFilter = new AndFilter(
-        ImmutableList.of(
-            new SelectorFilter("channel", "#de.wikipedia"),
-            new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", "Germany")
-        )
+        joinableClauses,
+        joinFilterPreAnalysis
     );
 
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
@@ -1093,13 +1091,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", "Germany"),
         ImmutableList.of()
     );
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
-        adapter,
-        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
-        originalFilter,
-        true,
-        true
-    );
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter2(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
 
     JoinTestHelper.verifyCursors(
@@ -1128,6 +1120,13 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   @Test
   public void test_filterPushDown_factToCountryRightWithFilterOnNullColumns()
   {
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.RIGHT));
+    Filter originalFilter = new AndFilter(
+        ImmutableList.of(
+            new SelectorFilter("channel", null),
+            new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", null)
+        )
+    );
     JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
         joinableClauses,
         VirtualColumns.EMPTY,
@@ -1139,13 +1138,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
-        ImmutableList.of(factToCountryOnIsoCode(JoinType.RIGHT))
-    );
-    Filter originalFilter = new AndFilter(
-        ImmutableList.of(
-            new SelectorFilter("channel", null),
-            new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", null)
-        )
+        joinableClauses,
+        joinFilterPreAnalysis
     );
 
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
@@ -1158,13 +1152,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ),
         ImmutableList.of()
     );
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
-        adapter,
-        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
-        originalFilter,
-        true,
-        true
-    );
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter2(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
 
     JoinTestHelper.verifyCursors(
@@ -1191,6 +1179,13 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   @Test
   public void test_filterPushDown_factToCountryInnerUsingCountryNumberFilterOnChannelAndCountryName()
   {
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnNumber(JoinType.INNER));
+    Filter originalFilter = new AndFilter(
+        ImmutableList.of(
+            new SelectorFilter("channel", "#en.wikipedia"),
+            new SelectorFilter(FACT_TO_COUNTRY_ON_NUMBER_PREFIX + "countryName", "Australia")
+        )
+    );
     JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
         joinableClauses,
         VirtualColumns.EMPTY,
@@ -1202,13 +1197,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
-        ImmutableList.of(factToCountryOnNumber(JoinType.INNER))
-    );
-    Filter originalFilter = new AndFilter(
-        ImmutableList.of(
-            new SelectorFilter("channel", "#en.wikipedia"),
-            new SelectorFilter(FACT_TO_COUNTRY_ON_NUMBER_PREFIX + "countryName", "Australia")
-        )
+        joinableClauses,
+        joinFilterPreAnalysis
     );
 
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
@@ -1221,13 +1211,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         new SelectorFilter(FACT_TO_COUNTRY_ON_NUMBER_PREFIX + "countryName", "Australia"),
         ImmutableList.of()
     );
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
-        adapter,
-        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
-        originalFilter,
-        true,
-        true
-    );
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter2(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
 
     // In non-SQL-compatible mode, we get an extra row, since the 'null' countryNumber for "Talk:Oswald Tilghman"
@@ -1262,6 +1246,13 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   @Test
   public void test_filterPushDown_factToCountryInnerUsingCountryNumberFilterOnNulls()
   {
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnNumber(JoinType.INNER));
+    Filter originalFilter = new AndFilter(
+        ImmutableList.of(
+            new SelectorFilter("channel", null),
+            new SelectorFilter(FACT_TO_COUNTRY_ON_NUMBER_PREFIX + "countryName", null)
+        )
+    );
     JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
         joinableClauses,
         VirtualColumns.EMPTY,
@@ -1273,13 +1264,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
-        ImmutableList.of(factToCountryOnNumber(JoinType.INNER))
-    );
-    Filter originalFilter = new AndFilter(
-        ImmutableList.of(
-            new SelectorFilter("channel", null),
-            new SelectorFilter(FACT_TO_COUNTRY_ON_NUMBER_PREFIX + "countryName", null)
-        )
+        joinableClauses,
+        joinFilterPreAnalysis
     );
 
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
@@ -1292,13 +1278,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ),
         ImmutableList.of()
     );
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
-        adapter,
-        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
-        originalFilter,
-        true,
-        true
-    );
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter2(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
 
     JoinTestHelper.verifyCursors(
@@ -1324,10 +1304,17 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   @Test
   public void test_filterPushDown_factToCountryFullWithFilterOnChannelAndCountryName()
   {
+    Filter filter = new AndFilter(
+        ImmutableList.of(
+            new SelectorFilter("channel", "#es.wikipedia"),
+            new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", "El Salvador")
+        )
+    );
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.FULL));
     JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
         joinableClauses,
         VirtualColumns.EMPTY,
-        originalFilter,
+        filter,
         true,
         true,
         true,
@@ -1335,13 +1322,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
-        ImmutableList.of(factToCountryOnIsoCode(JoinType.FULL))
-    );
-    Filter filter = new AndFilter(
-        ImmutableList.of(
-            new SelectorFilter("channel", "#es.wikipedia"),
-            new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", "El Salvador")
-        )
+        joinableClauses,
+        joinFilterPreAnalysis
     );
 
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
@@ -1354,13 +1336,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", "El Salvador"),
         ImmutableList.of()
     );
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
-        adapter,
-        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
-        filter,
-        true,
-        true
-    );
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter2(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
 
     JoinTestHelper.verifyCursors(
@@ -1389,6 +1365,13 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   @Test
   public void test_filterPushDown_factToCountryFullWithFilterOnNulls()
   {
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.FULL));
+    Filter originalFilter = new AndFilter(
+        ImmutableList.of(
+            new SelectorFilter("channel", null),
+            new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", null)
+        )
+    );
     JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
         joinableClauses,
         VirtualColumns.EMPTY,
@@ -1400,13 +1383,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
-        ImmutableList.of(factToCountryOnIsoCode(JoinType.FULL))
-    );
-    Filter originalFilter = new AndFilter(
-        ImmutableList.of(
-            new SelectorFilter("channel", null),
-            new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", null)
-        )
+        joinableClauses,
+        joinFilterPreAnalysis
     );
 
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
@@ -1419,13 +1397,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ),
         ImmutableList.of()
     );
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
-        adapter,
-        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
-        originalFilter,
-        true,
-        true
-    );
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter2(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
 
     JoinTestHelper.verifyCursors(
@@ -1452,15 +1424,6 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   @Test
   public void test_filterPushDown_factToRegionTwoColumnsToOneRHSColumnAndFilterOnRHS()
   {
-    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
-        joinableClauses,
-        VirtualColumns.EMPTY,
-        originalFilter,
-        true,
-        true,
-        true,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
-    );
     JoinableClause factExprToRegon = new JoinableClause(
         FACT_TO_REGION_PREFIX,
         new IndexedTableJoinable(regionsTable),
@@ -1475,14 +1438,26 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             ExprMacroTable.nil()
         )
     );
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        factExprToRegon
+    );
+    Filter originalFilter = new SelectorFilter("r1.regionName", "Fourems Province");
+
+    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        originalFilter,
+        true,
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
+    );
 
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
-        ImmutableList.of(
-            factExprToRegon
-        )
+        joinableClauses,
+        joinFilterPreAnalysis
     );
-    Filter originalFilter = new SelectorFilter("r1.regionName", "Fourems Province");
 
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         new AndFilter(
@@ -1494,13 +1469,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         new SelectorFilter("r1.regionName", "Fourems Province"),
         ImmutableList.of()
     );
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
-        adapter,
-        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
-        originalFilter,
-        true,
-        true
-    );
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter2(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
 
     JoinTestHelper.verifyCursors(
@@ -1525,15 +1494,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   @Test
   public void test_filterPushDown_factToRegionOneColumnToTwoRHSColumnsAndFilterOnRHS()
   {
-    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
-        joinableClauses,
-        VirtualColumns.EMPTY,
-        originalFilter,
-        true,
-        true,
-        true,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
-    );
+
     JoinableClause factExprToRegon = new JoinableClause(
         FACT_TO_REGION_PREFIX,
         new IndexedTableJoinable(regionsTable),
@@ -1548,27 +1509,32 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             ExprMacroTable.nil()
         )
     );
-
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
-        ImmutableList.of(
-            factExprToRegon
-        )
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        factExprToRegon
     );
     Filter originalFilter = new SelectorFilter("r1.regionName", "Fourems Province");
+
+    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        originalFilter,
+        true,
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
+    );
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        joinableClauses,
+        joinFilterPreAnalysis
+    );
 
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         new InDimFilter("regionIsoCode", ImmutableSet.of("MMMM"), null, null).toFilter(),
         new SelectorFilter("r1.regionName", "Fourems Province"),
         ImmutableList.of()
     );
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
-        adapter,
-        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
-        originalFilter,
-        true,
-        true
-    );
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter2(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
 
     JoinTestHelper.verifyCursors(
@@ -1593,38 +1559,33 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   @Test
   public void test_filterPushDown_factToRegionToCountryLeftFilterOnPageDisablePushDown()
   {
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        factToRegion(JoinType.LEFT),
+        regionToCountry(JoinType.LEFT)
+    );
+    Filter originalFilter = new SelectorFilter("page", "Peremptory norm");
+
     JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
         joinableClauses,
         VirtualColumns.EMPTY,
         originalFilter,
-        true,
+        false,
         true,
         true,
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
-        ImmutableList.of(
-            factToRegion(JoinType.LEFT),
-            regionToCountry(JoinType.LEFT)
-        ),
-        false,
-        true
+        joinableClauses,
+        joinFilterPreAnalysis
     );
-    Filter originalFilter = new SelectorFilter("page", "Peremptory norm");
 
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         null,
         new SelectorFilter("page", "Peremptory norm"),
         ImmutableList.of()
     );
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
-        adapter,
-        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
-        originalFilter,
-        adapter.isEnableFilterPushDown(),
-        true
-    );
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter2(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
 
     JoinTestHelper.verifyCursors(
@@ -1650,21 +1611,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   @Test
   public void test_filterPushDown_factToRegionToCountryLeftEnablePushDownDisableRewrite()
   {
-    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
-        joinableClauses,
-        VirtualColumns.EMPTY,
-        originalFilter,
-        true,
-        true,
-        true,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
-    );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
-        ImmutableList.of(
-            factToRegion(JoinType.LEFT),
-            regionToCountry(JoinType.LEFT)
-        )
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        factToRegion(JoinType.LEFT),
+        regionToCountry(JoinType.LEFT)
     );
     Filter originalFilter = new AndFilter(
         ImmutableList.of(
@@ -1687,6 +1636,20 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
                 null
             ))
         )
+    );
+    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        originalFilter,
+        true,
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
+    );
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        joinableClauses,
+        joinFilterPreAnalysis
     );
 
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
@@ -1718,13 +1681,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ),
         ImmutableList.of()
     );
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
-        adapter,
-        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
-        originalFilter,
-        true,
-        false
-    );
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter2(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
 
     JoinTestHelper.verifyCursors(
