@@ -120,10 +120,12 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
   }
 
-  /*
+
   @Test
   public void test_filterPushDown_factToRegionExprToCountryLeftFilterOnCountryName()
   {
+
+    Filter originalFilter = new SelectorFilter("rtc.countryName", "United States");
     JoinableClause regionExprToCountry = new JoinableClause(
         REGION_TO_COUNTRY_PREFIX,
         new IndexedTableJoinable(countriesTable),
@@ -138,14 +140,24 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             ExprMacroTable.nil()
         )
     );
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        factToRegion(JoinType.LEFT),
+        regionExprToCountry
+    );
+
+    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        originalFilter,
+        true,
+        true
+    );
+
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
-        ImmutableList.of(
-            factToRegion(JoinType.LEFT),
-            regionExprToCountry
-        )
+        joinableClauses,
+        joinFilterPreAnalysis
     );
-    Filter originalFilter = new SelectorFilter("rtc.countryName", "United States");
 
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         null,
@@ -181,6 +193,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
   }
 
+  /*
   @Test
   public void test_filterPushDown_factToRegionToCountryLeftFilterOnChannelAndCountryName()
   {

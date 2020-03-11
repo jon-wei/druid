@@ -262,14 +262,14 @@ public class JoinFilterAnalyzer
       );
     }
 
-    Map<String, JoinFilterColumnCorrelationAnalysis> correlationsByColumn = new HashMap<>();
+    Map<String, Optional<JoinFilterColumnCorrelationAnalysis>> correlationsByColumn = new HashMap<>();
     for (RHSRewriteCandidate rhsRewriteCandidate : rhsRewriteCandidates) {
       Optional<Map<String, JoinFilterColumnCorrelationAnalysis>> correlationsForPrefix = correlationsByPrefix.get(
           rhsRewriteCandidate.getJoinableClause().getPrefix()
       );
       if (correlationsForPrefix.isPresent()) {
         for (Map.Entry<String, JoinFilterColumnCorrelationAnalysis> correlationForColumn : correlationsForPrefix.get().entrySet()) {
-          correlationsByColumn.put(rhsRewriteCandidate.getRhsColumn(), correlationForColumn.getValue());
+          correlationsByColumn.put(rhsRewriteCandidate.getRhsColumn(), Optional.of(correlationForColumn.getValue()));
           correlationForColumn.getValue().getCorrelatedValuesMap().computeIfAbsent(
               rhsRewriteCandidate.getValueForRewrite(),
               (rhsVal) -> {
@@ -287,6 +287,8 @@ public class JoinFilterAnalyzer
               }
           );
         }
+      } else {
+        correlationsByColumn.put(rhsRewriteCandidate.getRhsColumn(), Optional.empty());
       }
     }
 
@@ -456,19 +458,23 @@ public class JoinFilterAnalyzer
     String filteringColumn = selectorFilter.getDimension();
     String filteringValue = selectorFilter.getValue();
 
-    JoinFilterColumnCorrelationAnalysis correlationAnalysis = joinFilterPreAnalysis.getCorrelationsByColumn().get(filteringColumn);
+    Optional<JoinFilterColumnCorrelationAnalysis> correlationAnalysis = joinFilterPreAnalysis.getCorrelationsByColumn().get(filteringColumn);
+
+    if (!correlationAnalysis.isPresent()) {
+      return JoinFilterAnalysis.createNoPushdownFilterAnalysis(selectorFilter);
+    }
 
     List<Filter> newFilters = new ArrayList<>();
     List<VirtualColumn> pushdownVirtualColumns = new ArrayList<>();
 
-    if (correlationAnalysis.supportsPushDown()) {
-      Optional<Set<String>> correlatedValues = correlationAnalysis.getCorrelatedValuesMap().get(filteringValue);
+    if (correlationAnalysis.get().supportsPushDown()) {
+      Optional<Set<String>> correlatedValues = correlationAnalysis.get().getCorrelatedValuesMap().get(filteringValue);
 
       if (!correlatedValues.isPresent()) {
         return JoinFilterAnalysis.createNoPushdownFilterAnalysis(selectorFilter);
       }
 
-      for (String correlatedBaseColumn : correlationAnalysis.getBaseColumns()) {
+      for (String correlatedBaseColumn : correlationAnalysis.get().getBaseColumns()) {
         Filter rewrittenFilter = new InDimFilter(
             correlatedBaseColumn,
             correlatedValues.get(),
@@ -478,7 +484,7 @@ public class JoinFilterAnalyzer
         newFilters.add(rewrittenFilter);
       }
 
-      for (Expr correlatedBaseExpr : correlationAnalysis.getBaseExpressions()) {
+      for (Expr correlatedBaseExpr : correlationAnalysis.get().getBaseExpressions()) {
         // We need to create a virtual column for the expressions when pushing down.
         // Note that this block is never entered right now, since correlationAnalysis.supportsPushDown()
         // will return false if there any correlated expressions on the base table.
