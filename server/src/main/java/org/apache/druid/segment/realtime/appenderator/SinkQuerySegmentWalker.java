@@ -177,6 +177,8 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
         cpuTimeAccumulator,
         QueryContexts.getEnableJoinFilterPushDown(query),
         QueryContexts.getEnableJoinFilterRewrite(query),
+        QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(query),
+        QueryContexts.getJoinFilterRewriteMaxSize(query),
         query.getFilter().toFilter(),
         query.getVirtualColumns()
     );

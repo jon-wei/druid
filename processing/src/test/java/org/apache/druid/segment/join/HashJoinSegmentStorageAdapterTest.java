@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.OrDimFilter;
@@ -306,7 +307,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         VirtualColumns.EMPTY,
         null,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     JoinTestHelper.verifyCursors(
@@ -372,7 +375,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         VirtualColumns.EMPTY,
         null,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     JoinTestHelper.verifyCursors(
@@ -432,7 +437,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         VirtualColumns.EMPTY,
         null,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     JoinTestHelper.verifyCursors(
@@ -494,7 +501,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         VirtualColumns.EMPTY,
         filter,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     JoinTestHelper.verifyCursors(
@@ -562,7 +571,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         VirtualColumns.EMPTY,
         filter,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     JoinTestHelper.verifyCursors(
@@ -626,7 +637,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         VirtualColumns.EMPTY,
         filter,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     JoinTestHelper.verifyCursors(
@@ -665,7 +678,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         VirtualColumns.EMPTY,
         filter,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     JoinTestHelper.verifyCursors(
@@ -706,7 +721,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         VirtualColumns.EMPTY,
         filter,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     JoinTestHelper.verifyCursors(
@@ -752,7 +769,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         VirtualColumns.EMPTY,
         filter,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     JoinTestHelper.verifyCursors(
@@ -798,7 +817,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         VirtualColumns.EMPTY,
         filter,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     JoinTestHelper.verifyCursors(
@@ -843,7 +864,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         VirtualColumns.EMPTY,
         filter,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     JoinTestHelper.verifyCursors(
@@ -901,7 +924,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         VirtualColumns.EMPTY,
         filter,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     JoinTestHelper.verifyCursors(
@@ -965,7 +990,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         VirtualColumns.EMPTY,
         null,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     JoinTestHelper.verifyCursors(
@@ -1042,7 +1069,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         VirtualColumns.EMPTY,
         filter,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
     JoinTestHelper.verifyCursors(
         new HashJoinSegmentStorageAdapter(
@@ -1107,7 +1136,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         VirtualColumns.EMPTY,
         filter,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     JoinTestHelper.verifyCursors(
@@ -1156,7 +1187,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         VirtualColumns.EMPTY,
         filter,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     JoinTestHelper.verifyCursors(
@@ -1222,7 +1255,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         VirtualColumns.EMPTY,
         filter,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     JoinTestHelper.verifyCursors(
@@ -1280,7 +1315,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         virtualColumns,
         null,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     JoinTestHelper.verifyCursors(
@@ -1336,7 +1373,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         VirtualColumns.EMPTY,
         null,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     JoinTestHelper.verifyCursors(
@@ -1394,7 +1433,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         VirtualColumns.EMPTY,
         filter,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     JoinTestHelper.verifyCursors(
@@ -1452,7 +1493,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         VirtualColumns.EMPTY,
         null,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     JoinTestHelper.readCursors(
@@ -1496,7 +1539,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         VirtualColumns.EMPTY,
         null,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     JoinTestHelper.readCursors(

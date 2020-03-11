@@ -240,7 +240,7 @@ public class QueryContexts
     );
   }
 
-  public static <T> long geJoinFilterRewriteMaxSize(Query<T> query)
+  public static <T> long getJoinFilterRewriteMaxSize(Query<T> query)
   {
     return parseLong(query, JOIN_FILTER_REWRITE_MAX_SIZE_KEY, DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY);
   }

@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.Filter;
@@ -64,7 +65,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         VirtualColumns.EMPTY,
         originalFilter,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
@@ -144,7 +147,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         VirtualColumns.EMPTY,
         originalFilter,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
@@ -201,7 +206,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         VirtualColumns.EMPTY,
         originalFilter,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(

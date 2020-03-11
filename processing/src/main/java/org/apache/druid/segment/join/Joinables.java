@@ -88,6 +88,8 @@ public class Joinables
       final AtomicLong cpuTimeAccumulator,
       final boolean enableFilterPushDown,
       final boolean enableFilterRewrite,
+      final boolean enableRewriteValueColumnFilters,
+      final long filterRewriteMaxSize,
       final Filter originalFilter,
       final VirtualColumns virtualColumns
   )
@@ -105,7 +107,9 @@ public class Joinables
                 virtualColumns,
                 originalFilter,
                 enableFilterPushDown,
-                enableFilterRewrite
+                enableFilterRewrite,
+                enableRewriteValueColumnFilters,
+                filterRewriteMaxSize
             );
             return baseSegment -> new HashJoinSegment(baseSegment, joinableClauses, jfpa);
           }

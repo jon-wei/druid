@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.planning.PreJoinableClause;
@@ -101,6 +102,8 @@ public class JoinablesTest
         new AtomicLong(),
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY,
         null,
         VirtualColumns.EMPTY
     );
@@ -128,6 +131,8 @@ public class JoinablesTest
         new AtomicLong(),
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY,
         null,
         VirtualColumns.EMPTY
     );
@@ -163,6 +168,8 @@ public class JoinablesTest
         new AtomicLong(),
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY,
         null,
         VirtualColumns.EMPTY
     );

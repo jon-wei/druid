@@ -74,22 +74,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     this.joinFilterPreAnalysis = joinFilterPreAnalysis;
   }
 
-  /*
-  @VisibleForTesting
-  HashJoinSegmentStorageAdapter(
-      StorageAdapter baseAdapter,
-      List<JoinableClause> clauses
-  )
-  {
-    this(
-        baseAdapter,
-        clauses,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE
-    );
-  }
-  */
-
   @Override
   public Interval getInterval()
   {

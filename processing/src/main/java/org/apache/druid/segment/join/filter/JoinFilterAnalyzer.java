@@ -135,7 +135,9 @@ public class JoinFilterAnalyzer
       VirtualColumns virtualColumns,
       Filter originalFilter,
       boolean enableFilterPushDown,
-      boolean enableFilterRewrite
+      boolean enableFilterRewrite,
+      boolean enableRewriteValueColumnFilters,
+      long filterRewriteMaxSize
   )
   {
     final List<VirtualColumn> preJoinVirtualColumns = new ArrayList<>();
@@ -277,7 +279,9 @@ public class JoinFilterAnalyzer
                     rhsRewriteCandidate.getRhsColumn(),
                     rhsRewriteCandidate.getValueForRewrite(),
                     correlationForColumn.getValue().getJoinColumn(),
-                    rhsRewriteCandidate.getJoinableClause()
+                    rhsRewriteCandidate.getJoinableClause(),
+                    enableRewriteValueColumnFilters,
+                    filterRewriteMaxSize
                 );
                 if (correlatedValues.isEmpty()) {
                   return Optional.empty();
@@ -544,7 +548,9 @@ public class JoinFilterAnalyzer
       String filterColumn,
       String filterValue,
       String correlatedJoinColumn,
-      JoinableClause clauseForFilteredTable
+      JoinableClause clauseForFilteredTable,
+      boolean enableRewriteValueColumnFilters,
+      long filterRewriteMaxSize
   )
   {
     String filterColumnNoPrefix = filterColumn.substring(clauseForFilteredTable.getPrefix().length());
@@ -554,8 +560,8 @@ public class JoinFilterAnalyzer
         filterColumnNoPrefix,
         filterValue,
         correlatedColumnNoPrefix,
-        100,
-        false
+        filterRewriteMaxSize,
+        enableRewriteValueColumnFilters
     );
   }
 

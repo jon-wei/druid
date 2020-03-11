@@ -86,7 +86,9 @@ public class HashJoinSegmentTest
         VirtualColumns.EMPTY,
         null,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     hashJoinSegment = new HashJoinSegment(
@@ -109,7 +111,9 @@ public class HashJoinSegmentTest
         VirtualColumns.EMPTY,
         null,
         true,
-        true
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
     );
 
     final HashJoinSegment ignored = new HashJoinSegment(
