@@ -213,6 +213,10 @@ public class JoinFilterAnalyzer
 
     Set<RHSRewriteCandidate> rhsRewriteCandidates = new HashSet<>();
     for (Filter orClause : normalizedJoinTableClauses) {
+      if (filterMatchesNull(orClause)) {
+        continue;
+      }
+
       if (orClause instanceof SelectorFilter) {
         // this is a candidate for RHS filter rewrite, determine column correlations and correlated values
         String reqColumn = ((SelectorFilter) orClause).getDimension();
@@ -283,6 +287,7 @@ public class JoinFilterAnalyzer
                     enableRewriteValueColumnFilters,
                     filterRewriteMaxSize
                 );
+
                 if (correlatedValues.isEmpty()) {
                   return Optional.empty();
                 } else {
