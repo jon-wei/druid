@@ -270,7 +270,7 @@ public class JoinFilterAnalyzer
       );
     }
 
-    Map<String, Optional<JoinFilterColumnCorrelationAnalysis>> correlationsByColumn = new HashMap<>();
+    Map<String, Optional<JoinFilterColumnCorrelationAnalysis>> correlationsByColumn = new HashMap<>(); //TODO: THIS NEEDS TO HAVE A LIST VALUE
     for (RHSRewriteCandidate rhsRewriteCandidate : rhsRewriteCandidates) {
       Optional<Map<String, JoinFilterColumnCorrelationAnalysis>> correlationsForPrefix = correlationsByPrefix.get(
           rhsRewriteCandidate.getJoinableClause().getPrefix()
