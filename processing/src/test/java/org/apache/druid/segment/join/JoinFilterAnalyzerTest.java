@@ -362,8 +362,13 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
-        null,
-        originalFilter,
+        new SelectorFilter("baseTableInvalidColumn", "abcd"),
+        new AndFilter(
+            ImmutableList.of(
+                new SelectorFilter("rtc.invalidColumn", "abcd"),
+                new SelectorFilter("r1.invalidColumn", "abcd")
+            )
+        ),
         ImmutableList.of()
     );
     JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter2(joinFilterPreAnalysis);
