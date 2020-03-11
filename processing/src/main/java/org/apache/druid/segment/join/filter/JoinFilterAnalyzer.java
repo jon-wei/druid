@@ -277,7 +277,9 @@ public class JoinFilterAnalyzer
       );
       if (correlationsForPrefix.isPresent()) {
         for (Map.Entry<String, JoinFilterColumnCorrelationAnalysis> correlationForColumn : correlationsForPrefix.get().entrySet()) {
+          // TODO: this part needs to add to a list instead of replace
           correlationsByColumn.put(rhsRewriteCandidate.getRhsColumn(), Optional.of(correlationForColumn.getValue()));
+          // update the value we just added to the map above with the per-value rewrite IN set
           correlationForColumn.getValue().getCorrelatedValuesMap().computeIfAbsent(
               rhsRewriteCandidate.getValueForRewrite(),
               (rhsVal) -> {
