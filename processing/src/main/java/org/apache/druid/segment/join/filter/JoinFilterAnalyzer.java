@@ -114,6 +114,19 @@ public class JoinFilterAnalyzer
     return false;
   }
 
+  public static boolean areSomeColumnsFromPostJoinVirtualColumns(
+      List<VirtualColumn> postJoinVirtualColumns,
+      Collection<String> columns
+  )
+  {
+    for (String column : columns) {
+      if (isColumnFromPostJoinVirtualColumns(postJoinVirtualColumns, column)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   public static void splitVirtualColumns(
       List<JoinableClause> joinableClauses,
       final VirtualColumns virtualColumns,
@@ -149,6 +162,7 @@ public class JoinFilterAnalyzer
       return new JoinFilterPreAnalysis(
           joinableClauses,
           originalFilter,
+          postJoinVirtualColumns,
           null,
           null,
           null,
@@ -175,7 +189,7 @@ public class JoinFilterAnalyzer
 
     for (Filter orClause : normalizedOrClauses) {
       Set<String> reqColumns = orClause.getRequiredColumns();
-      if (areSomeColumnsFromJoin(joinableClauses, reqColumns)) {
+      if (areSomeColumnsFromJoin(joinableClauses, reqColumns) || areSomeColumnsFromPostJoinVirtualColumns(postJoinVirtualColumns, reqColumns)) {
         normalizedJoinTableClauses.add(orClause);
       } else {
         normalizedBaseTableClauses.add(orClause);
@@ -186,6 +200,7 @@ public class JoinFilterAnalyzer
       return new JoinFilterPreAnalysis(
           joinableClauses,
           originalFilter,
+          postJoinVirtualColumns,
           normalizedBaseTableClauses,
           normalizedJoinTableClauses,
           null,
@@ -270,14 +285,13 @@ public class JoinFilterAnalyzer
       );
     }
 
-    Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationsByColumn = new HashMap<>(); //TODO: THIS NEEDS TO HAVE A LIST VALUE
+    Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationsByColumn = new HashMap<>();
     for (RHSRewriteCandidate rhsRewriteCandidate : rhsRewriteCandidates) {
       Optional<Map<String, JoinFilterColumnCorrelationAnalysis>> correlationsForPrefix = correlationsByPrefix.get(
           rhsRewriteCandidate.getJoinableClause().getPrefix()
       );
       if (correlationsForPrefix.isPresent()) {
         for (Map.Entry<String, JoinFilterColumnCorrelationAnalysis> correlationForColumn : correlationsForPrefix.get().entrySet()) {
-          // TODO: this part needs to add to a list instead of replace
           Optional<List<JoinFilterColumnCorrelationAnalysis>> perColumnCorrelations = correlationsByColumn.computeIfAbsent(
               rhsRewriteCandidate.getRhsColumn(),
               (rhsCol) -> {
@@ -324,6 +338,7 @@ public class JoinFilterAnalyzer
     return new JoinFilterPreAnalysis(
         joinableClauses,
         originalFilter,
+        postJoinVirtualColumns,
         normalizedBaseTableClauses,
         normalizedJoinTableClauses,
         correlationsByColumn,
@@ -490,8 +505,25 @@ public class JoinFilterAnalyzer
       JoinFilterPreAnalysis joinFilterPreAnalysis
   )
   {
+
+    List<Filter> newFilters = new ArrayList<>();
+    List<VirtualColumn> pushdownVirtualColumns = new ArrayList<>();
+
     String filteringColumn = selectorFilter.getDimension();
     String filteringValue = selectorFilter.getValue();
+
+    if (areSomeColumnsFromPostJoinVirtualColumns(joinFilterPreAnalysis.getPostJoinVirtualColumns(), selectorFilter.getRequiredColumns())) {
+      return JoinFilterAnalysis.createNoPushdownFilterAnalysis(selectorFilter);
+    }
+
+    if (!areSomeColumnsFromJoin(joinFilterPreAnalysis.getJoinableClauses(), selectorFilter.getRequiredColumns())) {
+      return new JoinFilterAnalysis(
+          true,
+          selectorFilter,
+          selectorFilter,
+          pushdownVirtualColumns
+      );
+    }
 
     Optional<List<JoinFilterColumnCorrelationAnalysis>> correlationAnalyses = joinFilterPreAnalysis.getCorrelationsByColumn().get(filteringColumn);
 
@@ -499,8 +531,6 @@ public class JoinFilterAnalyzer
       return JoinFilterAnalysis.createNoPushdownFilterAnalysis(selectorFilter);
     }
 
-    List<Filter> newFilters = new ArrayList<>();
-    List<VirtualColumn> pushdownVirtualColumns = new ArrayList<>();
 
     for (JoinFilterColumnCorrelationAnalysis correlationAnalysis : correlationAnalyses.get()) {
       if (correlationAnalysis.supportsPushDown()) {

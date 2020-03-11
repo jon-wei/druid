@@ -497,7 +497,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
         joinableClauses,
-        VirtualColumns.EMPTY,
+        virtualColumns,
         originalFilter,
         true,
         true,

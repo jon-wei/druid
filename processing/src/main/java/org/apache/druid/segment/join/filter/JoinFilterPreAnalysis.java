@@ -20,6 +20,7 @@
 package org.apache.druid.segment.join.filter;
 
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.join.JoinableClause;
 
 import java.util.List;
@@ -35,10 +36,12 @@ public class JoinFilterPreAnalysis
   private final Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>>  correlationsByColumn;
   private final boolean enableFilterPushDown;
   private final boolean enableFilterRewrite;
+  private final List<VirtualColumn> postJoinVirtualColumns;
 
   public JoinFilterPreAnalysis(
       final List<JoinableClause> joinableClauses,
       final Filter originalFilter,
+      final List<VirtualColumn> postJoinVirtualColumns,
       final List<Filter> normalizedBaseTableClauses,
       final List<Filter> normalizedJoinTableClauses,
       final Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>>  correlationsByColumn,
@@ -48,6 +51,7 @@ public class JoinFilterPreAnalysis
   {
     this.joinableClauses = joinableClauses;
     this.originalFilter = originalFilter;
+    this.postJoinVirtualColumns = postJoinVirtualColumns;
     this.normalizedBaseTableClauses = normalizedBaseTableClauses;
     this.normalizedJoinTableClauses = normalizedJoinTableClauses;
     this.correlationsByColumn = correlationsByColumn;
@@ -63,6 +67,11 @@ public class JoinFilterPreAnalysis
   public Filter getOriginalFilter()
   {
     return originalFilter;
+  }
+
+  public List<VirtualColumn> getPostJoinVirtualColumns()
+  {
+    return postJoinVirtualColumns;
   }
 
   public List<Filter> getNormalizedBaseTableClauses()
