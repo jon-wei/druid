@@ -41,8 +41,6 @@ public class HashJoinSegment extends AbstractSegment
 {
   private final Segment baseSegment;
   private final List<JoinableClause> clauses;
-  private final boolean enableFilterPushDown;
-  private final boolean enableFilterRewrite;
   private final JoinFilterPreAnalysis joinFilterPreAnalysis;
 
   /**

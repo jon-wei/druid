@@ -33,6 +33,8 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
+import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -40,6 +42,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.List;
 
 public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorageAdapterTest
 {
@@ -294,10 +297,21 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   @Test
   public void test_makeCursors_factToCountryLeft()
   {
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
+
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true
+    );
+
     JoinTestHelper.verifyCursors(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
-            ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT))
+            joinableClauses,
+            preAnalysis
         ).makeCursors(
             null,
             Intervals.ETERNITY,
@@ -350,10 +364,20 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   @Test
   public void test_makeCursors_factToCountryInner()
   {
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.INNER));
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true
+    );
+
     JoinTestHelper.verifyCursors(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
-            ImmutableList.of(factToCountryOnIsoCode(JoinType.INNER))
+            joinableClauses,
+            preAnalysis
         ).makeCursors(
             null,
             Intervals.ETERNITY,
@@ -400,10 +424,20 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   @Test
   public void test_makeCursors_factToCountryInnerUsingLookup()
   {
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryNameUsingIsoCodeLookup(JoinType.INNER));
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true
+    );
+
     JoinTestHelper.verifyCursors(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
-            ImmutableList.of(factToCountryNameUsingIsoCodeLookup(JoinType.INNER))
+            joinableClauses,
+            preAnalysis
         ).makeCursors(
             null,
             Intervals.ETERNITY,
@@ -451,11 +485,20 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   {
     // In non-SQL-compatible mode, we get an extra row, since the 'null' countryNumber for "Talk:Oswald Tilghman"
     // is interpreted as 0 (a.k.a. Australia).
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnNumber(JoinType.INNER));
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true
+    );
 
     JoinTestHelper.verifyCursors(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
-            ImmutableList.of(factToCountryOnNumber(JoinType.INNER))
+            joinableClauses,
+            preAnalysis
         ).makeCursors(
             new SelectorDimFilter("channel", "#en.wikipedia", null).toFilter(),
             Intervals.ETERNITY,
@@ -509,11 +552,20 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   {
     // In non-SQL-compatible mode, we get an extra row, since the 'null' countryNumber for "Talk:Oswald Tilghman"
     // is interpreted as 0 (a.k.a. Australia).
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryNameUsingNumberLookup(JoinType.INNER));
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true
+    );
 
     JoinTestHelper.verifyCursors(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
-            ImmutableList.of(factToCountryNameUsingNumberLookup(JoinType.INNER))
+            joinableClauses,
+            preAnalysis
         ).makeCursors(
             new SelectorDimFilter("channel", "#en.wikipedia", null).toFilter(),
             Intervals.ETERNITY,
@@ -563,10 +615,20 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   @Test
   public void test_makeCursors_factToCountryLeftWithFilterOnFacts()
   {
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true
+    );
+
     JoinTestHelper.verifyCursors(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
-            ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT))
+            joinableClauses,
+            preAnalysis
         ).makeCursors(
             new SelectorDimFilter("channel", "#de.wikipedia", null).toFilter(),
             Intervals.ETERNITY,
@@ -591,10 +653,20 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   @Test
   public void test_makeCursors_factToCountryRightWithFilterOnLeftIsNull()
   {
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.RIGHT));
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true
+    );
+
     JoinTestHelper.verifyCursors(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
-            ImmutableList.of(factToCountryOnIsoCode(JoinType.RIGHT))
+            joinableClauses,
+            preAnalysis
         ).makeCursors(
             new SelectorDimFilter("channel", null, null).toFilter(),
             Intervals.ETERNITY,
@@ -621,10 +693,20 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   @Test
   public void test_makeCursors_factToCountryFullWithFilterOnLeftIsNull()
   {
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.FULL));
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true
+    );
+
     JoinTestHelper.verifyCursors(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
-            ImmutableList.of(factToCountryOnIsoCode(JoinType.FULL))
+            joinableClauses,
+            preAnalysis
         ).makeCursors(
             new SelectorDimFilter("channel", null, null).toFilter(),
             Intervals.ETERNITY,
@@ -651,10 +733,20 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   @Test
   public void test_makeCursors_factToCountryRightWithFilterOnJoinable()
   {
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.RIGHT));
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true
+    );
+
     JoinTestHelper.verifyCursors(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
-            ImmutableList.of(factToCountryOnIsoCode(JoinType.RIGHT))
+            joinableClauses,
+            preAnalysis
         ).makeCursors(
             new SelectorDimFilter(
                 FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName",
@@ -684,10 +776,20 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   @Test
   public void test_makeCursors_factToCountryLeftWithFilterOnJoinable()
   {
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true
+    );
+
     JoinTestHelper.verifyCursors(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
-            ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT))
+            joinableClauses,
+            preAnalysis
         ).makeCursors(
             new OrDimFilter(
                 new SelectorDimFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryIsoCode", "DE", null),
@@ -718,10 +820,20 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   @Test
   public void test_makeCursors_factToCountryLeftWithFilterOnJoinableUsingLookup()
   {
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryNameUsingIsoCodeLookup(JoinType.LEFT));
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true
+    );
+
     JoinTestHelper.verifyCursors(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
-            ImmutableList.of(factToCountryNameUsingIsoCodeLookup(JoinType.LEFT))
+            joinableClauses,
+            preAnalysis
         ).makeCursors(
             new OrDimFilter(
                 new SelectorDimFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "k", "DE", null),
@@ -752,21 +864,31 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
     // Join condition => always true.
     // Filter => Fact to countries on countryIsoCode.
 
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        new JoinableClause(
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+            new IndexedTableJoinable(countriesTable),
+            JoinType.INNER,
+            JoinConditionAnalysis.forExpression(
+                "1",
+                FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+                ExprMacroTable.nil()
+            )
+        )
+    );
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true
+    );
+
     JoinTestHelper.verifyCursors(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
-            ImmutableList.of(
-                new JoinableClause(
-                    FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
-                    new IndexedTableJoinable(countriesTable),
-                    JoinType.INNER,
-                    JoinConditionAnalysis.forExpression(
-                        "1",
-                        FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
-                        ExprMacroTable.nil()
-                    )
-                )
-            )
+            joinableClauses,
+            preAnalysis
         ).makeCursors(
             new ExpressionDimFilter(
                 StringUtils.format("\"%scountryIsoCode\" == countryIsoCode", FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX),
@@ -816,13 +938,24 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   @Test
   public void test_makeCursors_factToRegionToCountryLeft()
   {
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        factToRegion(JoinType.LEFT),
+        regionToCountry(JoinType.LEFT)
+    );
+
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true
+    );
+
     JoinTestHelper.verifyCursors(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
-            ImmutableList.of(
-                factToRegion(JoinType.LEFT),
-                regionToCountry(JoinType.LEFT)
-            )
+            joinableClauses,
+            preAnalysis
         ).makeCursors(
             null,
             Intervals.ETERNITY,
@@ -873,21 +1006,31 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   @Test
   public void test_makeCursors_factToCountryAlwaysTrue()
   {
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        new JoinableClause(
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+            new IndexedTableJoinable(countriesTable),
+            JoinType.LEFT,
+            JoinConditionAnalysis.forExpression(
+                "1",
+                FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+                ExprMacroTable.nil()
+            )
+        )
+    );
+
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true
+    );
     JoinTestHelper.verifyCursors(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
-            ImmutableList.of(
-                new JoinableClause(
-                    FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
-                    new IndexedTableJoinable(countriesTable),
-                    JoinType.LEFT,
-                    JoinConditionAnalysis.forExpression(
-                        "1",
-                        FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
-                        ExprMacroTable.nil()
-                    )
-                )
-            )
+            joinableClauses,
+            preAnalysis
         ).makeCursors(
             new SelectorDimFilter("channel", "#de.wikipedia", null).toFilter(),
             Intervals.ETERNITY,
@@ -926,21 +1069,32 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   @Test
   public void test_makeCursors_factToCountryAlwaysFalse()
   {
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        new JoinableClause(
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+            new IndexedTableJoinable(countriesTable),
+            JoinType.LEFT,
+            JoinConditionAnalysis.forExpression(
+                "0",
+                FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+                ExprMacroTable.nil()
+            )
+        )
+    );
+
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true
+    );
+
     JoinTestHelper.verifyCursors(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
-            ImmutableList.of(
-                new JoinableClause(
-                    FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
-                    new IndexedTableJoinable(countriesTable),
-                    JoinType.LEFT,
-                    JoinConditionAnalysis.forExpression(
-                        "0",
-                        FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
-                        ExprMacroTable.nil()
-                    )
-                )
-            )
+            joinableClauses,
+            preAnalysis
         ).makeCursors(
             new SelectorDimFilter("channel", "#de.wikipedia", null).toFilter(),
             Intervals.ETERNITY,
@@ -962,21 +1116,32 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   @Test
   public void test_makeCursors_factToCountryAlwaysTrueUsingLookup()
   {
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        new JoinableClause(
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+            LookupJoinable.wrap(countryIsoCodeToNameLookup),
+            JoinType.LEFT,
+            JoinConditionAnalysis.forExpression(
+                "1",
+                FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+                ExprMacroTable.nil()
+            )
+        )
+    );
+
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true
+    );
+
     JoinTestHelper.verifyCursors(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
-            ImmutableList.of(
-                new JoinableClause(
-                    FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
-                    LookupJoinable.wrap(countryIsoCodeToNameLookup),
-                    JoinType.LEFT,
-                    JoinConditionAnalysis.forExpression(
-                        "1",
-                        FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
-                        ExprMacroTable.nil()
-                    )
-                )
-            )
+            joinableClauses,
+            preAnalysis
         ).makeCursors(
             new SelectorDimFilter("channel", "#de.wikipedia", null).toFilter(),
             Intervals.ETERNITY,
@@ -1015,21 +1180,32 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   @Test
   public void test_makeCursors_factToCountryAlwaysFalseUsingLookup()
   {
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        new JoinableClause(
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+            LookupJoinable.wrap(countryIsoCodeToNameLookup),
+            JoinType.LEFT,
+            JoinConditionAnalysis.forExpression(
+                "0",
+                FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+                ExprMacroTable.nil()
+            )
+        )
+    );
+
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true
+    );
+
     JoinTestHelper.verifyCursors(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
-            ImmutableList.of(
-                new JoinableClause(
-                    FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
-                    LookupJoinable.wrap(countryIsoCodeToNameLookup),
-                    JoinType.LEFT,
-                    JoinConditionAnalysis.forExpression(
-                        "0",
-                        FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
-                        ExprMacroTable.nil()
-                    )
-                )
-            )
+            joinableClauses,
+            preAnalysis
         ).makeCursors(
             new SelectorDimFilter("channel", "#de.wikipedia", null).toFilter(),
             Intervals.ETERNITY,
@@ -1051,21 +1227,32 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   @Test
   public void test_makeCursors_factToCountryUsingVirtualColumn()
   {
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        new JoinableClause(
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+            new IndexedTableJoinable(countriesTable),
+            JoinType.INNER,
+            JoinConditionAnalysis.forExpression(
+                StringUtils.format("\"%scountryIsoCode\" == virtual", FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX),
+                FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+                ExprMacroTable.nil()
+            )
+        )
+    );
+
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true
+    );
+
     JoinTestHelper.verifyCursors(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
-            ImmutableList.of(
-                new JoinableClause(
-                    FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
-                    new IndexedTableJoinable(countriesTable),
-                    JoinType.INNER,
-                    JoinConditionAnalysis.forExpression(
-                        StringUtils.format("\"%scountryIsoCode\" == virtual", FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX),
-                        FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
-                        ExprMacroTable.nil()
-                    )
-                )
-            )
+            joinableClauses,
+            preAnalysis
         ).makeCursors(
             null,
             Intervals.ETERNITY,
@@ -1102,24 +1289,35 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   @Test
   public void test_makeCursors_factToCountryUsingExpression()
   {
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        new JoinableClause(
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+            new IndexedTableJoinable(countriesTable),
+            JoinType.INNER,
+            JoinConditionAnalysis.forExpression(
+                StringUtils.format(
+                    "\"%scountryIsoCode\" == concat(substring(countryIsoCode, 0, 1),'L')",
+                    FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX
+                ),
+                FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+                ExprMacroTable.nil()
+            )
+        )
+    );
+
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true
+    );
+
     JoinTestHelper.verifyCursors(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
-            ImmutableList.of(
-                new JoinableClause(
-                    FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
-                    new IndexedTableJoinable(countriesTable),
-                    JoinType.INNER,
-                    JoinConditionAnalysis.forExpression(
-                        StringUtils.format(
-                            "\"%scountryIsoCode\" == concat(substring(countryIsoCode, 0, 1),'L')",
-                            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX
-                        ),
-                        FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
-                        ExprMacroTable.nil()
-                    )
-                )
-            )
+            joinableClauses,
+            preAnalysis
         ).makeCursors(
             null,
             Intervals.ETERNITY,
@@ -1147,25 +1345,35 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   public void test_makeCursors_factToRegionTheWrongWay()
   {
     // Joins using only regionIsoCode, which is wrong since they are not unique internationally.
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        new JoinableClause(
+            FACT_TO_REGION_PREFIX,
+            new IndexedTableJoinable(regionsTable),
+            JoinType.LEFT,
+            JoinConditionAnalysis.forExpression(
+                StringUtils.format(
+                    "\"%sregionIsoCode\" == regionIsoCode",
+                    FACT_TO_REGION_PREFIX
+                ),
+                FACT_TO_REGION_PREFIX,
+                ExprMacroTable.nil()
+            )
+        )
+    );
+
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true
+    );
 
     JoinTestHelper.verifyCursors(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
-            ImmutableList.of(
-                new JoinableClause(
-                    FACT_TO_REGION_PREFIX,
-                    new IndexedTableJoinable(regionsTable),
-                    JoinType.LEFT,
-                    JoinConditionAnalysis.forExpression(
-                        StringUtils.format(
-                            "\"%sregionIsoCode\" == regionIsoCode",
-                            FACT_TO_REGION_PREFIX
-                        ),
-                        FACT_TO_REGION_PREFIX,
-                        ExprMacroTable.nil()
-                    )
-                )
-            )
+            joinableClauses,
+            preAnalysis
         ).makeCursors(
             new SelectorDimFilter("regionIsoCode", "VA", null).toFilter(),
             Intervals.ETERNITY,
@@ -1198,21 +1406,32 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Cannot build hash-join matcher on non-equi-join condition: x == y");
 
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        new JoinableClause(
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+            new IndexedTableJoinable(countriesTable),
+            JoinType.LEFT,
+            JoinConditionAnalysis.forExpression(
+                "x == y",
+                FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+                ExprMacroTable.nil()
+            )
+        )
+    );
+
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true
+    );
+
     JoinTestHelper.readCursors(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
-            ImmutableList.of(
-                new JoinableClause(
-                    FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
-                    new IndexedTableJoinable(countriesTable),
-                    JoinType.LEFT,
-                    JoinConditionAnalysis.forExpression(
-                        "x == y",
-                        FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
-                        ExprMacroTable.nil()
-                    )
-                )
-            )
+            joinableClauses,
+            preAnalysis
         ).makeCursors(
             null,
             Intervals.ETERNITY,
@@ -1231,22 +1450,32 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Cannot build hash-join matcher on non-key-based condition: "
                                     + "Equality{leftExpr=x, rightColumn='countryName'}");
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        new JoinableClause(
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+            new IndexedTableJoinable(countriesTable),
+            JoinType.LEFT,
+            JoinConditionAnalysis.forExpression(
+                StringUtils.format("x == \"%scountryName\"", FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX),
+                FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+                ExprMacroTable.nil()
+            )
+        )
+    );
+
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.preSplitComputeStuff(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true
+    );
 
     JoinTestHelper.readCursors(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
-            ImmutableList.of(
-                new JoinableClause(
-                    FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
-                    new IndexedTableJoinable(countriesTable),
-                    JoinType.LEFT,
-                    JoinConditionAnalysis.forExpression(
-                        StringUtils.format("x == \"%scountryName\"", FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX),
-                        FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
-                        ExprMacroTable.nil()
-                    )
-                )
-            )
+            joinableClauses,
+            preAnalysis
         ).makeCursors(
             null,
             Intervals.ETERNITY,
