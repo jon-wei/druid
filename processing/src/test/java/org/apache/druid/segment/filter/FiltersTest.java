@@ -26,16 +26,30 @@ import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.AndDimFilter;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.query.filter.OrDimFilter;
+import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.IntIteratorUtils;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class FiltersTest extends InitializedNullHandlingTest
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   @Test
   public void testEstimateSelectivityOfBitmapList()
   {
@@ -259,6 +273,68 @@ public class FiltersTest extends InitializedNullHandlingTest
         )
     );
     Assert.assertEquals(expected, Filters.toCNF(filter));
+  }
+
+  @Test
+  public void testBigFilter()
+  {
+    DimFilter dimFilter = new AndDimFilter(
+        or(
+            makeAnds(29)
+        ),
+        selector("aaa", "value1"),
+        selector("bbb", "value2")
+    );
+
+    Filter bigFilter = dimFilter.toFilter();
+    Filter bigFilterCNF = Filters.toCNF(bigFilter);
+    System.out.println(bigFilter);
+    System.out.println(bigFilterCNF);
+    System.out.println("abc");
+  }
+
+  private static DimFilter[] makeAnds(int count)
+  {
+    DimFilter[] ands = new DimFilter[count];
+    for (int i = 0; i < count; i++) {
+      ands[i] = and(
+          selector("ccc", "value3"),
+          selector("ddd", "value4"),
+          selector("eee", String.valueOf(i))
+      );
+    }
+    return ands;
+  }
+
+  public static AndDimFilter and(DimFilter... filters)
+  {
+    return new AndDimFilter(Arrays.asList(filters));
+  }
+
+  public static OrDimFilter or(DimFilter... filters)
+  {
+    return new OrDimFilter(Arrays.asList(filters));
+  }
+
+  public static NotDimFilter not(DimFilter filter)
+  {
+    return new NotDimFilter(filter);
+  }
+
+  public static InDimFilter in(String dimension, List<String> values, ExtractionFn extractionFn)
+  {
+    return new InDimFilter(dimension, values, extractionFn);
+  }
+
+  public static SelectorDimFilter selector(final String fieldName, final String value, final ExtractionFn extractionFn)
+  {
+    return new SelectorDimFilter(fieldName, value, extractionFn);
+  }
+
+
+  public static SelectorDimFilter selector(final String fieldName, final String value)
+  {
+    return new SelectorDimFilter(fieldName, value, null);
   }
 
   private static BitmapIndex getBitmapIndex(final List<ImmutableBitmap> bitmapList)
