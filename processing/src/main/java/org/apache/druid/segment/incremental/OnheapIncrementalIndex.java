@@ -21,6 +21,7 @@ package org.apache.druid.segment.incremental;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -152,6 +153,26 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   {
     List<String> parseExceptionMessages;
     final int priorIndex = facts.getPriorIndex(key);
+
+    MapBasedInputRow mbir = (MapBasedInputRow) row;
+    Object policyId = mbir.getDimension("policyId").size() > 0 ? mbir.getDimension("policyId").get(0) : null;
+    Object policyVer = mbir.getDimension("policyVer").size() > 0 ? mbir.getDimension("policyVer").get(0) : null;
+    Object clientId = mbir.getDimension("clientId").size() > 0 ? mbir.getDimension("clientId").get(0) : null;
+    Object protocol = mbir.getDimension("protocol").size() > 0 ? mbir.getDimension("protocol").get(0) : null;
+    Object port = mbir.getDimension("port").size() > 0 ? mbir.getDimension("port").get(0) : null;
+    Object srcIp = mbir.getDimension("srcIP").size() > 0 ? mbir.getDimension("srcIP").get(0) : null;
+    Object dstIp = mbir.getDimension("dstIP").size() > 0 ? mbir.getDimension("dstIP").get(0) : null;
+
+    if ("ba1e64e9105e52298a7a35a2dd22a8ba".equals(clientId) &&
+        "3341485dbe3cb14d8d3514275b950766".equals(srcIp) &&
+        "449c5b7e2e12409225ec4837113babc3".equals(dstIp) &&
+        "1067207107".equals(policyId) &&
+        "1570194794".equals(policyVer) &&
+        "17".equals(protocol) &&
+        "137".equals(port)
+        ) {
+      log.info("XXXXX INTERESTING ROW: " + mbir);
+    }
 
     Aggregator[] aggs;
     final AggregatorFactory[] metrics = getMetrics();

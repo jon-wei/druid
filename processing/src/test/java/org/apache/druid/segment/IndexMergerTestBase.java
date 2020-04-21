@@ -44,7 +44,10 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
+import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
@@ -78,6 +81,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -1310,6 +1314,234 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
       Assert.assertEquals(expected.get(i++), (Integer) index);
     }
   }
+
+
+
+  @Test
+  public void testAAAAAAA() throws Exception
+  {
+    IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
+        .withDimensionsSpec(
+            new DimensionsSpec(
+                ImmutableList.of(
+                    new StringDimensionSchema("clientId", MultiValueHandling.SORTED_ARRAY, true),
+                    new StringDimensionSchema("dstGroups", MultiValueHandling.SORTED_ARRAY, true),
+                    new StringDimensionSchema("dstGroupsListStr", MultiValueHandling.SORTED_ARRAY, true),
+                    new StringDimensionSchema("dstIP", MultiValueHandling.SORTED_ARRAY, true),
+                    new StringDimensionSchema("policyId", MultiValueHandling.SORTED_ARRAY, false),
+                    new StringDimensionSchema("policyVer", MultiValueHandling.SORTED_ARRAY, false),
+                    new StringDimensionSchema("port", MultiValueHandling.SORTED_ARRAY, false),
+                    new StringDimensionSchema("protocol", MultiValueHandling.SORTED_ARRAY, false),
+                    new StringDimensionSchema("srcGroups", MultiValueHandling.SORTED_ARRAY, true),
+                    new StringDimensionSchema("srcGroupsListStr", MultiValueHandling.SORTED_ARRAY, true),
+                    new StringDimensionSchema("srcIP", MultiValueHandling.SORTED_ARRAY, true)
+                )
+            )
+        )
+        .withMetrics(
+            new LongMinAggregatorFactory("firstStartTime", "firstStartTime"),
+            new LongSumAggregatorFactory("is_deleted", "is_deleted"),
+            new LongMaxAggregatorFactory("lastEndTime", "lastEndTime"),
+            new LongSumAggregatorFactory("sum_count", "sum_count")
+        )
+        .withRollup(false)
+        .build();
+    IncrementalIndex toPersistA = new IncrementalIndex.Builder()
+        .setIndexSchema(indexSchema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
+
+    /*
+    //{"__time":"2020-03-24T00:00:00.000Z",
+    "clientId":"ba1e64e9105e52298a7a35a2dd22a8ba",
+    "dstGroups":["-1550378166187778989","160014583562540127","1768258155547003241","1916580124956959003","5250844410734964706","8679905028717741128"],
+    "dstGroupsListStr":"[-1550378166187778989,160014583562540127,1768258155547003241,1916580124956959003,5250844410734964706,8679905028717741128]",
+    "dstIP":"449c5b7e2e12409225ec4837113babc3",
+    "firstStartTime":1585015354000,
+    "isDeleted":0,
+    "lastEndTime":1585015354000,
+    "policyId":"1067207107",
+    "policyVer":"1570194794",
+    "port":"137",
+    "protocol":"17",
+    "srcGroups":["-1397430684025476892","-1550378166187778989","1768258155547003241","4284386752036930572","6865763199354610700","8679905028717741128"],
+    "srcGroupsListStr":"[-1550378166187778989,-1397430684025476892,1768258155547003241,4284386752036930572,6865763199354610700,8679905028717741128]",
+    "srcIP":"3341485dbe3cb14d8d3514275b950766",
+    "sum_count":1
+    }
+   // {"__time":"2020-03-24T00:00:00.000Z","clientId":"ba1e64e9105e52298a7a35a2dd22a8ba","dstGroups":["-1550378166187778989","160014583562540127","1768258155547003241","1916580124956959003","5250844410734964706","8679905028717741128"],"dstGroupsListStr":"[-1550378166187778989,160014583562540127,1768258155547003241,1916580124956959003,5250844410734964706,8679905028717741128]","dstIP":"449c5b7e2e12409225ec4837113babc3","firstStartTime":1585081353000,"isDeleted":0,"lastEndTime":1585081353000,"policyId":"1067207107","policyVer":"1570194794","port":"137","protocol":"17","srcGroups":["-1397430684025476892","-1550378166187778989","1768258155547003241","4284386752036930572","6865763199354610700","8679905028717741128"],"srcGroupsListStr":"[-1550378166187778989,-1397430684025476892,1768258155547003241,4284386752036930572,6865763199354610700,8679905028717741128]","srcIP":"3341485dbe3cb14d8d3514275b950766","sum_count":1}
+
+*/
+    Map<String, Object> event = new HashMap<>();
+    event.put("clientId", "ba1e64e9105e52298a7a35a2dd22a8ba");
+    event.put(
+        "dstGroups",
+        ImmutableList.of(
+            "-1550378166187778989",
+            "160014583562540127",
+            "1768258155547003241",
+            "1916580124956959003",
+            "5250844410734964706",
+            "8679905028717741128"
+        )
+    );
+    event.put(
+        "dstGroupsListStr",
+        "[-1550378166187778989,160014583562540127,1768258155547003241,1916580124956959003,5250844410734964706,8679905028717741128]"
+    );
+    event.put("dstIP", "449c5b7e2e12409225ec4837113babc3");
+    event.put("policyId", "1067207107");
+    event.put("policyVer", "1570194794");
+    event.put("port", "137");
+    event.put("protocol", "17");
+    event.put(
+        "srcGroups",
+        ImmutableList.of(
+            "-1397430684025476892",
+            "-1550378166187778989",
+            "1768258155547003241",
+            "4284386752036930572",
+            "6865763199354610700",
+            "8679905028717741128"
+        )
+    );
+    event.put(
+        "srcGroupsListStr",
+        "[-1550378166187778989,-1397430684025476892,1768258155547003241,4284386752036930572,6865763199354610700,8679905028717741128]"
+    );
+    event.put("srcIP", "3341485dbe3cb14d8d3514275b950766");
+
+    event.put("firstStartTime", 1585015354000L);
+    event.put("isDeleted", 0L);
+    event.put("lastEndTime", 1585015354000L);
+    event.put("sum_count", 1L);
+
+
+    toPersistA.add(
+        new MapBasedInputRow(
+            1,
+            Arrays.asList(
+                "clientId",
+                "dstGroups",
+                "dstGroupsListStr",
+                "dstIP",
+                "policyId",
+                "policyVer",
+                "port",
+                "protocol",
+                "srcGroups",
+                "srcGroupsListStr",
+                "srcIP"
+            ),
+            event
+        )
+    );
+
+    event.put("firstStartTime", 1585081353000L);
+    event.put("isDeleted", 0L);
+    event.put("lastEndTime", 1585081353000L);
+
+
+    IncrementalIndex toPersistB = new IncrementalIndex.Builder()
+        .setIndexSchema(indexSchema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
+
+    toPersistB.add(
+        new MapBasedInputRow(
+            1,
+            Arrays.asList(
+                "clientId",
+                "dstGroups",
+                "dstGroupsListStr",
+                "dstIP",
+                "policyId",
+                "policyVer",
+                "port",
+                "protocol",
+                "srcGroups",
+                "srcGroupsListStr",
+                "srcIP"
+            ),
+            event
+        )
+    );
+
+    final File tmpDirA = temporaryFolder.newFolder();
+    final File tmpDirB = temporaryFolder.newFolder();
+    final File tmpDirMerged = temporaryFolder.newFolder();
+
+    QueryableIndex indexA = closer.closeLater(
+        indexIO.loadIndex(indexMerger.persist(toPersistA, tmpDirA, indexSpec, null))
+    );
+
+    QueryableIndex indexB = closer.closeLater(
+        indexIO.loadIndex(indexMerger.persist(toPersistB, tmpDirB, indexSpec, null))
+    );
+
+    final QueryableIndex merged = closer.closeLater(
+        indexIO.loadIndex(
+            indexMerger.mergeQueryableIndex(
+                Arrays.asList(indexA, indexB),
+                false,
+                new AggregatorFactory[]{
+                    new LongMinAggregatorFactory("firstStartTime", "firstStartTime"),
+                    new LongSumAggregatorFactory("is_deleted", "is_deleted"),
+                    new LongMaxAggregatorFactory("lastEndTime", "lastEndTime"),
+                    new LongSumAggregatorFactory("sum_count", "sum_count")
+                },
+                tmpDirMerged,
+                indexSpec,
+                null
+            )
+        )
+    );
+
+    final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
+    final List<DebugRow> rowList = RowIteratorHelper.toList(adapter.getRows());
+
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(
+          ImmutableList.of("d3", "d6", "d8", "d9"),
+          ImmutableList.copyOf(adapter.getDimensionNames())
+      );
+    } else {
+      Assert.assertEquals(
+          ImmutableList.of("d1", "d2", "d3", "d5", "d6", "d7", "d8", "d9"),
+          ImmutableList.copyOf(adapter.getDimensionNames())
+      );
+    }
+
+    Assert.assertEquals(4, rowList.size());
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(Arrays.asList("310", null, null, "910"), rowList.get(0).dimensionValues());
+      Assert.assertEquals(Arrays.asList("310", null, null, "910"), rowList.get(1).dimensionValues());
+      Assert.assertEquals(Arrays.asList("310", null, null, "910"), rowList.get(2).dimensionValues());
+      Assert.assertEquals(Arrays.asList(null, "621", "821", "921"), rowList.get(3).dimensionValues());
+    } else {
+      Assert.assertEquals(Arrays.asList("", "", "310", null, null, "", null, "910"), rowList.get(0).dimensionValues());
+      Assert.assertEquals(Arrays.asList("", "", "310", null, null, "", null, "910"), rowList.get(1).dimensionValues());
+      Assert.assertEquals(Arrays.asList("", "", "310", null, null, "", null, "910"), rowList.get(2).dimensionValues());
+      Assert.assertEquals(
+          Arrays.asList(null, null, null, "", "621", "", "821", "921"),
+          rowList.get(3).dimensionValues()
+      );
+    }
+
+    checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("d3", null));
+    checkBitmapIndex(Arrays.asList(0, 1, 2), adapter.getBitmapIndex("d3", "310"));
+
+    checkBitmapIndex(Arrays.asList(0, 1, 2), adapter.getBitmapIndex("d6", null));
+    checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("d6", "621"));
+
+    checkBitmapIndex(Arrays.asList(0, 1, 2), adapter.getBitmapIndex("d8", null));
+    checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("d8", "821"));
+
+    checkBitmapIndex(Collections.emptyList(), adapter.getBitmapIndex("d9", null));
+    checkBitmapIndex(Arrays.asList(0, 1, 2), adapter.getBitmapIndex("d9", "910"));
+    checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("d9", "921"));
+  }
+
 
   @Test
   public void testMergeWithSupersetOrdering() throws Exception
