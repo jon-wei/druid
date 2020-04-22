@@ -2307,8 +2307,11 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
 
     Assert.assertEquals(3, rowList.size());
     Assert.assertEquals(Arrays.asList("leek", Arrays.asList("1", "2", "4")), rowList.get(0).dimensionValues());
+    Assert.assertEquals(2L, rowList.get(0).metricValues().get(0));
     Assert.assertEquals(Arrays.asList("leek", Arrays.asList("1", "2", "3", "5")), rowList.get(1).dimensionValues());
+    Assert.assertEquals(1L, rowList.get(1).metricValues().get(0));
     Assert.assertEquals(Arrays.asList("potato", Arrays.asList("0", "1", "4")), rowList.get(2).dimensionValues());
+    Assert.assertEquals(1L, rowList.get(2).metricValues().get(0));
 
     checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("dimA", "leek"));
     checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("dimA", "potato"));
