@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.primitives.Ints;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
@@ -41,9 +42,31 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
    *
    * The implementation is a bit complicated because it tries to check each position of both rows only once.
    */
+
   private static final Comparator<ColumnValueSelector> DIMENSION_SELECTOR_COMPARATOR = (s1, s2) -> {
     IndexedInts row1 = getRow(s1);
     IndexedInts row2 = getRow(s2);
+    System.out.println("HHHHH ROW1: " + row1.debugToString());
+    System.out.println("HHHHH ROW2: " + row2.debugToString());
+    int len1 = row1.size();
+    int len2 = row2.size();
+    int retVal = Ints.compare(len1, len2);
+    int valsIndex = 0;
+    while (retVal == 0 && valsIndex < len1) {
+      int lhsVal = row1.get(valsIndex);
+      int rhsVal = row2.get(valsIndex);
+      if (lhsVal != rhsVal) {
+        return Ints.compare(lhsVal, rhsVal);
+      }
+      ++valsIndex;
+    }
+    return retVal;
+  };
+  private static final Comparator<ColumnValueSelector> DIMENSION_SELECTOR_COMPARATOR_OLD = (s1, s2) -> {
+    IndexedInts row1 = getRow(s1);
+    IndexedInts row2 = getRow(s2);
+    System.out.println("HHHHH ROW1: " + row1.debugToString());
+    System.out.println("HHHHH ROW2: " + row2.debugToString());
     int len1 = row1.size();
     int len2 = row2.size();
     boolean row1IsNull = true;

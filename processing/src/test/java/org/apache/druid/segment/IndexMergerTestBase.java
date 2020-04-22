@@ -61,6 +61,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAdapter;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -98,6 +99,25 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     return Collections2.transform(
         Sets.cartesianProduct(
             ImmutableList.of(
+                ImmutableSet.of(CompressionStrategy.LZF),
+                ImmutableSet.of(CompressionStrategy.LZF),
+                ImmutableSet.of(CompressionFactory.LongEncodingStrategy.AUTO),
+                ImmutableSet.of(TmpFileSegmentWriteOutMediumFactory.instance())
+            )
+        ), new Function<List<?>, Object[]>()
+        {
+          @Nullable
+          @Override
+          public Object[] apply(List<?> input)
+          {
+            return input.toArray();
+          }
+        }
+    );
+    /*
+    return Collections2.transform(
+        Sets.cartesianProduct(
+            ImmutableList.of(
                 EnumSet.allOf(CompressionStrategy.class),
                 ImmutableSet.copyOf(CompressionStrategy.noNoneValues()),
                 EnumSet.allOf(CompressionFactory.LongEncodingStrategy.class),
@@ -113,6 +133,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
           }
         }
     );
+    */
   }
 
   static IndexSpec makeIndexSpec(
@@ -1662,7 +1683,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     Map<String, Object> event11 = new HashMap<>();
     event11.putAll(baseEvent);
     event11.put("dstIP", "f28ef47f53bc684fb6ee193301dd68e0");
-    event11.put("srcIP", "3341485dbe3cb14d8d3514275b950766");
+    event11.put("srcIP", "adae87ae972fc76446ae93c1749c7479");
     event11.put(
         "dstGroups",
         ImmutableList.of(
@@ -1704,6 +1725,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
         indexIO.loadIndex(indexMerger.persist(toPersistB, tmpDirB, indexSpec, null))
     );
 
+    System.out.println("QQQQQQQQ MERGING NOW");
     final QueryableIndex merged = closer.closeLater(
         indexIO.loadIndex(
             indexMerger.mergeQueryableIndex(

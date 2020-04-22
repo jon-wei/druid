@@ -148,6 +148,13 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
     for (int i = 0; i < adapters.size(); i++) {
       @SuppressWarnings("MustBeClosedChecker") // we register dimValues in the closer
           Indexed<String> dimValues = closer.register(adapters.get(i).getDimValueLookup(dimensionName));
+
+      System.out.println("ADAPTER NUM: " + i);
+      for (int jj = 0; jj < dimValues.size(); jj++) {
+        System.out.println("ID: " + jj + " VAL: " + dimValues.get(jj));
+      }
+
+
       if (dimValues != null && !allNull(dimValues)) {
         dimHasValues = true;
         hasNull |= dimValues.indexOf(null) >= 0;
@@ -207,6 +214,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
   private void writeDictionary(Iterable<String> dictionaryValues) throws IOException
   {
     for (String value : dictionaryValues) {
+      log.info("XXXXXXXXX DICT VALUE: " + value);
       dictionaryWriter.write(value);
       value = NullHandling.emptyToNullIfNeeded(value);
       if (dictionarySize == 0) {

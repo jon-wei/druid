@@ -175,6 +175,8 @@ final class RowCombiningTimeAndDimsIterator implements TimeAndDimsIterator
       currentTimeAndDimsPointer = null;
       return false;
     }
+    //System.out.println("JJJJJJ: " + nextRowPointer);
+
     // This line implicitly uses the property of RowIterator.getPointer() (see [*] below), that it's still valid after
     // RowPointer.moveToNext() returns false. mergingIterator.moveToNext() could have returned false during the previous
     // call to this method, RowCombiningTimeAndDimsIterator.moveToNext().

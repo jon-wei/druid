@@ -155,6 +155,7 @@ public class TimeAndDimsPointer implements Comparable<TimeAndDimsPointer>
       return timestampDiff;
     }
     for (int dimIndex = 0; dimIndex < dimensionSelectors.length; dimIndex++) {
+      System.out.println("COMPARING FOR DIMNAME: " + dimensionHandlers.get(dimIndex).getDimensionName());
       int dimDiff = dimensionSelectorComparators[dimIndex].compare(
           dimensionSelectors[dimIndex],
           rhs.dimensionSelectors[dimIndex]

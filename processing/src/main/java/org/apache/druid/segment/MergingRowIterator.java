@@ -86,6 +86,7 @@ final class MergingRowIterator implements RowIterator
           TransformableRowIterator rowIterator = iterators.get(indexNum);
           // Can call rowIterator.getPointer() only here, after moveToNext() returned true on the filter() step
           rowIterator.getPointer().setIndexNum(indexNum);
+          System.out.println("UUUUU + " + indexNum + ": " + rowIterator.getPointer());
           originalIterators[indexNum] = rowIterator;
           return rowIterator;
         })
@@ -118,6 +119,8 @@ final class MergingRowIterator implements RowIterator
       }
       throw new IllegalStateException("Don't call moveToNext() after it returned false once");
     }
+    System.out.println("YYYYYY: " + pQueue[0].getPointer());
+
     if (first) {
       first = false;
       return true;
@@ -217,6 +220,10 @@ final class MergingRowIterator implements RowIterator
         }
       }
       int parentDiff = iteratorToSink.getPointer().compareTo(childIterator.getPointer());
+      System.out.println("NNNN: " + iteratorToSink.getPointer());
+      System.out.println("MMMM: " + childIterator.getPointer());
+      System.out.println("PARENT DIFF: " + parentDiff + ", I: " + i);
+
       if (parentDiff == 0) {
         equalToChild[i] = true;
         pQueue[i] = iteratorToSink;
