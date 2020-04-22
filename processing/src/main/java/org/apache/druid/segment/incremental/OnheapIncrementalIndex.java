@@ -163,6 +163,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     Object srcIp = mbir.getDimension("srcIP").size() > 0 ? mbir.getDimension("srcIP").get(0) : null;
     Object dstIp = mbir.getDimension("dstIP").size() > 0 ? mbir.getDimension("dstIP").get(0) : null;
 
+    log.info("ROW: " + mbir);
     if ("ba1e64e9105e52298a7a35a2dd22a8ba".equals(clientId) &&
         "3341485dbe3cb14d8d3514275b950766".equals(srcIp) &&
         "449c5b7e2e12409225ec4837113babc3".equals(dstIp) &&
@@ -171,7 +172,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
         "17".equals(protocol) &&
         "137".equals(port)
         ) {
-      log.info("XXXXX INTERESTING ROW: " + mbir);
+      //log.info("XXXXX INTERESTING ROW: " + mbir);
     }
 
     Aggregator[] aggs;
