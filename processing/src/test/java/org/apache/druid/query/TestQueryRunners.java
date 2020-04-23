@@ -22,6 +22,10 @@ package org.apache.druid.query;
 import com.google.common.base.Suppliers;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.collections.NonBlockingPool;
+import org.apache.druid.query.scan.ScanQueryConfig;
+import org.apache.druid.query.scan.ScanQueryEngine;
+import org.apache.druid.query.scan.ScanQueryQueryToolChest;
+import org.apache.druid.query.scan.ScanQueryRunnerFactory;
 import org.apache.druid.query.search.SearchQueryConfig;
 import org.apache.druid.query.search.SearchQueryQueryToolChest;
 import org.apache.druid.query.search.SearchQueryRunnerFactory;
@@ -95,6 +99,23 @@ public class TestQueryRunners
   public static <T> QueryRunner<T> makeTimeBoundaryQueryRunner(Segment adapter)
   {
     QueryRunnerFactory factory = new TimeBoundaryQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER);
+    return new FinalizeResultsQueryRunner<T>(
+        factory.createRunner(adapter),
+        factory.getToolchest()
+    );
+  }
+
+  public static <T> QueryRunner<T> makeScanQueryRunner(Segment adapter)
+  {
+    QueryRunnerFactory factory = new ScanQueryRunnerFactory(
+        new ScanQueryQueryToolChest(
+            new ScanQueryConfig(),
+            DefaultGenericQueryMetricsFactory.instance()
+        ),
+        new ScanQueryEngine(),
+        new ScanQueryConfig()
+    );
+
     return new FinalizeResultsQueryRunner<T>(
         factory.createRunner(adapter),
         factory.getToolchest()

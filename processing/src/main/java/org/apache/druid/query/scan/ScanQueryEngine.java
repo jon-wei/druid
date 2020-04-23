@@ -193,7 +193,7 @@ public class ScanQueryEngine
                                   timeoutAt - (System.currentTimeMillis() - start)
                               );
                             }
-                            return new ScanResultValue(segmentId.toString(), allColumns, events);
+                            return new ScanResultValue(segmentId == null ? null : segmentId.toString(), allColumns, events);
                           }
 
                           @Override

@@ -44,12 +44,24 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
    * {@link StringDimensionIndexer#compareUnsortedEncodedKeyComponents}, since this comparator is used to order rows
    * when merging segments. If the comparison logic does not match, imperfect rollup during segment merging can occur.
    */
-  private static final Comparator<ColumnValueSelector> DIMENSION_SELECTOR_COMPARATOR = (s1, s2) -> {
+  private static final Comparator<ColumnValueSelector> DIMENSION_SELECTOR_COMPARATOR__ = (s1, s2) -> {
     IndexedInts row1 = getRow(s1);
     IndexedInts row2 = getRow(s2);
     int len1 = row1.size();
     int len2 = row2.size();
-    int retVal = Integer.compare(len1, len2);
+    //noinspection SubtractionInCompareTo -- substraction is safe here, because lengths or rows are small numbers.
+    int retVal = len1 - len2;
+    if (retVal != 0) {
+      // check for equivalent "null" representations
+      boolean row1IsNull = isAllNull(row1, len1);
+      boolean row2IsNull = isAllNull(row2, len2);
+      if (!row1IsNull || !row2IsNull) {
+        return retVal;
+      } else {
+        return 0;
+      }
+    }
+
     int valsIndex = 0;
     while (retVal == 0 && valsIndex < len1) {
       int lhsVal = row1.get(valsIndex);
@@ -59,6 +71,63 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
     }
     return retVal;
   };
+
+  private static boolean isAllNull(IndexedInts row, int len) {
+    for (int i = 0; i < len; i++) {
+      if (row.get(i) != 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static final Comparator<ColumnValueSelector> DIMENSION_SELECTOR_COMPARATOR = (s1, s2) -> {
+    IndexedInts row1 = getRow(s1);
+    IndexedInts row2 = getRow(s2);
+    int len1 = row1.size();
+    int len2 = row2.size();
+    boolean row1IsNull = true;
+    boolean row2IsNull = true;
+    for (int i = 0; i < Math.min(len1, len2); i++) {
+      int v1 = row1.get(i);
+      row1IsNull &= v1 == 0;
+      int v2 = row2.get(i);
+      row2IsNull &= v2 == 0;
+      int valueDiff = Integer.compare(v1, v2);
+      if (valueDiff != 0) {
+        return valueDiff;
+      }
+    }
+    //noinspection SubtractionInCompareTo -- substraction is safe here, because lengths or rows are small numbers.
+    int lenDiff = len1 - len2;
+    if (lenDiff == 0) {
+      return 0;
+    } else {
+      if (!row1IsNull || !row2IsNull) {
+        return lenDiff;
+      } else {
+        return compareRestNulls(row1, len1, row2, len2);
+      }
+    }
+  };
+
+  private static int compareRestNulls(IndexedInts row1, int len1, IndexedInts row2, int len2)
+  {
+    if (len1 < len2) {
+      for (int i = len1; i < len2; i++) {
+        if (row2.get(i) != 0) {
+          return -1;
+        }
+      }
+    } else {
+      for (int i = len2; i < len1; i++) {
+        if (row1.get(i) != 0) {
+          return 1;
+        }
+      }
+    }
+    return 0;
+  }
 
   /**
    * Value for absent column, i. e. {@link NilColumnValueSelector}, should be equivalent to [null] during index merging.

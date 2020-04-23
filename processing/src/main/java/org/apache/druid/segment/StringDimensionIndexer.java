@@ -396,10 +396,73 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   @Override
   public int compareUnsortedEncodedKeyComponents(int[] lhs, int[] rhs)
   {
+    boolean row1IsNull = true;
+    boolean row2IsNull = true;
+    for (int i = 0; i < Math.min(lhs.length, rhs.length); i++) {
+      int v1 = lhs[i];
+      row1IsNull &= v1 == 0;
+      int v2 = rhs[i];
+      row2IsNull &= v2 == 0;
+      int valueDiff = Integer.compare(v1, v2);
+      if (valueDiff != 0) {
+        final String lhsValActual = getActualValue(v1, false);
+        final String rhsValActual = getActualValue(v2, false);
+        if (lhsValActual != null && rhsValActual != null) {
+          return lhsValActual.compareTo(rhsValActual);
+        } else if (lhsValActual == null ^ rhsValActual == null) {
+          return lhsValActual == null ? -1 : 1;
+        }
+      }
+    }
+    //noinspection SubtractionInCompareTo -- substraction is safe here, because lengths or rows are small numbers.
+    int lenDiff = lhs.length - rhs.length;
+    if (lenDiff == 0) {
+      return 0;
+    } else {
+      if (!row1IsNull || !row2IsNull) {
+        return lenDiff;
+      } else {
+        return compareRestNulls(lhs, rhs, dimLookup.idForNull);
+      }
+    }
+  }
+
+
+  private static int compareRestNulls(int[] row1, int[] row2, int nullId)
+  {
+    if (row1.length < row2.length) {
+      for (int i = row1.length; i < row2.length; i++) {
+        if (row2[i] != 0) {
+          return -1;
+        }
+      }
+    } else {
+      for (int i = row2.length; i < row1.length; i++) {
+        if (row1[i] != 0) {
+          return 1;
+        }
+      }
+    }
+    return 0;
+  }
+
+  public int compareUnsortedEncodedKeyComponents2(int[] lhs, int[] rhs)
+  {
+    System.out.println("idForNull: " + dimLookup.idForNull + " BBBB: " + Arrays.toString(lhs) + " | " + Arrays.toString(rhs));
     int lhsLen = lhs.length;
     int rhsLen = rhs.length;
 
     int retVal = Ints.compare(lhsLen, rhsLen);
+    if (retVal != 0) {
+      boolean lhsAllNull = isAllNull(lhs, dimLookup.idForNull);
+      boolean rhsAllNull = isAllNull(lhs, dimLookup.idForNull);
+      if (!lhsAllNull || !rhsAllNull) {
+        return retVal;
+      } else {
+        return 0;
+      }
+    }
+
     int valsIndex = 0;
     while (retVal == 0 && valsIndex < lhsLen) {
       int lhsVal = lhs[valsIndex];
@@ -416,6 +479,15 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       ++valsIndex;
     }
     return retVal;
+  }
+
+  private static boolean isAllNull(int[] rowVal, int dimLookupIdForNull) {
+    for (int singleVal: rowVal) {
+      if (singleVal != dimLookupIdForNull) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override

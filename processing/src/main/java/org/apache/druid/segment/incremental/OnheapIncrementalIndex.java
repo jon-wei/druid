@@ -152,6 +152,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   {
     List<String> parseExceptionMessages;
     final int priorIndex = facts.getPriorIndex(key);
+    System.out.println("OHII ROW: " + row);
 
     Aggregator[] aggs;
     final AggregatorFactory[] metrics = getMetrics();

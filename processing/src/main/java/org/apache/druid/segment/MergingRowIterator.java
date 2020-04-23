@@ -86,6 +86,7 @@ final class MergingRowIterator implements RowIterator
           TransformableRowIterator rowIterator = iterators.get(indexNum);
           // Can call rowIterator.getPointer() only here, after moveToNext() returned true on the filter() step
           rowIterator.getPointer().setIndexNum(indexNum);
+          System.out.println("PPPPP: " + rowIterator.getPointer());
           originalIterators[indexNum] = rowIterator;
           return rowIterator;
         })
@@ -118,6 +119,7 @@ final class MergingRowIterator implements RowIterator
       }
       throw new IllegalStateException("Don't call moveToNext() after it returned false once");
     }
+    System.out.println("CSM: " + changedSinceMark + ", XXXXX: " + pQueue[0].getPointer());
     if (first) {
       first = false;
       return true;
@@ -134,14 +136,17 @@ final class MergingRowIterator implements RowIterator
       }
     }
     boolean headUsedToBeEqualToChild = equalToChild[0];
+    System.out.println("headUsedToBeEqualToChild: " + headUsedToBeEqualToChild);
     if (head.moveToNext()) {
       if (sinkHeap(0) == 0) { // The head iterator didn't change
         if (!changedSinceMark && head.hasTimeAndDimsChangedSinceMark()) {
+          System.out.println("FFFF");
           changedSinceMark = true;
         }
       } else { // The head iterator changed
         // If the head iterator changed, the changedSinceMark property could still be "unchanged", if there were several
         // iterators pointing to equal "time and dims", that is what the following line checks:
+        System.out.println("GGGG");
         changedSinceMark |= !headUsedToBeEqualToChild;
       }
       return true;
@@ -154,6 +159,7 @@ final class MergingRowIterator implements RowIterator
         // The head iterator is going to change, so the changedSinceMark property could still be "unchanged", if there
         // were several iterators pointing to equal "time and dims", that is what the following line checks:
         changedSinceMark |= !headUsedToBeEqualToChild;
+        System.out.println("UUUU");
 
         int parentOfLast = (pQueueSize - 1) >> 1;
         // This sinkHeap() call is guaranteed to not move any heap elements, but it is used as a shortcut to fix the
@@ -211,12 +217,19 @@ final class MergingRowIterator implements RowIterator
       if (right < pQueueSize) {
         RowIterator rightChildIterator = pQueue[right];
         childrenDiff = rightChildIterator.getPointer().compareTo(childIterator.getPointer());
+        System.out.println("NNNN: " + iteratorToSink.getPointer());
+        System.out.println("MMMM: " + childIterator.getPointer());
+        System.out.println("CD: " + childrenDiff);
         if (childrenDiff < 0) {
           child = right;
           childIterator = rightChildIterator;
         }
       }
       int parentDiff = iteratorToSink.getPointer().compareTo(childIterator.getPointer());
+      System.out.println("AAAA: " + iteratorToSink.getPointer());
+      System.out.println("BBBB: " + childIterator.getPointer());
+      System.out.println("PD: " + parentDiff);
+
       if (parentDiff == 0) {
         equalToChild[i] = true;
         pQueue[i] = iteratorToSink;

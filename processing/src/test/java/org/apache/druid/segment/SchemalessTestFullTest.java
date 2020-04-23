@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -45,6 +46,8 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.search.SearchHit;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchResultValue;
@@ -1183,7 +1186,7 @@ public class SchemalessTestFullTest extends InitializedNullHandlingTest
                     .put("addRowsIndexConstant", NullHandling.sqlCompatible() ? 912.0D : 911.0D)
                     .put("uniques", UNIQUES_1)
                     .put("maxIndex", 100.0D)
-                    .put("minIndex", NullHandling.replaceWithDefault() ? 0.0D : 100.0D)
+                    .put("minIndex", NullHandling.sqlCompatible() ? 100.0D : 0.0D)
                     .build()
             )
         )
@@ -1425,6 +1428,23 @@ public class SchemalessTestFullTest extends InitializedNullHandlingTest
       String failMsg
   )
   {
+
+    ScanQuery query = Druids.newScanQueryBuilder()
+                            .dataSource(dataSource)
+                            .intervals(fullOnInterval)
+                            .columns(Collections.emptyList())
+                            .legacy(false)
+                            .build();
+    QueryRunner runner = TestQueryRunners.makeScanQueryRunner(adapter);
+    Iterable<Result<ScanResultValue>> actualResults = runner.run(QueryPlus.wrap(query)).toList();
+    try {
+      System.out.println("XXXX: " + new DefaultObjectMapper().writeValueAsString(actualResults));
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+
+
     testFullOnTimeseries(TestQueryRunners.makeTimeSeriesQueryRunner(adapter), expectedTimeseriesResults, failMsg);
     testFilteredTimeseries(
         TestQueryRunners.makeTimeSeriesQueryRunner(adapter),
@@ -1440,6 +1460,7 @@ public class SchemalessTestFullTest extends InitializedNullHandlingTest
     testFilteredSearch(TestQueryRunners.makeSearchQueryRunner(adapter), expectedFilteredSearchResults, failMsg);
     testTimeBoundary(TestQueryRunners.makeTimeBoundaryQueryRunner(adapter), expectedTimeBoundaryResults, failMsg);
   }
+
 
   private void testFullOnTimeseries(
       QueryRunner runner,

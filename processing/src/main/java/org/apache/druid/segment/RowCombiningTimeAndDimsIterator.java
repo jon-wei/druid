@@ -185,9 +185,11 @@ final class RowCombiningTimeAndDimsIterator implements TimeAndDimsIterator
     // [2] -- see comment in startNewTimeAndDims()
     while (mergingIterator.moveToNext()) {
       if (mergingIterator.hasTimeAndDimsChangedSinceMark()) {
+        System.out.println("IT HAS CHANGED");
         nextRowPointer = mergingIterator.getPointer(); // [*]
         return true;
       } else {
+        System.out.println("QQQQQQQQ: " + mergingIterator.getPointer());
         combineToCurrentTimeAndDims(mergingIterator.getPointer());
       }
     }
