@@ -138,7 +138,7 @@ public class LoadRuleTest
 
     DruidCluster druidCluster = DruidClusterBuilder
         .newBuilder()
-        .addTier(
+        .addHistoricalTier(
             "hot",
             new ServerHolder(
                 new DruidServer("serverHot", "hostHot", null, 1000, ServerType.HISTORICAL, "hot", 1)
@@ -146,7 +146,7 @@ public class LoadRuleTest
                 mockPeon
             )
         )
-        .addTier(
+        .addHistoricalTier(
             DruidServer.DEFAULT_TIER,
             new ServerHolder(
                 new DruidServer(
@@ -213,7 +213,7 @@ public class LoadRuleTest
         new DruidServer("serverHot2", "hostHot2", null, 1000, ServerType.HISTORICAL, "hot", 1).toImmutableDruidServer();
     DruidCluster druidCluster = DruidClusterBuilder
         .newBuilder()
-        .addTier("hot", new ServerHolder(server1, mockPeon), new ServerHolder(server2, mockPeon))
+        .addHistoricalTier("hot", new ServerHolder(server1, mockPeon), new ServerHolder(server2, mockPeon))
         .build();
 
     CoordinatorStats stats = rule.run(
@@ -231,7 +231,7 @@ public class LoadRuleTest
 
     DruidCluster afterLoad = DruidClusterBuilder
         .newBuilder()
-        .addTier("hot", new ServerHolder(server1, loadingPeon), new ServerHolder(server2, mockPeon))
+        .addHistoricalTier("hot", new ServerHolder(server1, loadingPeon), new ServerHolder(server2, mockPeon))
         .build();
 
     CoordinatorStats statsAfterLoadPrimary = rule.run(
@@ -266,7 +266,7 @@ public class LoadRuleTest
 
     final DruidCluster druidCluster = DruidClusterBuilder
         .newBuilder()
-        .addTier(
+        .addHistoricalTier(
             "tier1",
             new ServerHolder(
                 new DruidServer("server1", "host1", null, 1000, ServerType.HISTORICAL, "tier1", 0)
@@ -274,7 +274,7 @@ public class LoadRuleTest
                 mockPeon1
             )
         )
-        .addTier(
+        .addHistoricalTier(
             "tier2",
             new ServerHolder(
                 new DruidServer("server2", "host2", null, 1000, ServerType.HISTORICAL, "tier2", 1)
@@ -340,8 +340,8 @@ public class LoadRuleTest
     );
     DruidCluster druidCluster = DruidClusterBuilder
         .newBuilder()
-        .addTier("hot", new ServerHolder(server1.toImmutableDruidServer(), mockPeon))
-        .addTier(
+        .addHistoricalTier("hot", new ServerHolder(server1.toImmutableDruidServer(), mockPeon))
+        .addHistoricalTier(
             DruidServer.DEFAULT_TIER,
             new ServerHolder(server2.toImmutableDruidServer(), mockPeon),
             new ServerHolder(server3.toImmutableDruidServer(), mockPeon)
@@ -373,7 +373,7 @@ public class LoadRuleTest
 
     DruidCluster druidCluster = DruidClusterBuilder
         .newBuilder()
-        .addTier(
+        .addHistoricalTier(
             "hot",
             new ServerHolder(
                 new DruidServer("serverHot", "hostHot", null, 1000, ServerType.HISTORICAL, "hot", 0)
@@ -425,7 +425,7 @@ public class LoadRuleTest
 
     DruidCluster druidCluster = DruidClusterBuilder
         .newBuilder()
-        .addTier(
+        .addHistoricalTier(
             "hot",
             new ServerHolder(server1.toImmutableDruidServer(), mockPeon),
             new ServerHolder(server2.toImmutableDruidServer(), mockPeon)
@@ -454,7 +454,7 @@ public class LoadRuleTest
 
     DruidCluster druidCluster = DruidClusterBuilder
         .newBuilder()
-        .addTier(
+        .addHistoricalTier(
             "hot",
             new ServerHolder(
                 new DruidServer("serverHot", "hostHot", null, 1000, ServerType.HISTORICAL, "hot", 0)
@@ -512,8 +512,8 @@ public class LoadRuleTest
 
     DruidCluster druidCluster = DruidClusterBuilder
         .newBuilder()
-        .addTier("tier1", createServerHolder("tier1", mockPeon1, true))
-        .addTier("tier2", createServerHolder("tier2", mockPeon2, false))
+        .addHistoricalTier("tier1", createServerHolder("tier1", mockPeon1, true))
+        .addHistoricalTier("tier2", createServerHolder("tier2", mockPeon2, false))
         .build();
 
     CoordinatorStats stats = rule.run(null, makeCoordinatorRuntimeParams(druidCluster, segment), segment);
@@ -559,8 +559,8 @@ public class LoadRuleTest
 
     DruidCluster druidCluster = DruidClusterBuilder
         .newBuilder()
-        .addTier("tier1", holder1, holder2)
-        .addTier("tier2", holder3, holder4)
+        .addHistoricalTier("tier1", holder1, holder2)
+        .addHistoricalTier("tier2", holder3, holder4)
         .build();
 
     CoordinatorStats stats = rule.run(null, makeCoordinatorRuntimeParams(druidCluster, segment), segment);
@@ -598,7 +598,7 @@ public class LoadRuleTest
 
     DruidCluster druidCluster = DruidClusterBuilder
         .newBuilder()
-        .addTier(
+        .addHistoricalTier(
             "tier1",
             new ServerHolder(server1.toImmutableDruidServer(), mockPeon, true),
             new ServerHolder(server2.toImmutableDruidServer(), mockPeon, false)
@@ -644,7 +644,7 @@ public class LoadRuleTest
 
     DruidCluster druidCluster = DruidClusterBuilder
         .newBuilder()
-        .addTier(
+        .addHistoricalTier(
             "tier1",
             new ServerHolder(server1.toImmutableDruidServer(), mockPeon1, false),
             new ServerHolder(server2.toImmutableDruidServer(), mockPeon2, true),

@@ -20,15 +20,16 @@
 package org.apache.druid.server.coordinator.rules;
 
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public abstract class BroadcastDistributionRule implements Rule
 {
@@ -38,7 +39,17 @@ public abstract class BroadcastDistributionRule implements Rule
   public CoordinatorStats run(DruidCoordinator coordinator, DruidCoordinatorRuntimeParams params, DataSegment segment)
   {
     // Find servers which holds the segments of co-located data source
-    final Set<ServerHolder> loadServerHolders = new HashSet<>();
+    final Set<ServerHolder> loadServerHolders = params.getDruidCluster().getAllServers()
+                                                      .stream()
+                                                      .filter(
+                                                          (serverHolder) -> {
+                                                            ServerType serverType = serverHolder.getServer().getType();
+                                                            return serverType.isSegmentBroadcastTarget();
+                                                          }
+                                                      )
+                                                      .collect(Collectors.toSet());
+
+    /*
     final Set<ServerHolder> dropServerHolders = new HashSet<>();
     final List<String> colocatedDataSources = getColocatedDataSources();
     if (colocatedDataSources == null || colocatedDataSources.isEmpty()) {
@@ -58,11 +69,15 @@ public abstract class BroadcastDistributionRule implements Rule
           }
       );
     }
+    */
 
     final CoordinatorStats stats = new CoordinatorStats();
-
+    return stats.accumulate(assign(loadServerHolders, segment));
+    /*
     return stats.accumulate(assign(loadServerHolders, segment))
                 .accumulate(drop(dropServerHolders, segment));
+                */
+
   }
 
   private CoordinatorStats assign(

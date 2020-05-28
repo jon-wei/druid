@@ -240,13 +240,13 @@ public class BroadcastDistributionRuleTest
 
     druidCluster = DruidClusterBuilder
         .newBuilder()
-        .addTier(
+        .addHistoricalTier(
             "hot",
             holdersOfLargeSegments.get(0),
             holderOfSmallSegment,
             holdersOfLargeSegments2.get(0)
         )
-        .addTier(
+        .addHistoricalTier(
             DruidServer.DEFAULT_TIER,
             holdersOfLargeSegments.get(1),
             holdersOfLargeSegments.get(2),
@@ -256,7 +256,7 @@ public class BroadcastDistributionRuleTest
 
     secondCluster = DruidClusterBuilder
         .newBuilder()
-        .addTier(
+        .addHistoricalTier(
             "tier1",
             activeServer,
             decommissioningServer1,

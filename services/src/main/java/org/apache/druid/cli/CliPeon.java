@@ -109,8 +109,11 @@ import org.apache.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffN
 import org.apache.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierFactory;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.BatchDataSegmentAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordination.ZkCoordinator;
+import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.initialization.jetty.ChatHandlerServerModule;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
@@ -218,6 +221,11 @@ public class CliPeon extends GuiceRunnable
             Jerseys.addResource(binder, SegmentListerResource.class);
             binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.fromString(serverType)));
             LifecycleModule.register(binder, Server.class);
+
+            binder.bind(SegmentManager.class).in(LazySingleton.class);
+            binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
+            Jerseys.addResource(binder, HistoricalResource.class);
+            LifecycleModule.register(binder, ZkCoordinator.class);
           }
 
           @Provides

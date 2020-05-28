@@ -110,7 +110,7 @@ public class DruidClusterTest
                 new LoadQueuePeonTester()
             )
         )
-        .addTier(
+        .addHistoricalTier(
             "tier1",
             new ServerHolder(
                 new ImmutableDruidServer(
