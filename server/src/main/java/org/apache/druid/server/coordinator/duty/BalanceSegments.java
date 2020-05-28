@@ -77,7 +77,7 @@ public class BalanceSegments implements CoordinatorDuty
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     final CoordinatorStats stats = new CoordinatorStats();
-    params.getDruidCluster().getHistoricals().forEach((String tier, NavigableSet<ServerHolder> servers) -> {
+    params.getDruidCluster().getAllServersByTier().forEach((String tier, NavigableSet<ServerHolder> servers) -> {
       balanceTier(params, tier, servers, stats);
     });
     return params.buildFromExisting().withCoordinatorStats(stats).build();

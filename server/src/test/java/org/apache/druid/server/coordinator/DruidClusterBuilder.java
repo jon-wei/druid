@@ -19,12 +19,9 @@
 
 package org.apache.druid.server.coordinator;
 
-import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 public final class DruidClusterBuilder
 {
@@ -33,7 +30,7 @@ public final class DruidClusterBuilder
     return new DruidClusterBuilder();
   }
 
-  private @Nullable Set<ServerHolder> realtimes = null;
+  private final Map<String, Iterable<ServerHolder>> realtimes = new HashMap<>();
   private final Map<String, Iterable<ServerHolder>> historicals = new HashMap<>();
   private final Map<String, Iterable<ServerHolder>> brokers = new HashMap<>();
 
@@ -41,9 +38,11 @@ public final class DruidClusterBuilder
   {
   }
 
-  public DruidClusterBuilder withRealtimes(ServerHolder... realtimes)
+  public DruidClusterBuilder addRealtimesTier(String tierName, ServerHolder... realtimes)
   {
-    this.realtimes = new HashSet<>(Arrays.asList(realtimes));
+    if (this.realtimes.putIfAbsent(tierName, Arrays.asList(realtimes)) != null) {
+      throw new IllegalArgumentException("Duplicate tier: " + tierName);
+    }
     return this;
   }
 

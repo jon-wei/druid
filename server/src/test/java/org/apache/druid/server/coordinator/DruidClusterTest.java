@@ -99,7 +99,8 @@ public class DruidClusterTest
   {
     cluster = DruidClusterBuilder
         .newBuilder()
-        .withRealtimes(
+        .addRealtimesTier(
+            "tier1",
             new ServerHolder(
                 new ImmutableDruidServer(
                     new DruidServerMetadata("name1", "host1", null, 100L, ServerType.REALTIME, "tier1", 0),
@@ -129,15 +130,15 @@ public class DruidClusterTest
   public void testAdd()
   {
     Assert.assertEquals(1, cluster.getHistoricals().values().stream().mapToInt(Collection::size).sum());
-    Assert.assertEquals(1, cluster.getRealtimes().size());
+    Assert.assertEquals(1, cluster.getRealtimes().values().stream().mapToInt(Collection::size).sum());
 
     cluster.add(NEW_REALTIME);
     Assert.assertEquals(1, cluster.getHistoricals().values().stream().mapToInt(Collection::size).sum());
-    Assert.assertEquals(2, cluster.getRealtimes().size());
+    Assert.assertEquals(2, cluster.getRealtimes().values().stream().mapToInt(Collection::size).sum());
 
     cluster.add(NEW_HISTORICAL);
     Assert.assertEquals(2, cluster.getHistoricals().values().stream().mapToInt(Collection::size).sum());
-    Assert.assertEquals(2, cluster.getRealtimes().size());
+    Assert.assertEquals(2, cluster.getRealtimes().values().stream().mapToInt(Collection::size).sum());
   }
 
   @Test
@@ -145,12 +146,16 @@ public class DruidClusterTest
   {
     cluster.add(NEW_REALTIME);
     cluster.add(NEW_HISTORICAL);
-    final Set<ServerHolder> expectedRealtimes = cluster.getRealtimes();
+    final Map<String, NavigableSet<ServerHolder>> expectedRealtimes = cluster.getRealtimes();
     final Map<String, NavigableSet<ServerHolder>> expectedHistoricals = cluster.getHistoricals();
 
     final Collection<ServerHolder> allServers = cluster.getAllServers();
     Assert.assertEquals(4, allServers.size());
-    Assert.assertTrue(allServers.containsAll(cluster.getRealtimes()));
+    Assert.assertTrue(
+        allServers.containsAll(
+            cluster.getRealtimes().values().stream().flatMap(Collection::stream).collect(Collectors.toList())
+        )
+    );
     Assert.assertTrue(
         allServers.containsAll(
             cluster.getHistoricals().values().stream().flatMap(Collection::stream).collect(Collectors.toList())

@@ -53,7 +53,7 @@ public enum ServerType
     @Override
     public boolean isSegmentReplicationTarget()
     {
-      return false;
+      return true;
     }
   },
 
