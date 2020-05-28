@@ -112,7 +112,7 @@ public class MarkAsUnusedOvershadowedSegmentsTest
 
     druidCluster = DruidClusterBuilder
         .newBuilder()
-        .addTier("normal", new ServerHolder(druidServer, mockPeon))
+        .addHistoricalTier("normal", new ServerHolder(druidServer, mockPeon))
         .build();
 
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers

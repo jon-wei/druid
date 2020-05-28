@@ -35,6 +35,7 @@ public final class DruidClusterBuilder
 
   private @Nullable Set<ServerHolder> realtimes = null;
   private final Map<String, Iterable<ServerHolder>> historicals = new HashMap<>();
+  private final Map<String, Iterable<ServerHolder>> brokers = new HashMap<>();
 
   private DruidClusterBuilder()
   {
@@ -46,7 +47,7 @@ public final class DruidClusterBuilder
     return this;
   }
 
-  public DruidClusterBuilder addTier(String tierName, ServerHolder... historicals)
+  public DruidClusterBuilder addHistoricalTier(String tierName, ServerHolder... historicals)
   {
     if (this.historicals.putIfAbsent(tierName, Arrays.asList(historicals)) != null) {
       throw new IllegalArgumentException("Duplicate tier: " + tierName);
@@ -54,8 +55,16 @@ public final class DruidClusterBuilder
     return this;
   }
 
+  public DruidClusterBuilder addBrokerTier(String tierName, ServerHolder... brokers)
+  {
+    if (this.brokers.putIfAbsent(tierName, Arrays.asList(brokers)) != null) {
+      throw new IllegalArgumentException("Duplicate tier: " + tierName);
+    }
+    return this;
+  }
+
   public DruidCluster build()
   {
-    return DruidCluster.createDruidClusterFromBuilderInTest(realtimes, historicals);
+    return DruidCluster.createDruidClusterFromBuilderInTest(realtimes, historicals, brokers);
   }
 }

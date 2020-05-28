@@ -525,7 +525,7 @@ public class BalanceSegmentsTest
         .withDruidCluster(
             DruidClusterBuilder
                 .newBuilder()
-                .addTier(
+                .addHistoricalTier(
                     "normal",
                     IntStream
                         .range(0, druidServers.size())
