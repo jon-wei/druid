@@ -44,12 +44,9 @@ public abstract class BroadcastDistributionRule implements Rule
                                                       .filter(
                                                           (serverHolder) -> {
                                                             ServerType serverType = serverHolder.getServer().getType();
-
                                                             if (!serverType.isSegmentBroadcastTarget()) {
                                                               return false;
                                                             }
-
-                                                            serverHolder.getPeon().getSegmentsToLoad().contains(segment);
 
                                                             // if it's already loaded or in the queue,
                                                             // don't load it again
