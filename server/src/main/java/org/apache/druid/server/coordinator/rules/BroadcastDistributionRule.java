@@ -44,7 +44,17 @@ public abstract class BroadcastDistributionRule implements Rule
                                                       .filter(
                                                           (serverHolder) -> {
                                                             ServerType serverType = serverHolder.getServer().getType();
-                                                            return serverType.isSegmentBroadcastTarget();
+
+                                                            if (!serverType.isSegmentBroadcastTarget()) {
+                                                              return false;
+                                                            }
+
+                                                            DataSegment existingSegment = serverHolder
+                                                                .getServer()
+                                                                .getSegment(segment.getId());
+
+                                                            // if it's already loaded, don't load it again
+                                                            return existingSegment == null;
                                                           }
                                                       )
                                                       .collect(Collectors.toSet());
