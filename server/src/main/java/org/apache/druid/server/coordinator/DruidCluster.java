@@ -92,7 +92,7 @@ public class DruidCluster
         addHistorical(serverHolder);
         break;
       case INDEXER_EXECUTOR:
-        throw new IAE("unsupported server type[%s]", serverHolder.getServer().getType());
+        addRealtime(serverHolder);
       case BROKER:
         addBroker(serverHolder);
         break;
