@@ -49,12 +49,21 @@ public abstract class BroadcastDistributionRule implements Rule
                                                               return false;
                                                             }
 
+                                                            serverHolder.getPeon().getSegmentsToLoad().contains(segment);
+
+                                                            // if it's already loaded or in the queue,
+                                                            // don't load it again
                                                             DataSegment existingSegment = serverHolder
                                                                 .getServer()
                                                                 .getSegment(segment.getId());
 
-                                                            // if it's already loaded, don't load it again
-                                                            return existingSegment == null;
+                                                            if (existingSegment != null) {
+                                                              return false;
+                                                            }
+
+                                                            return !serverHolder.getPeon()
+                                                                                .getSegmentsToLoad()
+                                                                                .contains(segment);
                                                           }
                                                       )
                                                       .collect(Collectors.toSet());
