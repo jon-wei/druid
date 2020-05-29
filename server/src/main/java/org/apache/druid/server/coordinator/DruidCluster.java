@@ -93,6 +93,7 @@ public class DruidCluster
         break;
       case INDEXER_EXECUTOR:
         addRealtime(serverHolder);
+        break;
       case BROKER:
         addBroker(serverHolder);
         break;
