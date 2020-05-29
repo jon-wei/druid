@@ -38,7 +38,7 @@ public abstract class BroadcastDistributionRule implements Rule
   @Override
   public CoordinatorStats run(DruidCoordinator coordinator, DruidCoordinatorRuntimeParams params, DataSegment segment)
   {
-    // Find servers which holds the segments of co-located data source
+    // Find servers where we need to load the broadcast segments
     final Set<ServerHolder> loadServerHolders = params.getDruidCluster().getAllServers()
                                                       .stream()
                                                       .filter(
