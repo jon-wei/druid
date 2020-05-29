@@ -36,18 +36,15 @@ public class PeriodBroadcastDistributionRule extends BroadcastDistributionRule
 
   private final Period period;
   private final boolean includeFuture;
-  private final List<String> colocatedDataSources;
 
   @JsonCreator
   public PeriodBroadcastDistributionRule(
       @JsonProperty("period") Period period,
-      @JsonProperty("includeFuture") Boolean includeFuture,
-      @JsonProperty("colocatedDataSources") List<String> colocatedDataSources
+      @JsonProperty("includeFuture") Boolean includeFuture
   )
   {
     this.period = period;
     this.includeFuture = includeFuture == null ? DEFAULT_INCLUDE_FUTURE : includeFuture;
-    this.colocatedDataSources = colocatedDataSources;
   }
 
   @Override
@@ -55,13 +52,6 @@ public class PeriodBroadcastDistributionRule extends BroadcastDistributionRule
   public String getType()
   {
     return TYPE;
-  }
-
-  @Override
-  @JsonProperty
-  public List<String> getColocatedDataSources()
-  {
-    return colocatedDataSources;
   }
 
   @Override
@@ -94,25 +84,17 @@ public class PeriodBroadcastDistributionRule extends BroadcastDistributionRule
     if (this == o) {
       return true;
     }
-
-    if (o == null || o.getClass() != getClass()) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     PeriodBroadcastDistributionRule that = (PeriodBroadcastDistributionRule) o;
-
-    if (!Objects.equals(period, that.period)) {
-      return false;
-    }
-    if (includeFuture != that.includeFuture) {
-      return false;
-    }
-    return Objects.equals(colocatedDataSources, that.colocatedDataSources);
+    return isIncludeFuture() == that.isIncludeFuture() &&
+           Objects.equals(getPeriod(), that.getPeriod());
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(getType(), period, colocatedDataSources);
+    return Objects.hash(getPeriod(), isIncludeFuture());
   }
 }

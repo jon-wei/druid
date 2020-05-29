@@ -27,7 +27,6 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -65,35 +64,8 @@ public abstract class BroadcastDistributionRule implements Rule
                                                       )
                                                       .collect(Collectors.toSet());
 
-    /*
-    final Set<ServerHolder> dropServerHolders = new HashSet<>();
-    final List<String> colocatedDataSources = getColocatedDataSources();
-    if (colocatedDataSources == null || colocatedDataSources.isEmpty()) {
-      loadServerHolders.addAll(params.getDruidCluster().getAllServers());
-    } else {
-      params.getDruidCluster().getAllServers().forEach(
-          eachHolder -> {
-            if (!eachHolder.isDecommissioning()
-                && colocatedDataSources.stream()
-                                       .anyMatch(source -> eachHolder.getServer().getDataSource(source) != null)) {
-              loadServerHolders.add(eachHolder);
-            } else if (eachHolder.isServingSegment(segment)) {
-              if (!eachHolder.getPeon().getSegmentsToDrop().contains(segment)) {
-                dropServerHolders.add(eachHolder);
-              }
-            }
-          }
-      );
-    }
-    */
-
     final CoordinatorStats stats = new CoordinatorStats();
     return stats.accumulate(assign(loadServerHolders, segment));
-    /*
-    return stats.accumulate(assign(loadServerHolders, segment))
-                .accumulate(drop(dropServerHolders, segment));
-                */
-
   }
 
   private CoordinatorStats assign(
@@ -126,21 +98,4 @@ public abstract class BroadcastDistributionRule implements Rule
 
     return stats;
   }
-
-  private CoordinatorStats drop(
-      final Set<ServerHolder> serverHolders,
-      final DataSegment segment
-  )
-  {
-    CoordinatorStats stats = new CoordinatorStats();
-
-    for (ServerHolder holder : serverHolders) {
-      holder.getPeon().dropSegment(segment, null);
-      stats.addToGlobalStat(LoadRule.DROPPED_COUNT, 1);
-    }
-
-    return stats;
-  }
-
-  public abstract List<String> getColocatedDataSources();
 }
