@@ -98,7 +98,7 @@ public class CliBroker extends ServerRunnable
           );
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8082);
           binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8282);
-          binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(true);
+          binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(false);
           binder.bindConstant().annotatedWith(PruneLastCompactionState.class).to(true);
 
           binder.bind(CachingClusteredClient.class).in(LazySingleton.class);

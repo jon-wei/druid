@@ -91,11 +91,14 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     this.indexIO = indexIO;
     this.config = config;
 
+    this.jsonMapper = mapper;
+    /*
     ObjectMapper mapperOverride = mapper.copy();
     mapperOverride.setInjectableValues(
         new InjectableValues.Std().addValue(PruneLoadSpec.class, false)
     );
     this.jsonMapper = mapperOverride;
+    */
 
     this.locations = new ArrayList<>();
     for (StorageLocationConfig locationConfig : config.getLocations()) {
