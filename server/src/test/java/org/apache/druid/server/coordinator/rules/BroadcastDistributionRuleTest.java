@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.rules;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -269,7 +268,7 @@ public class BroadcastDistributionRuleTest
   public void testBroadcastToSingleDataSource()
   {
     final ForeverBroadcastDistributionRule rule =
-        new ForeverBroadcastDistributionRule(ImmutableList.of("large_source"));
+        new ForeverBroadcastDistributionRule();
 
     CoordinatorStats stats = rule.run(
         null,
@@ -331,7 +330,7 @@ public class BroadcastDistributionRuleTest
   public void testBroadcastDecommissioning()
   {
     final ForeverBroadcastDistributionRule rule =
-        new ForeverBroadcastDistributionRule(ImmutableList.of("large_source"));
+        new ForeverBroadcastDistributionRule();
 
     CoordinatorStats stats = rule.run(
         null,
@@ -356,7 +355,6 @@ public class BroadcastDistributionRuleTest
   public void testBroadcastToMultipleDataSources()
   {
     final ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule(
-        ImmutableList.of("large_source", "large_source2")
     );
 
     CoordinatorStats stats = rule.run(
@@ -392,7 +390,7 @@ public class BroadcastDistributionRuleTest
   @Test
   public void testBroadcastToAllServers()
   {
-    final ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule(null);
+    final ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule();
 
     CoordinatorStats stats = rule.run(
         null,

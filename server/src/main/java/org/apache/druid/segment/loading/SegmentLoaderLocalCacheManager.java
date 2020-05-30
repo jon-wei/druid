@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.loading;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
@@ -29,6 +30,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.PruneLoadSpec;
 
 import java.io.File;
 import java.io.IOException;
@@ -88,7 +90,12 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   {
     this.indexIO = indexIO;
     this.config = config;
-    this.jsonMapper = mapper;
+
+    ObjectMapper mapperOverride = mapper.copy();
+    mapperOverride.setInjectableValues(
+        new InjectableValues.Std().addValue(PruneLoadSpec.class, false)
+    );
+    this.jsonMapper = mapperOverride;
 
     this.locations = new ArrayList<>();
     for (StorageLocationConfig locationConfig : config.getLocations()) {

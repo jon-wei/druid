@@ -25,7 +25,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.util.List;
 import java.util.Objects;
 
 public class IntervalBroadcastDistributionRule extends BroadcastDistributionRule

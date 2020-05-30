@@ -26,7 +26,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
-import java.util.List;
 import java.util.Objects;
 
 public class PeriodBroadcastDistributionRule extends BroadcastDistributionRule
