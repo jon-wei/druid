@@ -24,7 +24,6 @@ import org.apache.druid.segment.AbstractSegment;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.filter.rewrite.JoinFilterPreAnalysisGroup;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;

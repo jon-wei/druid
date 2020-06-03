@@ -34,7 +34,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A JoinFilterPreAnalysis contains filter push down/rewrite information that does not have per-segment dependencies.

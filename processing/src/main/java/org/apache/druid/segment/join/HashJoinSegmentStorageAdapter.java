@@ -21,7 +21,6 @@ package org.apache.druid.segment.join;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -49,7 +48,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -211,15 +209,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       @Nullable final QueryMetrics<?> queryMetrics
   )
   {
-    /*
-    if (!Objects.equals(joinFilterPreAnalysisGroup.getOriginalFilter(), filter)) {
-      throw new ISE(
-          "Filter provided to cursor [%s] does not match join pre-analysis filter [%s]",
-          filter,
-          joinFilterPreAnalysisGroup.getOriginalFilter()
-      );
-    }
-    */
     JoinFilterPreAnalysis jfpa;
     if (filter == null) {
       jfpa = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
