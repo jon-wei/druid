@@ -28,6 +28,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.filter.JoinableClauses;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterPreAnalysisGroup;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.CoreMatchers;
@@ -82,10 +83,7 @@ public class HashJoinSegmentTest
         )
     );
 
-    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-        JoinableClauses.fromList(joinableClauses),
-        VirtualColumns.EMPTY,
-        null,
+    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = new JoinFilterPreAnalysisGroup(
         true,
         true,
         true,
@@ -95,7 +93,7 @@ public class HashJoinSegmentTest
     hashJoinSegment = new HashJoinSegment(
         baseSegment,
         joinableClauses,
-        joinFilterPreAnalysis
+        joinFilterPreAnalysisGroup
     );
   }
 
@@ -107,10 +105,7 @@ public class HashJoinSegmentTest
 
     List<JoinableClause> joinableClauses = ImmutableList.of();
 
-    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-        JoinableClauses.fromList(joinableClauses),
-        VirtualColumns.EMPTY,
-        null,
+    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = new JoinFilterPreAnalysisGroup(
         true,
         true,
         true,
@@ -120,7 +115,7 @@ public class HashJoinSegmentTest
     final HashJoinSegment ignored = new HashJoinSegment(
         baseSegment,
         joinableClauses,
-        joinFilterPreAnalysis
+        joinFilterPreAnalysisGroup
     );
   }
 

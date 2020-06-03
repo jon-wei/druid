@@ -46,6 +46,7 @@ import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.filter.JoinFilterSplit;
 import org.apache.druid.segment.join.filter.JoinableClauses;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterPreAnalysisGroup;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -66,24 +67,13 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         regionToCountry(JoinType.LEFT)
     );
 
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
-    );
+    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = simplePreAnalysisGroup();
 
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
         joinableClauses,
-        joinFilterPreAnalysis
+        joinFilterPreAnalysisGroup
     );
-
-    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
-        new SelectorFilter("channel", "#en.wikipedia"),
-        null,
-        ImmutableSet.of()
-    );
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
 
     JoinTestHelper.verifyCursors(
         adapter.makeCursors(
@@ -116,8 +106,18 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             new Object[]{"History of Fourems", "Fourems Province", "Fourems"}
         )
     );
+
+    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
+        new SelectorFilter("channel", "#en.wikipedia"),
+        null,
+        ImmutableSet.of()
+    );
+    JoinFilterPreAnalysis joinFilterPreAnalysis = joinFilterPreAnalysisGroup.getAnalyses().get(originalFilter);
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
+  /*
   @Test
   public void test_filterPushDown_factToRegionExprToCountryLeftFilterOnCountryName()
   {
@@ -142,9 +142,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         regionExprToCountry
     );
 
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
 
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
@@ -196,9 +194,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         regionToCountry(JoinType.LEFT)
     );
 
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
 
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
@@ -261,9 +257,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         regionToCountry(JoinType.LEFT)
     );
 
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
 
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
@@ -331,9 +325,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
 
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
@@ -388,9 +380,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
 
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
@@ -581,9 +571,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         regionToCountry(JoinType.LEFT)
     );
 
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -705,9 +693,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             new SelectorFilter("rtc.countryName", "States United")
         )
     );
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
 
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
@@ -795,9 +781,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Cannot build hash-join matcher on non-equi-join condition: \"r1.regionIsoCode\" == regionIsoCode && reverse(\"r1.countryIsoCode\") == countryIsoCode");
@@ -846,9 +830,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -946,9 +928,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        filter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
 
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
@@ -1035,9 +1015,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        filter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
 
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
@@ -1108,9 +1086,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", "Germany")
         )
     );
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -1164,9 +1140,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "v", "Germany")
         )
     );
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -1219,9 +1193,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", null)
         )
     );
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -1273,9 +1245,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", "NO MATCH")
         )
     );
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -1327,9 +1297,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "v", null)
         )
     );
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -1380,9 +1348,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             new SelectorFilter(FACT_TO_COUNTRY_ON_NUMBER_PREFIX + "countryName", "Australia")
         )
     );
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -1442,9 +1408,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             new SelectorFilter(FACT_TO_COUNTRY_ON_NUMBER_PREFIX + "v", "Australia")
         )
     );
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -1503,9 +1467,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             new SelectorFilter(FACT_TO_COUNTRY_ON_NUMBER_PREFIX + "countryName", null)
         )
     );
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -1556,9 +1518,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             new SelectorFilter(FACT_TO_COUNTRY_ON_NUMBER_PREFIX + "v", null)
         )
     );
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -1608,9 +1568,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.FULL));
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        filter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -1664,9 +1622,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryNameUsingIsoCodeLookup(JoinType.FULL));
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        filter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -1719,9 +1675,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", null)
         )
     );
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -1773,9 +1727,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "v", null)
         )
     );
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -1838,9 +1790,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     Filter originalFilter = new SelectorFilter("r1.regionName", "Fourems Province");
 
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
 
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
@@ -1908,9 +1858,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -1979,9 +1927,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -2284,9 +2230,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         regionToCountry(JoinType.LEFT)
     );
 
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
 
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
@@ -2439,9 +2383,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         regionToCountry(JoinType.LEFT)
     );
 
-    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
-        joinableClauses,
-        originalFilter
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysisGroup(
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -2499,20 +2441,16 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
                   .withNonnullFields("baseTableFilter", "pushDownVirtualColumns")
                   .verify();
   }
+  */
 
-  private static JoinFilterPreAnalysis simplePreAnalysis(
-      List<JoinableClause> joinableClauses,
-      Filter originalFilter
-  )
+  private static JoinFilterPreAnalysisGroup simplePreAnalysisGroup()
   {
-    return JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-        JoinableClauses.fromList(joinableClauses),
-        VirtualColumns.EMPTY,
-        originalFilter,
-        true,
-        true,
-        true,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
-    );
+    return new JoinFilterPreAnalysisGroup(
+      true,
+      true,
+      true,
+      QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
+  );
+
   }
 }

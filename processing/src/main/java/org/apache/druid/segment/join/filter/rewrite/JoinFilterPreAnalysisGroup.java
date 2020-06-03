@@ -56,11 +56,6 @@ public class JoinFilterPreAnalysisGroup
     return enableFilterRewrite;
   }
 
-  public ConcurrentHashMap<Filter, JoinFilterPreAnalysis> getAnalyses()
-  {
-    return analyses;
-  }
-
   public boolean isEnableRewriteValueColumnFilters()
   {
     return enableRewriteValueColumnFilters;
@@ -69,5 +64,10 @@ public class JoinFilterPreAnalysisGroup
   public long getFilterRewriteMaxSize()
   {
     return filterRewriteMaxSize;
+  }
+
+  public ConcurrentHashMap<Filter, JoinFilterPreAnalysis> getAnalyses()
+  {
+    return analyses;
   }
 }

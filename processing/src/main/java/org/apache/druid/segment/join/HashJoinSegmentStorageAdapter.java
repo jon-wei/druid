@@ -211,7 +211,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       @Nullable final QueryMetrics<?> queryMetrics
   )
   {
-
     /*
     if (!Objects.equals(joinFilterPreAnalysisGroup.getOriginalFilter(), filter)) {
       throw new ISE(
@@ -221,21 +220,35 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       );
     }
     */
-    JoinFilterPreAnalysis jfpa = joinFilterPreAnalysisGroup.getAnalyses().computeIfAbsent(
-        filter,
-        (theFilter) -> {
-          return JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-              JoinableClauses.fromList(clauses),
-              virtualColumns,
-              theFilter,
-              joinFilterPreAnalysisGroup.isEnableFilterPushDown(),
-              joinFilterPreAnalysisGroup.isEnableFilterRewrite(),
-              joinFilterPreAnalysisGroup.isEnableRewriteValueColumnFilters(),
-              joinFilterPreAnalysisGroup.getFilterRewriteMaxSize()
-          );
-        }
-    );
-
+    JoinFilterPreAnalysis jfpa;
+    if (filter == null) {
+      jfpa = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+          joinFilterPreAnalysisGroup,
+          JoinableClauses.fromList(clauses),
+          virtualColumns,
+          null,
+          joinFilterPreAnalysisGroup.isEnableFilterPushDown(),
+          joinFilterPreAnalysisGroup.isEnableFilterRewrite(),
+          joinFilterPreAnalysisGroup.isEnableRewriteValueColumnFilters(),
+          joinFilterPreAnalysisGroup.getFilterRewriteMaxSize()
+      );
+    } else {
+      jfpa = joinFilterPreAnalysisGroup.getAnalyses().computeIfAbsent(
+          filter,
+          (theFilter) -> {
+            return JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+                joinFilterPreAnalysisGroup,
+                JoinableClauses.fromList(clauses),
+                virtualColumns,
+                theFilter,
+                joinFilterPreAnalysisGroup.isEnableFilterPushDown(),
+                joinFilterPreAnalysisGroup.isEnableFilterRewrite(),
+                joinFilterPreAnalysisGroup.isEnableRewriteValueColumnFilters(),
+                joinFilterPreAnalysisGroup.getFilterRewriteMaxSize()
+            );
+          }
+      );
+    }
 
     final List<VirtualColumn> preJoinVirtualColumns = new ArrayList<>();
     final List<VirtualColumn> postJoinVirtualColumns = new ArrayList<>();
