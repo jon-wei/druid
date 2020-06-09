@@ -20,6 +20,8 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.hash.Hasher;
+import com.google.common.hash.Hashing;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BitmapResultFactory;
@@ -35,6 +37,7 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -189,6 +192,16 @@ public class SelectorFilter implements Filter
   @Override
   public int hashCode()
   {
-    return Objects.hash(getDimension(), getValue(), filterTuning);
+    final Hasher hasher = Hashing.goodFastHash(32).newHasher();
+    hasher.putString(getDimension(), StandardCharsets.UTF_8);
+    hasher.putString(getValue(), StandardCharsets.UTF_8);
+
+    if (filterTuning != null) {
+      hasher.putInt(filterTuning.hashCode());
+    }
+
+
+    return hasher.hash().asInt();
+    //return Objects.hash(getDimension(), getValue(), filterTuning);
   }
 }

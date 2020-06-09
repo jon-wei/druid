@@ -50,7 +50,6 @@ import java.util.Set;
 
 /**
  */
-@Immutable
 public class OrFilter implements BooleanFilter
 {
   private static final Joiner OR_JOINER = Joiner.on(" || ");
@@ -70,7 +69,7 @@ public class OrFilter implements BooleanFilter
     Preconditions.checkArgument(filters.size() > 0, "Can't construct empty OrFilter (the universe does not exist)");
 
     this.filters = filters;
-    this.filtersHashCode = Suppliers.memoize(() -> Objects.hash(getFilters()));
+    this.filtersHashCode = Suppliers.memoize(() -> getFilters().hashCode());
   }
 
   @Override
@@ -249,12 +248,31 @@ public class OrFilter implements BooleanFilter
       return false;
     }
     OrFilter orFilter = (OrFilter) o;
+    //return Objects.equals(getFilters(), orFilter.getFilters());
+
+    if (!Objects.equals(getFilters(), orFilter.getFilters())) {
+      if (Objects.equals(hashCode(), orFilter.hashCode())) {
+        System.out.println("WTF");
+        System.out.println("A: " + this  + " | " + hashCode());
+        System.out.println("B: " + o  + " | " + o.hashCode());
+        System.out.println("A2: " + Objects.hash(filters));
+        System.out.println("B2: " + Objects.hash(((OrFilter) o).filters));
+
+        for (Filter f1 : filters) {
+          System.out.println("F1: " + f1 + " | " + f1.hashCode());
+        }
+        for (Filter f2 : orFilter.filters) {
+          System.out.println("F2: " + f2 + " | " + f2.hashCode());
+        }
+      }
+    }
     return Objects.equals(hashCode(), orFilter.hashCode());
   }
 
   @Override
   public int hashCode()
   {
+   // return Objects.hashCode(getFilters());
     return filtersHashCode.get();
   }
 }

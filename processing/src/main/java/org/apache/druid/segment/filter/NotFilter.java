@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment.filter;
 
+import com.google.common.hash.Hasher;
+import com.google.common.hash.Hashing;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.BitmapIndexSelector;
@@ -33,6 +35,7 @@ import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -170,8 +173,13 @@ public class NotFilter implements Filter
   @Override
   public int hashCode()
   {
+    final Hasher hasher = Hashing.goodFastHash(32).newHasher();
+    hasher.putInt(1);
+    hasher.putInt(baseFilter.hashCode());
+    return hasher.hash().asInt();
+
     // to return a different hash from baseFilter
-    return Objects.hash(1, baseFilter);
+    //return Objects.hash(1, baseFilter);
   }
 
   public Filter getBaseFilter()

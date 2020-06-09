@@ -66,7 +66,6 @@ import java.util.Set;
  * In default null handling mode, this filter is equivalent to {@code (dimension IN [values])} or
  * {@code (dimension IN [non-null values, ''])} when {@link #values} contains nulls.
  */
-@Immutable
 public class InFilter implements Filter
 {
   private final String dimension;

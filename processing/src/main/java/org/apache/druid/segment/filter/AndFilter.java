@@ -50,7 +50,6 @@ import java.util.Set;
 
 /**
  */
-@Immutable
 public class AndFilter implements BooleanFilter
 {
   private static final Joiner AND_JOINER = Joiner.on(" && ");
@@ -264,12 +263,14 @@ public class AndFilter implements BooleanFilter
       return false;
     }
     AndFilter andFilter = (AndFilter) o;
-    return Objects.equals(hashCode(), andFilter.hashCode());
+    return Objects.equals(getFilters(), andFilter.getFilters());
+    //return Objects.equals(hashCode(), andFilter.hashCode());
   }
 
   @Override
   public int hashCode()
   {
-    return filtersHashCode.get();
+    return Objects.hash(getFilters());
+    //return filtersHashCode.get();
   }
 }
