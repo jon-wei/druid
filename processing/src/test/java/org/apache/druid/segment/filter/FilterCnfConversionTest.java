@@ -309,6 +309,26 @@ public class FilterCnfConversionTest
   @Test
   public void testToNormalizedOrClausesWithComplexFilterIncludingNotAndOr()
   {
+    System.out.println(FilterTestUtils.selector("col1", "val1").hashCode());
+    System.out.println(FilterTestUtils.selector("col2", "val2").hashCode());
+    System.out.println(FilterTestUtils.selector("col3", "val3").hashCode());
+    System.out.println(FilterTestUtils.selector("col4", "val4").hashCode());
+    System.out.println("col1".hashCode());
+    System.out.println("col2".hashCode());
+    System.out.println("col3".hashCode());
+    System.out.println("col4".hashCode());
+
+    HashSet<String> setA = new HashSet<>();
+    setA.add("col1");
+    setA.add("col4");
+
+    HashSet<String> setB = new HashSet<>();
+    setB.add("col2");
+    setB.add("col3");
+
+    System.out.println("SET A HASH: " + setA.hashCode());
+    System.out.println("SET B HASH: " + setB.hashCode());
+
     final Filter filter = FilterTestUtils.and(
         FilterTestUtils.or(
             FilterTestUtils.and(

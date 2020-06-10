@@ -192,6 +192,7 @@ public class SelectorFilter implements Filter
   @Override
   public int hashCode()
   {
+    /*
     final Hasher hasher = Hashing.goodFastHash(32).newHasher();
     hasher.putString(getDimension(), StandardCharsets.UTF_8);
     hasher.putString(getValue(), StandardCharsets.UTF_8);
@@ -202,6 +203,7 @@ public class SelectorFilter implements Filter
 
 
     return hasher.hash().asInt();
-    //return Objects.hash(getDimension(), getValue(), filterTuning);
+    */
+    return Objects.hash(getDimension(), getValue(), filterTuning);
   }
 }

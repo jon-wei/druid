@@ -173,13 +173,16 @@ public class NotFilter implements Filter
   @Override
   public int hashCode()
   {
+    /*
     final Hasher hasher = Hashing.goodFastHash(32).newHasher();
     hasher.putInt(1);
     hasher.putInt(baseFilter.hashCode());
     return hasher.hash().asInt();
+    */
 
     // to return a different hash from baseFilter
     //return Objects.hash(1, baseFilter);
+    return Objects.hash(baseFilter, 1);
   }
 
   public Filter getBaseFilter()
