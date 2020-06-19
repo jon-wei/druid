@@ -107,8 +107,17 @@ public class Joinables
             );
 
             for (Query joinQuery : joinQueryLevels) {
+              // The pre-analysis needs to apply to the optimized form of filters, as this is what will be
+              // passed to HashJoinSegmentAdapter.makeCursors().
+              // The optimize() call here means that the filter optimization will happen twice,
+              // since the query toolchests will call optimize() later.
+              // We do this for simplicity as we cannot override what query will get run later from this context.
+              // A more complicated approach involving wrapping the query runner after the pre-merge decoration
+              // and moving the pre-analysis might be viable.
+              // The additional overhead of the simple approach should be low, as the additional optimize() call
+              // on each filter will only occur once per query.
               preAnalysisGroup.computeJoinFilterPreAnalysisIfAbsent(
-                  joinQuery.getFilter() == null ? null : joinQuery.getFilter().toFilter(),
+                  joinQuery.getFilter() == null ? null : joinQuery.getFilter().optimize().toFilter(),
                   joinableClauses.getJoinableClauses(),
                   joinQuery.getVirtualColumns()
               );
