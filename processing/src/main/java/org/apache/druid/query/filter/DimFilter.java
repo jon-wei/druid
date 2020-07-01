@@ -58,6 +58,8 @@ public interface DimFilter extends Cacheable
    */
   DimFilter optimize();
 
+  Filter toOptimizedFilter();
+
   /**
    * Returns a Filter that implements this DimFilter. This does not generally involve optimizing the DimFilter,
    * so it does make sense to optimize first and then call toFilter on the resulting DimFilter.

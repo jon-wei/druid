@@ -120,7 +120,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
     return (queryPlus, responseContext) -> {
       ScanQuery scanQuery = (ScanQuery) queryPlus.getQuery();
       if (scanQuery.getFilter() != null) {
-        scanQuery = scanQuery.withDimFilter(scanQuery.getFilter().optimize());
+        //scanQuery = scanQuery.withDimFilter(scanQuery.getFilter().optimize());
         queryPlus = queryPlus.withQuery(scanQuery);
       }
       return runner.run(queryPlus, responseContext);

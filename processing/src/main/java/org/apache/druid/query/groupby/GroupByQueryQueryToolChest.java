@@ -473,7 +473,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
           {
             GroupByQuery groupByQuery = (GroupByQuery) queryPlus.getQuery();
             if (groupByQuery.getDimFilter() != null) {
-              groupByQuery = groupByQuery.withDimFilter(groupByQuery.getDimFilter().optimize());
+              //groupByQuery = groupByQuery.withDimFilter(groupByQuery.getDimFilter().optimize());
             }
             final GroupByQuery delegateGroupByQuery = groupByQuery;
             final List<DimensionSpec> dimensionSpecs = new ArrayList<>();

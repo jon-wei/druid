@@ -426,7 +426,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     return (queryPlus, responseContext) -> {
       TopNQuery topNQuery = (TopNQuery) queryPlus.getQuery();
       if (topNQuery.getDimensionsFilter() != null) {
-        topNQuery = topNQuery.withDimFilter(topNQuery.getDimensionsFilter().optimize());
+        //topNQuery = topNQuery.withDimFilter(topNQuery.getDimensionsFilter().optimize());
       }
       final TopNQuery delegateTopNQuery = topNQuery;
       if (TopNQueryEngine.canApplyExtractionInPost(delegateTopNQuery)) {

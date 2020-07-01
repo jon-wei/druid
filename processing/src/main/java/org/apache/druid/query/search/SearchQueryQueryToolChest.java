@@ -324,7 +324,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
         (queryPlus, responseContext) -> {
           SearchQuery searchQuery = (SearchQuery) queryPlus.getQuery();
           if (searchQuery.getDimensionsFilter() != null) {
-            searchQuery = searchQuery.withDimFilter(searchQuery.getDimensionsFilter().optimize());
+            //searchQuery = searchQuery.withDimFilter(searchQuery.getDimensionsFilter().optimize());
             queryPlus = queryPlus.withQuery(searchQuery);
           }
           return runner.run(queryPlus, responseContext);
