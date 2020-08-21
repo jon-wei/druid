@@ -56,10 +56,15 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -70,20 +75,19 @@ public class IndexMergeBenchmark
 {
 
   @Param({"5"})
-  private int numSegments;
+  private int numSegments = 5000;
 
   @Param({"75000"})
-  private int rowsPerSegment;
+  private int rowsPerSegment = 75;
 
   @Param({"basic"})
-  private String schema;
+  private String schema = "basic";
 
   @Param({"true", "false"})
-  private boolean rollup;
+  private boolean rollup = true;
 
   @Param({"OFF_HEAP", "TMP_FILE", "ON_HEAP"})
-  private SegmentWriteOutType factoryType;
-
+  private SegmentWriteOutType factoryType = SegmentWriteOutType.OFF_HEAP;
 
   private static final Logger log = new Logger(IndexMergeBenchmark.class);
   private static final int RNG_SEED = 9999;
@@ -119,9 +123,11 @@ public class IndexMergeBenchmark
     indexMergerV9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, getSegmentWriteOutMediumFactory(factoryType));
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
-    indexesToMerge = new ArrayList<>();
-
     schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schema);
+
+    File fout = new File("/tmp/imt/segments.txt");
+    FileOutputStream fos = new FileOutputStream(fout);
+    BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
 
     for (int i = 0; i < numSegments; i++) {
       DataGenerator gen = new DataGenerator(
@@ -141,7 +147,8 @@ public class IndexMergeBenchmark
         incIndex.add(row);
       }
 
-      tmpDir = FileUtils.createTempDir();
+      //tmpDir = FileUtils.createTempDir();
+      tmpDir = Files.createTempDirectory(new File("/tmp/imt").toPath(), "druid").toFile();
       log.info("Using temp dir: " + tmpDir.getAbsolutePath());
 
       File indexFile = indexMergerV9.persist(
@@ -151,7 +158,20 @@ public class IndexMergeBenchmark
           null
       );
 
-      QueryableIndex qIndex = INDEX_IO.loadIndex(indexFile);
+      bw.write(indexFile.getAbsolutePath() + "\n");
+    }
+
+    bw.close();
+  }
+
+  public void setup2() throws Exception
+  {
+    indexesToMerge = new ArrayList<>();
+    Scanner scanner = new Scanner(new File("/tmp/imt/segments.txt"));
+    while (scanner.hasNextLine()) {
+      String line = scanner.nextLine();
+      log.info("segment path: " + line);
+      QueryableIndex qIndex = INDEX_IO.loadIndex(new File(line));
       indexesToMerge.add(qIndex);
     }
   }
@@ -177,6 +197,28 @@ public class IndexMergeBenchmark
       );
 
       blackhole.consume(mergedFile);
+    }
+    finally {
+      tmpFile.delete();
+    }
+  }
+
+  public void mergeV9test() throws Exception
+  {
+    File tmpFile = File.createTempFile("IndexMergeBenchmark-MERGEDFILE-V9-" + System.currentTimeMillis(), ".TEMPFILE");
+    tmpFile.delete();
+    tmpFile.mkdirs();
+    try {
+      log.info(tmpFile.getAbsolutePath() + " isFile: " + tmpFile.isFile() + " isDir:" + tmpFile.isDirectory());
+
+      File mergedFile = indexMergerV9.mergeQueryableIndex(
+          indexesToMerge,
+          rollup,
+          schemaInfo.getAggsArray(),
+          tmpFile,
+          new IndexSpec(),
+          null
+      );
     }
     finally {
       tmpFile.delete();
