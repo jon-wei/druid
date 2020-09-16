@@ -9,11 +9,14 @@ public class IndexMergeMain
   public static void main(String[] args) throws Exception
   {
     IndexMergeBenchmark imb = new IndexMergeBenchmark();
-    //log.info("STARTING SETUP1");
+    log.info("STARTING SETUP1");
     //imb.setup();
     log.info("STARTING SETUP2");
     imb.setup2();
+
     log.info("STARTING MERGE");
+    Thread.sleep(20000);
     imb.mergeV9test();
+    Thread.sleep(90000);
   }
 }

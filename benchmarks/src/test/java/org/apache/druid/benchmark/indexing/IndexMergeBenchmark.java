@@ -75,16 +75,16 @@ public class IndexMergeBenchmark
 {
 
   @Param({"5"})
-  private int numSegments = 5000;
+  private int numSegments = 2;
 
   @Param({"75000"})
-  private int rowsPerSegment = 75;
+  private int rowsPerSegment = 1;
 
   @Param({"basic"})
   private String schema = "basic";
 
   @Param({"true", "false"})
-  private boolean rollup = true;
+  private boolean rollup = false;
 
   @Param({"OFF_HEAP", "TMP_FILE", "ON_HEAP"})
   private SegmentWriteOutType factoryType = SegmentWriteOutType.OFF_HEAP;
@@ -166,7 +166,11 @@ public class IndexMergeBenchmark
 
   public void setup2() throws Exception
   {
+    schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schema);
+    indexMergerV9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, getSegmentWriteOutMediumFactory(factoryType));
+    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
     indexesToMerge = new ArrayList<>();
+
     Scanner scanner = new Scanner(new File("/tmp/imt/segments.txt"));
     while (scanner.hasNextLine()) {
       String line = scanner.nextLine();
