@@ -56,7 +56,7 @@ for sha in all_commits.splitlines():
         url = "https://api.github.com/repos/apache/druid/issues/{}".format(pr_number)
         requests.patch(url, json=milestone_json, auth=(github_username, os.environ["GIT_TOKEN"]))
       else:
-        print("Skipping Pull Request {} since it's already tagged with milestone {}".format(pr_number, milestone))
+        print("Skipping Pull Request {} since it's already tagged with milestone {}".format(pr_number, pr['milestone']['number']))
 
   except Exception as e:
     print("Got exception for commit: {}  ex: {}".format(sha, e))
