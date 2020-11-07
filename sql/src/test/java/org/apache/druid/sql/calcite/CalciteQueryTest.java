@@ -12351,6 +12351,61 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testSQQQL(Map<String, Object> queryContext) throws Exception
+  {
+    // Cannot vectorize JOIN operator.
+    //cannotVectorize();
+
+    /*
+    testQuery(
+        "select (summ_added) from (select case when sum(m1) > 0 then sum(m1) else -1 end as summ_added, dim1 from druid.foo group by 2) where summ_added > -1",
+        queryContext,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0", ValueType.STRING)))
+                        .setAggregatorSpecs(aggregators(new DoubleSumAggregatorFactory("a0", "m1")))
+                        .setPostAggregatorSpecs(ImmutableList.of(expressionPostAgg("p0", "case_searched((\"a0\" > 0),\"a0\",-1)")))
+                        .setHavingSpec(having(expressionFilter("(case_searched((\"a0\" > 0),\"a0\",-1) > -1)")))
+                        .setContext(queryContext)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1.0d},
+            new Object[]{4.0d},
+            new Object[]{2.0d},
+            new Object[]{3.0d},
+            new Object[]{6.0d},
+            new Object[]{5.0d}
+        )
+    );
+    */
+
+    testQuery(
+        "select sum(summ_added) from (select case when sum(m1) > 0 then sum(m1) else -1 end as summ_added, dim1 from druid.foo group by 2) where summ_added > -1",
+        queryContext,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0", ValueType.STRING)))
+                        .setAggregatorSpecs(aggregators(new DoubleSumAggregatorFactory("a0", "m1")))
+                        .setPostAggregatorSpecs(ImmutableList.of(expressionPostAgg("p0", "case_searched((\"a0\" > 0),\"a0\",-1)")))
+                        .setHavingSpec(having(expressionFilter("(case_searched((\"a0\" > 0),\"a0\",-1) > -1)")))
+                        .setContext(queryContext)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{21.0d}
+        )
+    );
+  }
+
+  @Test
   public void testGroupingSetsNoSuperset() throws Exception
   {
     // Cannot vectorize due to virtual columns.
