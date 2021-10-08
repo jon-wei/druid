@@ -402,6 +402,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       prev = cur;
       final TaskLock lock = client.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, cur));
       if (lock == null) {
+        log.info(getId() + " TimeChunkLockTryAcquireAction returned null.");
         return false;
       }
     }

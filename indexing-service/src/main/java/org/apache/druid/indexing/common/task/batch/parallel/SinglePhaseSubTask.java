@@ -244,6 +244,9 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
           ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
       );
 
+      LOG.info("sleeping");
+      Thread.sleep(60000);
+
       final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
           ingestionSchema.getDataSchema().getParser()
       );

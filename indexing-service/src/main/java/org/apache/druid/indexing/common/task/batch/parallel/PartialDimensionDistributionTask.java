@@ -44,6 +44,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringD
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketch;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.RangePartitionIndexTaskInputRowIteratorBuilder;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -65,6 +66,8 @@ import java.util.function.Supplier;
 
 public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
 {
+  private static final Logger LOG = new Logger(PartialDimensionDistributionTask.class);
+
   public static final String TYPE = "partial_dimension_distribution";
 
   // Future work: StringDistribution does not handle inserting NULLs. This is the same behavior as hadoop indexing.
@@ -176,12 +179,16 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
+    LOG.info("isReady called on task: " + getId());
     if (!getIngestionSchema().getDataSchema().getGranularitySpec().inputIntervals().isEmpty()) {
-      return tryTimeChunkLock(
+      boolean tryResult = tryTimeChunkLock(
           new SurrogateTaskActionClient(supervisorTaskId, taskActionClient),
           getIngestionSchema().getDataSchema().getGranularitySpec().inputIntervals()
       );
+      LOG.info(getId() + " tryTimeChunkLock result: " + tryResult);
+      return tryResult;
     } else {
+      LOG.info("isReady returned true for task: " + getId());
       return true;
     }
   }
@@ -213,6 +220,9 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
         tuningConfig.getMaxSavedParseExceptions()
     );
     final boolean determineIntervals = granularitySpec.inputIntervals().isEmpty();
+
+    //LOG.info("sleeping");
+    //Thread.sleep(60000);
 
     try (
         final CloseableIterator<InputRow> inputRowIterator = AbstractBatchIndexTask.inputSourceReader(
