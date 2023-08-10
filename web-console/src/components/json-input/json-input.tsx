@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Ace } from 'ace-builds';
+import type { Ace } from 'ace-builds';
 import classNames from 'classnames';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
@@ -67,7 +67,7 @@ interface InternalValue {
 interface JsonInputProps {
   value: any;
   onChange: (value: any) => void;
-  onError?: (error: Error) => void;
+  setError?: (error: Error | undefined) => void;
   placeholder?: string;
   focus?: boolean;
   width?: string;
@@ -76,7 +76,7 @@ interface JsonInputProps {
 }
 
 export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
-  const { onChange, onError, placeholder, focus, width, height, value, issueWithValue } = props;
+  const { onChange, setError, placeholder, focus, width, height, value, issueWithValue } = props;
   const [internalValue, setInternalValue] = useState<InternalValue>(() => ({
     value,
     stringified: stringifyJson(value),
@@ -121,9 +121,8 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
             stringified: inputJson,
           });
 
-          if (error) {
-            onError?.(error);
-          } else {
+          setError?.(error);
+          if (!error) {
             onChange(value);
           }
 
