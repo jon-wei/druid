@@ -36,6 +36,7 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.exceptions.UnableToExecuteStatementException;
 import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
+import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
@@ -89,28 +90,23 @@ public class SQLMetadataConnectorTest
     connector.createSupervisorsTable();
 
     connector.getDBI().withHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle)
-          {
-            for (String table : tables) {
-              Assert.assertTrue(
-                  StringUtils.format("table %s was not created!", table),
-                  connector.tableExists(handle, table)
-              );
-            }
-
-            String taskTable = tablesConfig.getTasksTable();
-            for (String column : Arrays.asList("type", "group_id")) {
-              Assert.assertTrue(
-                  StringUtils.format("Tasks table column %s was not created!", column),
-                  connector.tableHasColumn(taskTable, column)
-              );
-            }
-
-            return null;
+        handle -> {
+          for (String table : tables) {
+            Assert.assertTrue(
+                StringUtils.format("table %s was not created!", table),
+                connector.tableExists(handle, table)
+            );
           }
+
+          String taskTable = tablesConfig.getTasksTable();
+          for (String column : Arrays.asList("type", "group_id")) {
+            Assert.assertTrue(
+                StringUtils.format("Tasks table column %s was not created!", column),
+                connector.tableHasColumn(taskTable, column)
+            );
+          }
+
+          return null;
         }
     );
 

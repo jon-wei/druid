@@ -929,6 +929,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             }
           }
         }
+    );
   }
 
   /*
