@@ -26,7 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.remote.TypedValue;
-import org.apache.druid.catalog.model.IngestionTemplateInfo;
+import org.apache.druid.catalog.model.QueryTemplateInfo;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.QueryContext;
 
@@ -52,14 +52,14 @@ public class SqlQuery
   private final boolean header;
   private final boolean typesHeader;
   private final boolean sqlTypesHeader;
-  private final IngestionTemplateInfo templateInfo;
+  private final QueryTemplateInfo templateInfo;
   private final Map<String, Object> context;
   private final List<SqlParameter> parameters;
 
   @JsonCreator
   public SqlQuery(
       @JsonProperty("query") final String query,
-      @JsonProperty("templateInfo") final IngestionTemplateInfo templateInfo,
+      @JsonProperty("templateInfo") final QueryTemplateInfo templateInfo,
       @JsonProperty("resultFormat") final ResultFormat resultFormat,
       @JsonProperty("header") final boolean header,
       @JsonProperty("typesHeader") final boolean typesHeader,
@@ -134,7 +134,7 @@ public class SqlQuery
   }
 
   @JsonProperty("templateInfo")
-  public IngestionTemplateInfo getTemplateInfo()
+  public QueryTemplateInfo getTemplateInfo()
   {
     return templateInfo;
   }

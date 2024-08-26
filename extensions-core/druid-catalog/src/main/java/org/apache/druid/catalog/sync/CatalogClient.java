@@ -22,7 +22,7 @@ package org.apache.druid.catalog.sync;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.catalog.http.CatalogResource;
-import org.apache.druid.catalog.model.IngestionTemplate;
+import org.apache.druid.catalog.model.QueryTemplate;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.catalog.model.TableId;
@@ -68,7 +68,7 @@ public class CatalogClient implements CatalogSource
   private static final TypeReference<TableMetadata> TABLE_METADATA_TYPE = new TypeReference<TableMetadata>()
   {
   };
-  private static final TypeReference<IngestionTemplate> TEMPLATE_TYPE = new TypeReference<IngestionTemplate>()
+  private static final TypeReference<QueryTemplate> TEMPLATE_TYPE = new TypeReference<QueryTemplate>()
   {
   };
 
@@ -114,7 +114,7 @@ public class CatalogClient implements CatalogSource
   }
 
   @Override
-  public IngestionTemplate getTemplate(String templateName)
+  public QueryTemplate getTemplate(String templateName)
   {
     String url = StringUtils.replace(TEMPLATE_GET_PATH, "{name}", templateName);
     return send(url, TEMPLATE_TYPE);

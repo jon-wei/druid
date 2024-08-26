@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite.planner;
 
-import org.apache.druid.catalog.model.IngestionTemplateInfo;
+import org.apache.druid.catalog.model.QueryTemplateInfo;
 import org.apache.druid.sql.calcite.table.DatasourceTable.PhysicalDatasourceMetadata;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
@@ -57,7 +57,7 @@ public class TrivialTest
     }
 
     @Override
-    public String generateQueryFromTemplate(IngestionTemplateInfo templateInfo)
+    public String generateQueryFromTemplate(QueryTemplateInfo templateInfo)
     {
       return null;
     }

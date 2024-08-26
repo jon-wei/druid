@@ -24,9 +24,9 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "concat", value = ConcatIngestionTemplate.class)
+    @JsonSubTypes.Type(name = "concat", value = ConcatQueryTemplate.class)
 })
-public interface IngestionTemplate
+public interface QueryTemplate
 {
   String getType();
 }

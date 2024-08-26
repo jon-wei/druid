@@ -25,7 +25,7 @@ import org.apache.curator.shaded.com.google.common.collect.Lists;
 import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.CatalogException.DuplicateKeyException;
 import org.apache.druid.catalog.CatalogException.NotFoundException;
-import org.apache.druid.catalog.model.IngestionTemplate;
+import org.apache.druid.catalog.model.QueryTemplate;
 import org.apache.druid.catalog.model.SchemaRegistry.SchemaSpec;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
@@ -104,7 +104,7 @@ public class CatalogResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response postTemplate(
       @PathParam("name") String templateName,
-      IngestionTemplate templateSpec,
+      QueryTemplate templateSpec,
       @QueryParam("overwrite") boolean overwrite,
       @Context final HttpServletRequest req
   )
@@ -150,7 +150,7 @@ public class CatalogResource
   )
   {
     try {
-      final IngestionTemplate template = catalog.tables().getTemplate(templateName);
+      final QueryTemplate template = catalog.tables().getTemplate(templateName);
       return Response.ok().entity(template).build();
     }
     catch (CatalogException e) {

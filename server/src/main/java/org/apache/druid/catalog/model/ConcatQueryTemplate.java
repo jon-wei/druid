@@ -19,21 +19,34 @@
 
 package org.apache.druid.catalog.model;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.base.Preconditions;
 
-import java.util.List;
-
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "concat", value = ConcatIngestionTemplateInfo.class)
-})
-public interface IngestionTemplateInfo
+@JsonTypeName("concat")
+public class ConcatQueryTemplate implements QueryTemplate
 {
-  String getType();
+  @JsonProperty
+  private final String body;
 
-  List<String> getRequiredTemplateNames();
+  @JsonCreator
+  public ConcatQueryTemplate(
+      @JsonProperty("body") String body
+  )
+  {
+    Preconditions.checkNotNull(body);
+    this.body = body;
+  }
 
-  String generateQueryFromTemplates(List<IngestionTemplate> templates);
+  public String getBody()
+  {
+    return body;
+  }
+
+  @Override
+  public String getType()
+  {
+    return "concat";
+  }
 }
-

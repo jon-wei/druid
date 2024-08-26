@@ -22,8 +22,8 @@ package org.apache.druid.catalog.sql;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
-import org.apache.druid.catalog.model.IngestionTemplate;
-import org.apache.druid.catalog.model.IngestionTemplateInfo;
+import org.apache.druid.catalog.model.QueryTemplate;
+import org.apache.druid.catalog.model.QueryTemplateInfo;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
@@ -218,9 +218,9 @@ public class LiveCatalogResolver implements CatalogResolver
   }
 
   @Override
-  public String generateQueryFromTemplate(IngestionTemplateInfo templateInfo)
+  public String generateQueryFromTemplate(QueryTemplateInfo templateInfo)
   {
-    List<IngestionTemplate> templates = catalog.getTemplates(templateInfo.getRequiredTemplateNames());
+    List<QueryTemplate> templates = catalog.getTemplates(templateInfo.getRequiredTemplateNames());
     return templateInfo.generateQueryFromTemplates(templates);
   }
 }

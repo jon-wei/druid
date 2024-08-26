@@ -19,7 +19,7 @@
 
 package org.apache.druid.catalog.sync;
 
-import org.apache.druid.catalog.model.IngestionTemplate;
+import org.apache.druid.catalog.model.QueryTemplate;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.SchemaRegistry;
 import org.apache.druid.catalog.model.SchemaRegistry.SchemaSpec;
@@ -92,11 +92,11 @@ public class LocalMetadataCatalog implements MetadataCatalog
   }
 
   @Override
-  public List<IngestionTemplate> getTemplates(List<String> templateNames)
+  public List<QueryTemplate> getTemplates(List<String> templateNames)
   {
-    List<IngestionTemplate> templates = new ArrayList<>();
+    List<QueryTemplate> templates = new ArrayList<>();
     for (String templateName : templateNames) {
-      IngestionTemplate template = catalog.getTemplate(templateName);
+      QueryTemplate template = catalog.getTemplate(templateName);
       templates.add(template);
     }
     return templates;

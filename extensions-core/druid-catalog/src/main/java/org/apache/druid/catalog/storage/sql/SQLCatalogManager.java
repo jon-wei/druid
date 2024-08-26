@@ -29,7 +29,7 @@ import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.CatalogException.DuplicateKeyException;
 import org.apache.druid.catalog.CatalogException.NotFoundException;
 import org.apache.druid.catalog.model.ColumnSpec;
-import org.apache.druid.catalog.model.IngestionTemplate;
+import org.apache.druid.catalog.model.QueryTemplate;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
@@ -721,7 +721,7 @@ public class SQLCatalogManager implements CatalogManager
       "WHERE name = :name";
 
   @Override
-  public long createTemplate(String name, IngestionTemplate template) throws DuplicateKeyException
+  public long createTemplate(String name, QueryTemplate template) throws DuplicateKeyException
   {
     try {
       return dbi.withHandle(
@@ -765,7 +765,7 @@ public class SQLCatalogManager implements CatalogManager
   }
 
   @Override
-  public long replaceTemplate(String name, IngestionTemplate template) throws NotFoundException
+  public long replaceTemplate(String name, QueryTemplate template) throws NotFoundException
   {
     try {
       final long updateTime = dbi.withHandle(
@@ -865,24 +865,24 @@ public class SQLCatalogManager implements CatalogManager
       "FROM %s\n" +
       "WHERE name = :name";
 
-  private static final TypeReference<IngestionTemplate> INGESTION_TEMPLATE_TYPE_REF =
-      new TypeReference<IngestionTemplate>() { };
+  private static final TypeReference<QueryTemplate> INGESTION_TEMPLATE_TYPE_REF =
+      new TypeReference<QueryTemplate>() { };
 
   @Override
-  public IngestionTemplate getTemplate(String name) throws NotFoundException
+  public QueryTemplate getTemplate(String name) throws NotFoundException
   {
     try {
       return dbi.withHandle(
-          new HandleCallback<IngestionTemplate>()
+          new HandleCallback<QueryTemplate>()
           {
             @Override
-            public IngestionTemplate withHandle(Handle handle) throws NotFoundException
+            public QueryTemplate withHandle(Handle handle) throws NotFoundException
             {
               final Query<Map<String, Object>> query = handle
                   .createQuery(templateStatement(SELECT_TEMPLATE))
                   .setFetchSize(connector.getStreamingFetchSize())
                   .bind(TEMPLATE_NAME_COL, name);
-              final ResultIterator<IngestionTemplate> resultIterator =
+              final ResultIterator<QueryTemplate> resultIterator =
                   query.map((index, r, ctx) ->
                                 fromBytes(jsonMapper, r.getBytes(3), INGESTION_TEMPLATE_TYPE_REF))
                        .iterator();

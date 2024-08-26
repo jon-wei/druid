@@ -29,7 +29,7 @@ import org.apache.druid.java.util.common.IAE;
 import java.util.List;
 
 @JsonTypeName("concat")
-public class ConcatIngestionTemplateInfo implements IngestionTemplateInfo
+public class ConcatQueryTemplateInfo implements QueryTemplateInfo
 {
   @JsonProperty
   private final String templateName;
@@ -38,7 +38,7 @@ public class ConcatIngestionTemplateInfo implements IngestionTemplateInfo
   private final String prepend;
 
   @JsonCreator
-  public ConcatIngestionTemplateInfo(
+  public ConcatQueryTemplateInfo(
       @JsonProperty("templateName") String templateName,
       @JsonProperty("prepend") String prepend
   )
@@ -62,16 +62,16 @@ public class ConcatIngestionTemplateInfo implements IngestionTemplateInfo
   }
 
   @Override
-  public String generateQueryFromTemplates(List<IngestionTemplate> templates)
+  public String generateQueryFromTemplates(List<QueryTemplate> templates)
   {
     if (templates.size() != 1) {
       throw new IAE("Only 1 referenced template can be used with concat templates.");
     }
-    if (!(templates.get(0) instanceof ConcatIngestionTemplate)) {
+    if (!(templates.get(0) instanceof ConcatQueryTemplate)) {
       throw new IAE("Referenced template [%s] is not a concat template.", templates.get(0));
     }
 
-    ConcatIngestionTemplate concatTemplate = (ConcatIngestionTemplate) templates.get(0);
+    ConcatQueryTemplate concatTemplate = (ConcatQueryTemplate) templates.get(0);
     return prepend + concatTemplate.getBody();
   }
 
